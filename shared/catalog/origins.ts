@@ -26,4 +26,5 @@ export const origins: Record<string, { kind: OriginKind; by: string; note: strin
   gltf: { kind: 'standard', by: 'Khronos Group · ISO/IEC 12113', note: 'OpenGL을 만든 Khronos Group의 표준.' },
   i3dm: { kind: 'standard', by: 'OGC 커뮤니티 표준 (3D Tiles)', note: 'Cesium이 만든 3D Tiles 1.0의 인스턴스 타일. 1.1부터 glTF 확장으로 대체.' },
   ifc: { kind: 'standard', by: 'buildingSMART · ISO 16739', note: '건설 업계 단체 buildingSMART International의 BIM 표준.' },
+  csv: { kind: 'community', by: 'IETF RFC 4180 (정보 문서)', note: '1970년대부터 쓰던 관례를 2005년 RFC 4180으로 정리. 정식 표준 아님 → 구분자·인코딩·좌표 열 이름이 데이터마다 다름.' },
 }

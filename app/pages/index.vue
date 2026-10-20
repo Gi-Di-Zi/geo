@@ -23,6 +23,7 @@ const glyphs: Record<string, string> = {
   'pointcloud': '<g class="dots"><circle cx="20" cy="9" r="1.4"/><circle cx="14" cy="12" r="1.4"/><circle cx="26" cy="12" r="1.4"/><circle cx="20" cy="15" r="1.4"/><circle cx="10" cy="17" r="1.4"/><circle cx="30" cy="17" r="1.4"/><circle cx="16" cy="19" r="1.4"/><circle cx="24" cy="19" r="1.4"/><circle cx="7" cy="23" r="1.4"/><circle cx="33" cy="23" r="1.4"/><circle cx="13" cy="24" r="1.4"/><circle cx="20" cy="23" r="1.4"/><circle cx="27" cy="24" r="1.4"/><circle cx="5" cy="30" r="1.4"/><circle cx="11" cy="30" r="1.4"/><circle cx="17" cy="29" r="1.4"/><circle cx="23" cy="29" r="1.4"/><circle cx="29" cy="30" r="1.4"/><circle cx="35" cy="30" r="1.4"/></g>',
   'model-3d': '<path class="f" d="M7 14h18v18H7z"/><path d="M7 14l8-7h18l-8 7M25 14l8-7v18l-8 7"/><path class="dash" d="M15 7v18h18M15 25l-8 7"/>',
   'indoor-bim': '<path class="dash" d="M10 6h26v22"/><path class="f" d="M4 12h26v24H4z"/><path d="M17 12v10M4 24h8M17 30v6M30 24h-6"/><path d="M12 24a5 5 0 0 1 5-5"/>',
+  'attribute': '<rect class="f" x="4" y="6" width="27" height="25" rx="2"/><path class="f2" d="M4 8a2 2 0 0 1 2-2h23a2 2 0 0 1 2 2v5H4z"/><path d="M4 13h27M4 19h27M4 25h17M14 6v25"/><path class="d" d="M30 21c-3.3 0-6 2.5-6 5.7 0 4 6 9.3 6 9.3s6-5.3 6-9.3c0-3.2-2.7-5.7-6-5.7z"/><circle cx="30" cy="26.6" r="2.1" style="fill: var(--surface); stroke: none"/>',
 }
 </script>
 

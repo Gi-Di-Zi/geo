@@ -48,9 +48,12 @@ export function vectorRecipe(r: VectorRecipe): Recipe {
 export const BBOX = '126.970 37.555 126.990 37.570'
 export const BBOX_CSV = '126.970,37.555,126.990,37.570'
 
-/** 올린 벡터 파일: 레이어를 하나로 합치고 GeoJSON + PMTiles로. 데이터 크기를 모르니 줌 범위는 tippecanoe가 정한다 */
-export function vectorUpload(u: { accept: string[]; note: string; open?: string; prepare?: Step }): Upload {
-  const open = u.open ?? '$INPUT'
+/**
+ * 올린 벡터 파일: 레이어를 하나로 합치고 GeoJSON + PMTiles로. 데이터 크기를 모르니 줌 범위는 tippecanoe가 정한다.
+ * prepare = 열기 전 준비 단계(인코딩 등), opts = 읽을 때 붙이는 옵션(-oo, -spat 등. ogrinfo·ogr2ogr 공통)
+ */
+export function vectorUpload(u: { accept: string[]; note: string; open?: string; prepare?: Step[]; opts?: string }): Upload {
+  const open = `${u.open ?? '$INPUT'}${u.opts ? ` ${u.opts}` : ''}`
   return {
     accept: u.accept,
     note: u.note,
@@ -58,18 +61,18 @@ export function vectorUpload(u: { accept: string[]; note: string; open?: string;
       id: 'upload',
       title: '내 파일',
       preprocess: [
+        ...(u.prepare ?? []),
         {
           title: '무결성 확인',
           why: '레이어 이름·도형 종류·개수·범위·좌표계 확인.',
           tool: 'gdal',
           run: `ogrinfo -so -al ${open} | grep -E 'Layer name|Geometry:|Feature Count|Extent|PROJCRS|GEOGCRS'`,
         },
-        ...(u.prepare ? [u.prepare] : []),
         {
           title: '단일 레이어·위경도 정리',
           why: '-addfields: 여러 레이어 → data 하나로 병합. -nlt GEOMETRY: 도형 종류 혼합 허용. -t_srs EPSG:4326: 위경도 변환. -makevalid: 꼬인 도형 수정.',
           tool: 'gdal',
-          run: `ogr2ogr -f GPKG /work/data.gpkg ${open} -nln data -nlt GEOMETRY -addfields -t_srs EPSG:4326 -makevalid${u.prepare ? ' $(cat /work/open_options)' : ''}`,
+          run: `ogr2ogr -f GPKG /work/data.gpkg ${open} -nln data -nlt GEOMETRY -addfields -t_srs EPSG:4326 -makevalid`,
         },
       ],
       convert: [
@@ -81,9 +84,9 @@ export function vectorUpload(u: { accept: string[]; note: string; open?: string;
         },
         {
           title: 'PMTiles 생성',
-          why: '-zg: 데이터 크기 미지 → 줌 범위 자동 결정. --drop-densest-as-needed: 무거운 타일은 밀집 구간부터 피처 제거. --extend-zooms-if-still-dropping: 그래도 넘치면 최대 줌 확장. GDAL MVT(샘플 방식)는 줌 범위 수동 지정 필요.',
+          why: '-zg: 데이터 크기 미지 → 줌 범위 자동 결정. --smallest-maximum-zoom-guess=12: 피처가 적어도 최대 줌 12 이상(낮으면 좌표가 수백 m 단위로 반올림). --drop-densest-as-needed: 무거운 타일은 밀집 구간부터 피처 제거. --extend-zooms-if-still-dropping: 그래도 넘치면 최대 줌 확장. GDAL MVT(샘플 방식)는 줌 범위 수동 지정 필요.',
           tool: 'tippecanoe',
-          run: 'tippecanoe -q -o /out/data.pmtiles -l data -zg --drop-densest-as-needed --extend-zooms-if-still-dropping -f /out/ogc/collections/data/items.json',
+          run: 'tippecanoe -q -o /out/data.pmtiles -l data -zg --smallest-maximum-zoom-guess=12 --drop-densest-as-needed --extend-zooms-if-still-dropping -f /out/ogc/collections/data/items.json',
         },
       ],
       outputs: [
@@ -100,10 +103,13 @@ export function vectorUpload(u: { accept: string[]; note: string; open?: string;
   }
 }
 
-/** 올린 SHP zip에 .cpg가 없으면 국내 SHP에 흔한 CP949로 읽게 하는 열기 옵션을 /work/open_options에 남긴다 */
+/**
+ * 올린 SHP zip의 한글 처리 옵션을 /work/open_options에 남긴다.
+ * .cpg가 없으면 .dbf를 CP949로, zip 안 파일 이름이 UTF-8 표시(0x800) 없는 한글이면 이름도 CP949로 읽는다
+ */
 export const shpEncoding: Step = {
   title: '한글 인코딩 결정',
-  why: '.cpg: .dbf 글자 인코딩. 없으면 국내 SHP에 흔한 CP949(EUC-KR)로 열기(-oo ENCODING=CP949). 잘못 읽으면 한글 깨짐.',
+  why: '.cpg: .dbf 글자 인코딩. 없으면 국내 SHP에 흔한 CP949(EUC-KR)로 열기(-oo ENCODING=CP949). zip 안 파일 이름이 UTF-8 표시 없는 한글이면 CPL_ZIP_ENCODING CP949(안 하면 레이어 이름 깨짐·목록 실패).',
   tool: 'gdal',
-  run: `python3 -c "import sys, zipfile; cpg = any(n.lower().endswith('.cpg') for n in zipfile.ZipFile(sys.argv[1]).namelist()); print('' if cpg else '-oo ENCODING=CP949')" $INPUT > /work/open_options && echo "열기 옵션: $(cat /work/open_options)"`,
+  run: `python3 -c "import sys, zipfile; z = zipfile.ZipFile(sys.argv[1]).infolist(); cpg = any(i.filename.lower().endswith('.cpg') for i in z); cp949 = any(not i.flag_bits & 0x800 and not i.filename.isascii() for i in z); print(' '.join(o for o, on in [('-oo ENCODING=CP949', not cpg), ('--config CPL_ZIP_ENCODING CP949', cp949)] if on))" $INPUT > /work/open_options && echo "열기 옵션: $(cat /work/open_options)"`,
 }

@@ -91,13 +91,13 @@ export function buildingUpload(u: { accept: string[]; note: string; open?: strin
       id: 'upload',
       title: '내 파일',
       preprocess: [
+        ...(u.prepare ? [u.prepare] : []),
         {
           title: '무결성 확인',
           why: '도형 종류·개수·속성 열 이름 확인. 높이·층수 열 유무.',
           tool: 'gdal',
-          run: `ogrinfo -so -al ${open} | grep -vE '^(INFO|Metadata|  [A-Z_]+=)'`,
+          run: `ogrinfo -so -al ${open}${u.prepare ? ' $(cat /work/open_options)' : ''} | grep -vE '^(INFO|Metadata|  [A-Z_]+=)'`,
         },
-        ...(u.prepare ? [u.prepare] : []),
         {
           title: '위경도 정리',
           why: '-t_srs EPSG:4326: 위경도 변환. -makevalid: 꼬인 도형 수정.',

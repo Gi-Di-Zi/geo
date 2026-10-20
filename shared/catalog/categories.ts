@@ -8,4 +8,5 @@ export const categories: Category[] = [
   { id: 'pointcloud', name: '포인트 클라우드', color: '#7448C9', summary: '레이저 스캐너가 측정한 대량의 3D 점. 점마다 좌표·색·분류.' },
   { id: 'model-3d', name: '3D 모델', color: '#2C5FD4', summary: '면과 텍스처로 이루어진 입체 모델. 건물, 시설물.' },
   { id: 'indoor-bim', name: '실내·BIM', color: '#2E8A4C', summary: '층·벽·설비까지 담은 건물 설계·시공 데이터.' },
+  { id: 'attribute', name: '속성 데이터', color: '#B4367E', summary: '도형 없이 값만 담은 표. 좌표 열·주소·행정구역 코드로 위치 연결.' },
 ]

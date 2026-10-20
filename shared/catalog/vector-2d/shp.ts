@@ -167,7 +167,8 @@ export default {
     accept: ['.zip'],
     note: '.shp, .shx, .dbf, .prj(, .cpg)를 zip 하나로. .shp 단독은 속성·좌표계 없음.',
     open: '/vsizip/$INPUT',
-    prepare: shpEncoding,
+    prepare: [shpEncoding],
+    opts: '$(cat /work/open_options)',
   }),
   view: { center: [126.979, 37.565], zoom: 14 },
 } satisfies FormatSpec

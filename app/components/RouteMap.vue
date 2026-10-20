@@ -29,7 +29,7 @@ const lag = (i: number, k: number) => ((i * 0.61 + k * 1.37) % FLOW).toFixed(2)
 
 <template>
   <svg class="route-map" :viewBox="`0 0 ${W} ${H}`" role="img" aria-labelledby="map-title">
-    <title id="map-title">데이터 유형 7개가 수집, 전처리, 웹 형태 변환을 지나 그릴 수 있는 뷰어로 갈라지는 노선도</title>
+    <title id="map-title">데이터 유형 {{ categories.length }}개가 수집, 전처리, 웹 형태 변환을 지나 그릴 수 있는 뷰어로 갈라지는 노선도</title>
     <g v-for="(l, i) in lines" :key="l.c.id">
       <a :href="`/?type=${l.c.id}`" :aria-label="`${l.c.name}: ${l.stops.join(', ')}에서 확인 가능`" @click.prevent="emit('pick', l.c.id)">
         <text x="156" :y="l.y + 5" text-anchor="end" class="cat">{{ l.c.name }}</text>
