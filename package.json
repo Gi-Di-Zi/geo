@@ -1,0 +1,33 @@
+{
+  "name": "geo-web-showcase",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare && node scripts/copy-cesium.ts",
+    "setup": "node scripts/pipeline.ts all",
+    "pipeline": "node scripts/pipeline.ts",
+    "check": "node scripts/check.ts"
+  },
+  "dependencies": {
+    "@deck.gl/core": "~9.4.0",
+    "@deck.gl/geo-layers": "~9.4.0",
+    "@deck.gl/layers": "~9.4.0",
+    "@deck.gl/maplibre": "~9.4.0",
+    "@deck.gl/mesh-layers": "~9.4.0",
+    "@loaders.gl/3d-tiles": "^4.5.4",
+    "@loaders.gl/core": "^4.5.4",
+    "@loaders.gl/gltf": "^4.5.4",
+    "@loaders.gl/mvt": "^4.5.4",
+    "cesium": "^1.146.0",
+    "maplibre-gl": "^6.14.0",
+    "nuxt": "^4.6.1",
+    "ol": "^10.11.0",
+    "ol-pmtiles": "^2.0.2",
+    "pmtiles": "^4.5.0",
+    "vue": "^3.5.44"
+  }
+}

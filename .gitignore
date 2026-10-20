@@ -1,0 +1,10 @@
+node_modules
+.nuxt
+.output
+.data
+.env
+public/cesium
+pipeline/work
+# 샘플 원본·변환 결과는 올리지 않는다. npm run setup으로 다시 받고 변환
+pipeline/raw
+public/data
