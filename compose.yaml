@@ -1,0 +1,36 @@
+# 서비스 레시피용 상시 서버 (npm run services). 파일 레시피의 PostGIS는 단계 동안만 따로 띄운다 (scripts/pipeline.ts)
+# 포트는 127.0.0.1에만 연다. 사이트는 /svc/<서버>/** 를 이 포트로 프록시한다 (shared/catalog/tools.ts의 endpoint와 같게)
+name: geo
+services:
+  db:
+    image: postgis/postgis:18-3.6
+    environment: { POSTGRES_PASSWORD: geo, POSTGRES_DB: gis }
+    volumes: [db:/var/lib/postgresql]
+    healthcheck: { test: pg_isready -h 127.0.0.1 -U postgres, interval: 2s, retries: 60 }
+    restart: unless-stopped
+
+  geoserver:
+    image: docker.osgeo.org/geoserver:3.0.2
+    environment:
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_ADMIN_PASSWORD:-geoserver}
+      SKIP_DEMO_DATA: 'true'
+    ports: ['127.0.0.1:8600:8080']
+    # /serve: 서비스 레시피가 만든 래스터(GeoTIFF). pipeline 단계 컨테이너도 같은 폴더를 /serve로 쓴다
+    volumes: [geoserver:/opt/geoserver_data, './pipeline/serve:/serve:ro']
+    healthcheck: { test: curl -sf -o /dev/null 'http://localhost:8080/geoserver/ows?service=WMS&request=GetCapabilities', interval: 5s, retries: 60 }
+    depends_on: { db: { condition: service_healthy } }
+    restart: unless-stopped
+
+  # 시작할 때만 테이블을 찾는다 → 서비스 레시피의 martin 단계 전에 pipeline이 다시 띄운다
+  martin:
+    image: ghcr.io/maplibre/martin:1.16.1
+    command: --config /martin.yaml
+    volumes: ['./pipeline/martin.yaml:/martin.yaml:ro']
+    ports: ['127.0.0.1:3001:3000']
+    depends_on: { db: { condition: service_healthy } }
+    restart: unless-stopped
+
+volumes: { db: {}, geoserver: {} }
+
+# 서비스 레시피 단계 컨테이너가 붙는 네트워크
+networks: { default: { name: geo-svc } }

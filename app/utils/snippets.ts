@@ -12,6 +12,7 @@ function ol(o: Output, url: string) {
     cog: `import WebGLTileLayer from 'ol/layer/WebGLTile'\nimport GeoTIFF from 'ol/source/GeoTIFF'\n\n// COG 직접 읽기. 화면에 보이는 블록만 Range 요청\nconst layer = new WebGLTileLayer({\n  source: new GeoTIFF({ sources: [{ url: ${j(url)} }] }),\n})`,
     'xyz-raster': `import TileLayer from 'ol/layer/Tile'\nimport XYZ from 'ol/source/XYZ'\n\nconst layer = new TileLayer({\n  source: new XYZ({ url: ${j(url)}, maxZoom: ${o.maxzoom ?? 18} }),\n})`,
     image: `import ImageLayer from 'ol/layer/Image'\nimport ImageStatic from 'ol/source/ImageStatic'\n\nconst layer = new ImageLayer({\n  source: new ImageStatic({\n    url: ${j(url)},\n    imageExtent: transformExtent(${j(o.bounds)}, 'EPSG:4326', 'EPSG:3857'),\n  }),\n})`,
+    wms: `import ImageLayer from 'ol/layer/Image'\nimport ImageWMS from 'ol/source/ImageWMS'\n\n// 지도를 움직일 때마다 화면 범위 그림 한 장 요청 (GetMap)\nconst layer = new ImageLayer({\n  source: new ImageWMS({ url: ${j(url)}, params: { LAYERS: ${j(o.layer)}, TRANSPARENT: true } }),\n})`,
   }
   return `${head}${layer[o.kind]}\n\nnew Map({\n  target: 'map',\n  layers: [basemap, layer],\n  view: new View({ center: fromLonLat([lon, lat]), zoom }),\n})`
 }
@@ -52,6 +53,7 @@ function cesium(o: Output, url: string) {
     geojson: `const ds = await Cesium.GeoJsonDataSource.load(${j(url)})\n${o.style?.height ? `for (const e of ds.entities.values) {\n  if (e.polygon) e.polygon.extrudedHeight = e.properties.${o.style.height}.getValue()\n}\n` : ''}viewer.dataSources.add(ds)`,
     'xyz-raster': `viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({\n  url: ${j(url)},\n  rectangle: Cesium.Rectangle.fromDegrees(...${j(o.bounds)}),\n}))`,
     image: `viewer.imageryLayers.addImageryProvider(await Cesium.SingleTileImageryProvider.fromUrl(${j(url)}, {\n  rectangle: Cesium.Rectangle.fromDegrees(...${j(o.bounds)}),\n}))`,
+    wms: `// 타일 칸마다 GetMap 요청\nviewer.imageryLayers.addImageryProvider(new Cesium.WebMapServiceImageryProvider({\n  url: ${j(url)}, layers: ${j(o.layer)},\n  parameters: { transparent: true, format: 'image/png' },\n}))`,
     'quantized-mesh': `// layer.json이 있는 폴더 주소\nviewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromUrl(${j(url)}, { requestVertexNormals: true })`,
     '3dtiles': `viewer.scene.primitives.add(await Cesium.Cesium3DTileset.fromUrl(${j(url)}))`,
     glb: `// glb에는 위치 없음 → 세울 곳의 동·북·위 좌표계를 모델 행렬로 지정\nconst model = await Cesium.Model.fromGltfAsync({\n  url: ${j(url)},\n  modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(${(o.anchor ?? []).join(', ')})),\n})\nviewer.scene.primitives.add(model)`,

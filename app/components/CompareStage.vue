@@ -57,7 +57,7 @@ const tiles = computed(() => viewers.map(v => {
     meta: v,
     use,
     output,
-    path: output && dir.value + output.path,
+    path: output && outPath(dir.value, output),
     elsewhere: viewers.filter(w => 'output' in props.recipe.viewers[w.id]).map(w => w.name),
   }
 }))

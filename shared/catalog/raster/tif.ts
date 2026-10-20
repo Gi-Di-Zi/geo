@@ -1,4 +1,5 @@
 import type { FormatSpec, Recipe, Step } from '../../types.ts'
+import { geoserverRaster } from '../_server.ts'
 import { rasterUpload, toCog, toTiles, webViewers } from './cog.ts'
 
 const TIF = '/raw/50110.tif'
@@ -105,6 +106,26 @@ export default {
       outputs,
       viewers: webViewers,
     },
+    geoserverRaster({
+      name: 'landslide',
+      preprocess: [inspect],
+      file: '/serve/raster/tif/landslide.tif',
+      prepare: {
+        title: '서버용 COG 만들기 (좌표계·등급 값 유지)',
+        why: '-of COG: 내부 블록 + 내부 축소본 → 서버가 화면 범위·축척에 맞는 블록만 읽음(외부 .ovr 불필요). 좌표계(EPSG:5181)·등급 값(1~5) 그대로 → 색은 서버 스타일, 웹 메르카토르 변환은 요청마다. OVERVIEW_RESAMPLING=NEAREST: 축소본에서 등급 섞임 방지. DEFLATE + PREDICTOR=2: 무손실 압축.',
+        tool: 'gdal',
+        run: `mkdir -p /serve/raster/tif && gdal_translate -of COG -co COMPRESS=DEFLATE -co PREDICTOR=2 -co OVERVIEW_RESAMPLING=NEAREST ${TIF} /serve/raster/tif/landslide.tif`,
+      },
+      symbolizer: [
+        '      <ColorMap type="values">',
+        '        <ColorMapEntry color="#000000" quantity="0" opacity="0"/>',
+        ...RAMP.split('\\n').slice(0, 5).map(l => l.split(' ')).map(([q, r, g, b]) => `        <ColorMapEntry color="#${[r, g, b].map(v => Number(v).toString(16).padStart(2, '0')).join('').toUpperCase()}" quantity="${q}"/>`),
+        '      </ColorMap>',
+      ].join('\n'),
+      styleWhy: 'ColorMap type="values": 등급 값마다 색 하나(GDAL 레시피의 color-relief와 같은 색). 0(값 없음) 투명. 원본 값을 칠하는 일은 서버가 요청마다.',
+      bounds: JEJU,
+      maxzoom: 16,
+    }),
   ],
   alternatives: [
     { tool: 'titiler', note: '타일 미리 굽기 없이 COG에서 요청마다 생성.' },

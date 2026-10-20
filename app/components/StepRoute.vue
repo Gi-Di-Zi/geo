@@ -28,7 +28,7 @@ const perViewer = computed(() => viewers.map(v => {
     note: ('caution' in use && use.caution) || ('note' in use && use.note) || '',
     caution: 'caution' in use && !!use.caution,
     unsupported: 'unsupported' in use ? use.unsupported : '',
-    code: output && mounted.value ? snippet(v.id, output, location.origin + outDir.value + output.path) : '',
+    code: output && mounted.value ? snippet(v.id, output, location.origin + outPath(outDir.value, output)) : '',
   }
 }))
 </script>
@@ -127,7 +127,7 @@ const perViewer = computed(() => viewers.map(v => {
                 <span v-if="sameFormat(o)" class="chip same">원본과 같은 형식</span>
               </p>
               <p v-if="statOf(o.id)" class="small muted">
-                {{ bytes(statOf(o.id)!.bytes) }}<template v-if="statOf(o.id)!.files > 1">, 파일 {{ statOf(o.id)!.files.toLocaleString() }}개</template><template v-if="statOf(o.id)!.features">, 피처 {{ statOf(o.id)!.features }}개</template>
+                <template v-if="statOf(o.id)!.ms !== undefined">첫 요청 {{ statOf(o.id)!.ms }}ms<template v-if="statOf(o.id)!.cachedMs !== undefined">, 같은 요청 다시 {{ statOf(o.id)!.cachedMs }}ms</template>, </template>{{ bytes(statOf(o.id)!.bytes) }}<template v-if="statOf(o.id)!.files > 1">, 파일 {{ statOf(o.id)!.files.toLocaleString() }}개</template><template v-if="statOf(o.id)!.features">, 피처 {{ statOf(o.id)!.features }}개</template>
               </p>
               <p class="small"><TermText :text="o.why" /></p>
             </li>

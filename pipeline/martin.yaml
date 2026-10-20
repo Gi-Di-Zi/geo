@@ -1,0 +1,6 @@
+# public 스키마 테이블만 자동 발행 (postgis 이미지가 만드는 tiger 스키마 제외). 소스 id = 테이블 이름
+postgres:
+  connection_string: postgres://postgres:geo@db/gis
+  auto_publish:
+    tables:
+      from_schemas: public

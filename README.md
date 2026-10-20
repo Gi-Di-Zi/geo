@@ -18,6 +18,7 @@
 | `pipeline/raw/` | 받은 원본 (git 제외, `npm run setup`으로 생성) |
 | `public/data/` | 변환 결과·기록: `collect.json`, `<레시피>/report.json`, `status.json`, 내려받기용 `raw/`·`raw.zip` (git 제외, `npm run setup`으로 생성) |
 | `server/` | 내 파일 업로드 작업 API (`/api/jobs` → `pipeline.ts --job`) |
+| `compose.yaml`, `pipeline/martin.yaml` | 서비스 레시피용 상시 서버: PostGIS, GeoServer, martin. 사이트가 `/svc/<서버>/**`로 프록시 |
 
 ## 실행
 
@@ -30,10 +31,17 @@ npm run pipeline -- <유형>/<확장자>/<레시피>        # 레시피 하나�
 npm run pipeline -- all                       # 전부 (닫힌 확장자는 건너뜀)
 npm run pipeline -- --status                  # status.json만 다시 쓰기
 npm run check                                 # 검사
+npm run services                              # 서버 띄우기 (서비스 레시피 실행 시 pipeline이 자동으로도 띄움)
 ```
 
 - Docker 필요. `local:tools` 이미지는 처음 쓸 때 자동 빌드, 나머지는 공개 이미지(`shared/catalog/tools.ts`의 `image`).
-- `.env`: `NUXT_PUBLIC_VWORLD_KEY`(배경지도, 없으면 OSM). `.env.example` 참고.
+- `.env`: `NUXT_PUBLIC_VWORLD_KEY`(배경지도, 없으면 OSM), `GEOSERVER_ADMIN_PASSWORD`. `.env.example` 참고.
+- 레시피 두 종류: **파일**(결과를 파일로 구워 `public/data`에 둠)과 **서버**(변환 단계에 `type: 'server'` 도구. 벡터는 상시 PostGIS에 적재, 래스터는 `pipeline/serve`(단계·GeoServer 모두 `/serve`)에 COG로 두고 서버에 발행. 결과물 경로는 `/svc/<서버 id>/…`). 서버 레시피는 `shared/catalog/_server.ts`의 `serverRecipes`(벡터: GeoServer + martin)·`geoserverRaster`로 만든다. 서버 레이어 이름(DB 표 이름)은 확장자끼리 겹치면 안 됨(검사). 서버 단계는 curl 이미지에서 서버 REST·주소로 요청하고, pipeline이 결과물마다 확인 요청을 보내 응답 크기·시간을 기록. 서버 화면은 `npm run services` + 개발 서버가 함께 떠 있어야 보임.
+- 정확도·측정 기록:
+  - 벡터타일 레시피 끝에 `tileCount`(`shared/catalog/vector-2d/_vector.ts`) 단계 — 줌별로 타일에 남은 피처 수를 변환 전과 비교. `key` = 피처를 가르는 속성(식).
+  - `report.json`의 `env`: CPU, Docker 자원(코어·메모리), OS. 서버 출력은 `ms`(첫 요청)와 `cachedMs`(같은 요청 다시).
+  - 처리 수준(직접 처리 / 변환 후 처리 / 일부 기능만 / 미검증 / 미지원): 뷰어는 `supportOf`(`app/utils/catalog.ts`)가 레시피·실행 기록에서 계산. 서버 도구는 `tools.ts`의 `checked`에 그 이미지로 직접 돌려 본 결과만 기록 (공식 문서 목록은 빌드·확장 설치에 따라 다름).
+- 서버 포트는 127.0.0.1에만 열림. GeoServer는 작업공간 `geo` 아래(WMS·WFS·WMTS)만 프록시, 관리 화면·REST는 사이트로 노출 안 함. 업로드 레시피는 서버 도구 사용 불가.
 - `shared/catalog`에 파일 추가·삭제 시 개발 서버 재시작 (확장자 목록은 빌드 템플릿 `#build/catalog-formats`).
 
 ## 샘플 기준
@@ -79,5 +87,6 @@ npm run check                                 # 검사
 ## 참고
 
 - 원본 50MB 이하만 사이트에 게시, 파일 7개 이상이면 `raw.zip` 하나로.
+- 중간 파일(`pipeline/work`)은 레시피가 성공하면 삭제, 실패하면 남김(원인 확인용).
 - 업로드 작업: 네트워크 차단 컨테이너, 메모리 4GB·CPU 2, 단계당 20분, 결과는 24시간 뒤 삭제.
 - 시행착오 기록: 각 단계 `why`, 그리고 `scripts/check.ts` 주석.

@@ -34,6 +34,23 @@ useHead({ title: `${tool.name} | 공간 데이터 웹 처리` })
         <dt>홈페이지</dt><dd><a :href="tool.url" target="_blank" rel="noopener">{{ tool.url }}</a></dd>
       </dl>
 
+      <template v-if="tool.checked">
+        <h2>이 사이트에서 확인한 지원</h2>
+        <p class="small muted">위 실행 이미지로 직접 돌려 본 결과. 공식 문서의 지원 목록과 다를 수 있음(빌드 기능·확장 설치 여부).</p>
+        <div class="scroll">
+          <table class="checked small">
+            <thead><tr><th scope="col">입력 → 출력</th><th scope="col">수준</th><th scope="col">확인 내용</th></tr></thead>
+            <tbody>
+              <tr v-for="c in tool.checked" :key="c.what">
+                <th scope="row">{{ c.what }}</th>
+                <td :class="`lv-${c.level}`">{{ supportLabels[c.level] }}</td>
+                <td>{{ c.note }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
       <h2>대표 명령</h2>
       <pre><code>{{ tool.example }}</code></pre>
 
@@ -61,6 +78,12 @@ useHead({ title: `${tool.name} | 공간 데이터 웹 처리` })
 .facts dd { margin: 0; }
 h2 { font-size: var(--fs-2); margin: 40px 0 12px; }
 pre { max-width: 48rem; }
+.scroll { max-width: 56rem; overflow-x: auto; margin-top: 10px; }
+.checked { width: 100%; border-collapse: collapse; min-width: 560px; }
+.checked th, .checked td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+.checked thead th { color: var(--ink-2); font-weight: 500; }
+.checked tbody th { font-weight: 600; white-space: nowrap; }
+.checked td:nth-child(2) { white-space: nowrap; }
 .uses { padding-left: 18px; display: grid; gap: 6px; }
 .uses li span { margin-left: 8px; }
 </style>

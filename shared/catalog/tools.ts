@@ -8,7 +8,7 @@ export const toolTypes: { id: ToolType; name: string; summary: string }[] = [
   { id: 'model', name: '3D 모델·BIM·CityGML', summary: '설계·도시 모델 포맷 → glTF 변환·최적화.' },
   { id: 'python', name: 'Python 도구', summary: '처리 로직을 직접 짜는 스크립트용 라이브러리.' },
   { id: 'db', name: 'DB 기반', summary: 'DB 적재 → SQL 가공 → 웹 포맷 출력.' },
-  { id: 'server', name: '서버·서빙', summary: '변환 데이터를 OGC API·타일로 실시간 제공하는 서버. 이 사이트는 정적 파일 — 설명만.' },
+  { id: 'server', name: '서버·서빙', summary: '요청마다 지도 이미지·타일·피처를 만들어 주는 서버. GeoServer·martin은 서비스 레시피로 실행, 나머지는 설명만.' },
 ]
 
 export const tools: Tool[] = [
@@ -250,7 +250,7 @@ export const tools: Tool[] = [
     io: '파일 → 파일',
     example: 'python fix_refine.py tileset.json',
     url: 'https://www.python.org',
-  },
+  },
   {
     id: 'psycopg', name: 'psycopg', type: 'python', lang: 'Python', license: 'LGPL-3.0', version: '3.3.6', status: 'active',
     image: 'local:tools',
@@ -310,8 +310,25 @@ export const tools: Tool[] = [
 
   // 서버·서빙 (설명만)
   { id: 'pygeoapi', name: 'pygeoapi', type: 'server', lang: 'Python', license: 'MIT', version: '0.24.0', status: 'active', summary: 'OGC API(Features, Tiles 등) 제공 Python 서버.', description: '설정 파일에 데이터 경로만 적으면 /collections/{id}/items?bbox=… 같은 표준 API 제공. 이 사이트의 정적 OGC API 흉내 → 실제 서버 전환용.', io: 'GeoJSON, GPKG, PostGIS → OGC API Features', example: 'pygeoapi serve', url: 'https://pygeoapi.io', serves: ['geojson'] },
-  { id: 'geoserver', name: 'GeoServer', type: 'server', lang: 'Java', license: 'GPL-2.0', version: '3.0.1', status: 'active', summary: 'WMS·WFS부터 OGC API까지 제공하는 대표 지도 서버.', description: '국내 공공기관 최다 사용 지도 서버. OGC API Features는 2.27부터 정식 확장.', io: 'SHP, PostGIS, GeoTIFF → WMS, WFS, WMTS, OGC API', example: 'docker run -e STABLE_EXTENSIONS=ogcapi-features docker.osgeo.org/geoserver:3.0.1', url: 'https://geoserver.org', serves: ['geojson', 'mvt', 'xyz-raster'] },
-  { id: 'martin', name: 'martin', type: 'server', lang: 'Rust', license: 'MIT / Apache-2.0', version: '1.16.1', status: 'active', summary: 'PostGIS·PMTiles·MBTiles → 벡터타일 고속 제공 서버.', description: 'MapLibre 프로젝트의 타일 서버. PostGIS 테이블 → MVT 직접 출력.', io: 'PostGIS, PMTiles, MBTiles, COG → MVT, 래스터 타일', example: 'martin postgres://user@db/gis', url: 'https://martin.maplibre.org', serves: ['mvt', 'pmtiles'] },
+  // 서버 도구 image는 compose.yaml과 같게. endpoint의 포트도 compose.yaml과 같게 (사이트는 /svc/<id>/** → endpoint)
+  // GeoServer는 작업공간 geo 아래(OWS·GeoWebCache)만 연다. 관리 화면(/web)·REST는 사이트로 노출하지 않는다
+  { id: 'geoserver', name: 'GeoServer', type: 'server', lang: 'Java', license: 'GPL-2.0', version: '3.0.2', status: 'active', image: 'docker.osgeo.org/geoserver:3.0.2', endpoint: 'http://127.0.0.1:8600/geoserver/geo', summary: 'WMS·WFS·WMTS를 제공하는 대표 지도 서버. 벡터타일·OGC API는 확장 설치.', description: '국내 공공기관 최다 사용 지도 서버. 작업공간 → 저장소(PostGIS 등) → 레이어 순으로 등록, 스타일은 SLD. 타일 캐시 GeoWebCache 내장(WMTS). 벡터타일(MVT) 출력·OGC API Features는 확장 모듈.', io: 'SHP, PostGIS, GeoTIFF → WMS, WFS, WMTS (확장: MVT, OGC API)', example: 'docker run -p 8080:8080 docker.osgeo.org/geoserver:3.0.2', url: 'https://geoserver.org', serves: ['wms', 'xyz-raster', 'geojson'],
+    checked: [
+      { what: 'PostGIS 표 → WMS·WMTS 그림', level: 'direct', note: '벡터 레시피 5종. WMTS = 발행과 함께 생기는 GeoWebCache 타일' },
+      { what: 'PostGIS 표 → WFS GeoJSON', level: 'direct', note: 'srsName으로 요청 좌표계 변환. numDecimals 7 지정(기본 4자리)' },
+      { what: 'GeoTIFF → WMS·WMTS 그림', level: 'converted', note: '래스터·DEM 레시피. COG로 바꾼 뒤 GeoTIFF 저장소로 발행, SLD로 색' },
+      { what: 'MVT 벡터타일 출력', level: 'no', note: '이 이미지에 vectortiles 확장 없음 — WMS·WMTS 출력 형식 목록에 없음' },
+      { what: 'OGC API Features', level: 'no', note: '확장 미설치 — /ogc/features/v1 응답 404' },
+    ] },
+  { id: 'martin', name: 'martin', type: 'server', lang: 'Rust', license: 'MIT / Apache-2.0', version: '1.16.1', status: 'active', image: 'ghcr.io/maplibre/martin:1.16.1', endpoint: 'http://127.0.0.1:3001', restart: true, summary: 'PostGIS·PMTiles·GeoJSON → 벡터타일 고속 제공 서버.', description: 'MapLibre 프로젝트의 타일 서버. PostGIS 테이블 자동 발행(테이블 이름 = 소스 id), 요청마다 ST_AsMVT 실행. 테이블은 시작할 때만 탐색 → 새 테이블은 재시작 필요. 공식 문서의 소스 목록(COG 등)은 버전·빌드마다 다름 → 아래 확인 표.', io: 'PostGIS, PMTiles, MBTiles, GeoJSON → MVT', example: 'martin postgres://user@db/gis', url: 'https://martin.maplibre.org', serves: ['mvt'],
+    checked: [
+      { what: 'PostGIS 표 → MVT', level: 'direct', note: '벡터 레시피 5종. public 스키마 자동 발행, 요청마다 ST_AsMVT' },
+      { what: 'PMTiles 파일 → 타일', level: 'direct', note: '설정 pmtiles.sources. tippecanoe 결과 trdar.pmtiles로 확인' },
+      { what: 'GeoJSON 파일 → MVT', level: 'direct', note: '설정 geojson.sources. 버스정류장 GeoJSON 12,956점 → 타일 200 응답' },
+      { what: 'MBTiles 파일 → 타일', level: 'untested', note: 'MBTiles 결과물 없음' },
+      { what: 'COG → 래스터 타일', level: 'no', note: '설정 키 cog 미인식(unrecognized configuration key) — 이 이미지 빌드에 없음. 래스터는 GeoServer' },
+      { what: 'GeoJSON 피처 응답', level: 'no', note: '출력은 타일뿐 → 피처 조회는 WFS·OGC API 서버' },
+    ] },
   { id: 'pg-tileserv', name: 'pg_tileserv / pg_featureserv', type: 'server', lang: 'Go', license: 'Apache-2.0', version: '1.0.11 / 1.3.1', status: 'stale', summary: 'PostGIS 전용 경량 타일·피처 서버.', description: 'Crunchy Data의 소형 서버. 최근 업데이트 드문 편.', io: 'PostGIS → MVT, OGC API Features', example: 'pg_tileserv', url: 'https://github.com/CrunchyData/pg_tileserv', serves: ['mvt', 'geojson'] },
   { id: 'titiler', name: 'TiTiler', type: 'server', lang: 'Python', license: 'MIT', version: '2.4.0', status: 'active', summary: 'COG → XYZ 타일 요청 즉시 분할 서버.', description: '타일 사전 생성 불필요, COG 하나로 충분. 높이 데이터 → Terrain-RGB 즉시 인코딩 지원.', io: 'COG → XYZ 타일, Terrain-RGB', example: 'GET /cog/tiles/WebMercatorQuad/{z}/{x}/{y}?url=dem.tif', url: 'https://developmentseed.org/titiler', serves: ['cog', 'xyz-raster', 'terrain-rgb'] },
   { id: 'ctod', name: 'CTOD', type: 'server', lang: 'Python', license: 'MIT', version: '1.0.1', status: 'stale', summary: 'COG → quantized-mesh 지형 요청 즉시 생성 서버.', description: '지형 타일 사전 생성 불필요. 2024년 이후 업데이트 중단.', io: 'COG DEM → quantized-mesh', example: 'docker run ghcr.io/sogelink-research/ctod', url: 'https://github.com/sogelink-research/ctod', serves: ['quantized-mesh'] },

@@ -2,7 +2,7 @@ export type ViewerId = 'ol' | 'maplibre' | 'deck' | 'cesium'
 
 export type OutputKind =
   | 'geojson' | 'mvt' | 'pmtiles' | 'image' | 'cog' | 'xyz-raster'
-  | 'terrain-rgb' | 'quantized-mesh' | '3dtiles' | 'glb'
+  | 'terrain-rgb' | 'quantized-mesh' | '3dtiles' | 'glb' | 'wms'
 
 export type ToolType = 'basic' | 'engine' | 'tiling' | '3dtiles' | 'model' | 'python' | 'db' | 'server'
 
@@ -21,8 +21,12 @@ export interface Tool {
   license: string
   version: string
   status: 'active' | 'stale' | 'dead'
-  /** 실행하는 도구만 가짐. 'local:tools' = pipeline/Dockerfile 로컬 빌드 */
+  /** 실행하는 도구만 가짐. 'local:tools' = pipeline/Dockerfile 로컬 빌드. 서버 도구는 compose.yaml의 이미지 (단계는 curl 이미지에서 서버로 요청) */
   image?: string
+  /** 서버 도구: 사이트에 여는 로컬 주소. 사이트는 /svc/<id>/** 를 여기로 프록시하고, pipeline은 결과 확인 요청을 보낸다 */
+  endpoint?: string
+  /** 서버 도구: 시작할 때만 테이블을 찾는 서버. 이 도구의 단계 전에 pipeline이 다시 띄운다 */
+  restart?: true
   /** 이미지 기본 셸 앞에 붙는 숨은 준비 코드 (예: 래퍼 함수 정의). 화면에는 Step.run만 보인다 */
   prelude?: string
   summary: string
@@ -31,7 +35,15 @@ export interface Tool {
   example: string
   url: string
   serves?: OutputKind[]
+  /** 서버 도구: 이 사이트의 이미지(image)로 직접 돌려 본 입력·출력별 지원. 공식 문서 목록과 다를 수 있다(빌드 기능·확장 설치) */
+  checked?: { what: string; level: Support; note: string }[]
 }
+
+/**
+ * 처리 수준. direct = 원본과 같은 형식을 그대로 읽음, converted = 다른 형식으로 바꾼 뒤 처리,
+ * partial = 처리하지만 빠지는 기능 있음, untested = 성공한 실행 기록 없음, no = 미지원
+ */
+export type Support = 'direct' | 'converted' | 'partial' | 'untested' | 'no'
 
 export interface Source {
   id: string
@@ -58,15 +70,15 @@ export interface Step {
 export interface Output {
   id: string
   kind: OutputKind
-  /** 레시피 출력 폴더 기준 경로. 타일은 {z}/{x}/{y} 템플릿 */
+  /** 레시피 출력 폴더 기준 경로. 타일은 {z}/{x}/{y} 템플릿. /svc/<서버 id>/로 시작하면 서버 주소 (서비스 레시피) */
   path: string
   label: string
   why: string
   minzoom?: number
   maxzoom?: number
-  /** MVT source-layer 이름 */
+  /** MVT source-layer 이름, WMS LAYERS 이름 */
   layer?: string
-  /** image: [west, south, east, north] (EPSG:4326) */
+  /** image: [west, south, east, north] (EPSG:4326). 타일·WMS에 있으면 이 범위 밖은 요청하지 않는다 */
   bounds?: [number, number, number, number]
   /** glb: 모델을 놓을 위치 [경도, 위도, 높이(m)] */
   anchor?: [number, number, number]
@@ -141,8 +153,11 @@ export interface Report {
   recipe: string
   ranAt: string
   totalMs: number
+  /** 측정 환경. cores·memGB는 Docker가 쓰는 자원(Docker Desktop은 VM 한도) */
+  env?: { cpu: string; cores: number; memGB: number; os: string; docker: string }
   steps: { stage: 'preprocess' | 'convert'; title: string; run: string; ms: number; code: number; log: string }[]
-  outputs: { id: string; bytes: number; files: number; features?: number }[]
+  /** 서버 출력(/svc/)은 확인 요청 하나의 응답 크기와 시간(ms). cachedMs = 같은 요청을 바로 다시 보낸 시간(서버 캐시 적중) */
+  outputs: { id: string; bytes: number; files: number; features?: number; ms?: number; cachedMs?: number }[]
 }
 
 /** 수집 기록 (public/data/<cat>/<fmt>/collect.json) */
@@ -159,7 +174,7 @@ export interface StatusEntry {
   format: string
   /** 받아 둔 원본 (pipeline/raw) */
   raw: { files: number; bytes: number } | null
-  /** 원본을 사이트에서 내려받을 수 있는지 (재배포 가능 + 20MB 미만) */
+  /** 원본을 사이트에서 내려받을 수 있는지 (재배포 가능 + 50MB 미만, pipeline.ts PUBLISH_LIMIT) */
   published: boolean
   recipes: { id: string; state: 'done' | 'failed' | 'none'; ranAt?: string; totalMs?: number; bytes?: number; failedStep?: string }[]
 }

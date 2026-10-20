@@ -1,9 +1,44 @@
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { vectorRecipe, vectorUpload } from '../vector-2d/_vector.ts'
 
 const RAW = '/raw/molit_bus_stops.csv'
 // 위도·경도 열이 텍스트라 빈 칸·뒤바뀐 값이 섞여 있다. 한국 범위(위도 33~39, 경도 124~132) 밖은 버린다
 const IN_KOREA = 'CAST(위도 AS REAL) BETWEEN 33 AND 39 AND CAST(경도 AS REAL) BETWEEN 124 AND 132'
+
+// 파일 레시피(GDAL)와 서버 레시피(GeoServer·martin)가 같이 쓰는 전처리
+const preprocess: Step[] = [
+  {
+    title: 'UTF-8 변환',
+    why: '원본 파일 이름 표기 EUCKR(= CP949). GDAL CSV 드라이버는 UTF-8 기준 → 그대로 읽으면 한글 열 이름·값 깨짐. head: 머리글·첫 행 확인.',
+    tool: 'gdal',
+    run: `iconv -f CP949 -t UTF-8 ${RAW} > /work/stops.csv && head -3 /work/stops.csv`,
+  },
+  {
+    title: '무결성 확인',
+    why: 'X·Y_POSSIBLE_NAMES: 경도·위도 열을 점 좌표로 읽기(GDAL CSV 드라이버). 전국 227,065행. 범위(Extent) x 최솟값 33·y 최댓값 127 → 위도·경도 뒤바뀐 행 존재. Layer SRS 없음: CSV에는 좌표계 정보 없음.',
+    tool: 'gdal',
+    run: 'ogrinfo -so -al -oo X_POSSIBLE_NAMES=경도 -oo Y_POSSIBLE_NAMES=위도 /work/stops.csv',
+  },
+  {
+    title: '무결성 확인 (좌표 이상 행)',
+    why: '좌표가 숫자 아닌 텍스트 → 빈 칸·한국 범위 밖 행을 도시별로 집계. 대전 5·제주 1: 위도·경도 뒤바뀜, 세종 6: 빈 칸 5 + 위도·경도 같은 값 1.',
+    tool: 'gdal',
+    run: `ogrinfo -q /work/stops.csv -dialect SQLite -sql "SELECT 도시명, count(*) AS rows FROM stops WHERE 위도 = '' OR 경도 = '' OR NOT (${IN_KOREA}) GROUP BY 도시명"`,
+  },
+  {
+    title: '무결성 확인 (중복 등록)',
+    why: '관리도시명: 정류장을 등록한 버스정보시스템(BIS). 서울 정류장을 경기BIS도 따로 등록 → 경기BIS 행 중 서울BIS와 같은 단축번호(ARS) 수 집계. 같은 정류장이 두 점으로 겹침.',
+    tool: 'gdal',
+    run: `ogrinfo -q /work/stops.csv -dialect SQLite -sql "SELECT count(*) AS 경기BIS, sum(모바일단축번호 IN (SELECT 모바일단축번호 FROM stops WHERE 관리도시명 = '서울BIS')) AS 같은_단축번호 FROM stops WHERE 관리도시명 = '경기BIS' AND 도시명 = '서울특별시'"`,
+  },
+  {
+    title: '서울BIS 정류장 점 만들기',
+    why: 'MakePoint(경도, 위도, 4326): 텍스트 좌표 → 위경도 점. WHERE 범위: 이상 좌표 행 제외. 관리도시명 서울BIS: 중복 없이 한쪽만(서울 버스가 서는 경기·인천 일부 포함, 경기BIS에만 있는 광역 정류장은 빠짐). AS: 한글 열 → 영문. -nlt POINT: 도형 종류 고정.',
+    tool: 'gdal',
+    run: `ogr2ogr -f GPKG /work/stops.gpkg /work/stops.csv -nln stops -nlt POINT -dialect SQLite -sql "SELECT MakePoint(CAST(경도 AS REAL), CAST(위도 AS REAL), 4326) AS geom, 정류장번호 AS id, 정류장명 AS name, 모바일단축번호 AS ars FROM stops WHERE 관리도시명 = '서울BIS' AND ${IN_KOREA}"`,
+  },
+]
 
 export default {
   id: 'csv',
@@ -43,39 +78,10 @@ export default {
       layer: 'stops',
       minzoom: 11,
       maxzoom: 14,
-      preprocess: [
-        {
-          title: 'UTF-8 변환',
-          why: '원본 파일 이름 표기 EUCKR(= CP949). GDAL CSV 드라이버는 UTF-8 기준 → 그대로 읽으면 한글 열 이름·값 깨짐. head: 머리글·첫 행 확인.',
-          tool: 'gdal',
-          run: `iconv -f CP949 -t UTF-8 ${RAW} > /work/stops.csv && head -3 /work/stops.csv`,
-        },
-        {
-          title: '무결성 확인',
-          why: 'X·Y_POSSIBLE_NAMES: 경도·위도 열을 점 좌표로 읽기(GDAL CSV 드라이버). 전국 227,065행. 범위(Extent) x 최솟값 33·y 최댓값 127 → 위도·경도 뒤바뀐 행 존재. Layer SRS 없음: CSV에는 좌표계 정보 없음.',
-          tool: 'gdal',
-          run: 'ogrinfo -so -al -oo X_POSSIBLE_NAMES=경도 -oo Y_POSSIBLE_NAMES=위도 /work/stops.csv',
-        },
-        {
-          title: '무결성 확인 (좌표 이상 행)',
-          why: '좌표가 숫자 아닌 텍스트 → 빈 칸·한국 범위 밖 행을 도시별로 집계. 대전 5·제주 1: 위도·경도 뒤바뀜, 세종 6: 빈 칸 5 + 위도·경도 같은 값 1.',
-          tool: 'gdal',
-          run: `ogrinfo -q /work/stops.csv -dialect SQLite -sql "SELECT 도시명, count(*) AS rows FROM stops WHERE 위도 = '' OR 경도 = '' OR NOT (${IN_KOREA}) GROUP BY 도시명"`,
-        },
-        {
-          title: '무결성 확인 (중복 등록)',
-          why: '관리도시명: 정류장을 등록한 버스정보시스템(BIS). 서울 정류장을 경기BIS도 따로 등록 → 경기BIS 행 중 서울BIS와 같은 단축번호(ARS) 수 집계. 같은 정류장이 두 점으로 겹침.',
-          tool: 'gdal',
-          run: `ogrinfo -q /work/stops.csv -dialect SQLite -sql "SELECT count(*) AS 경기BIS, sum(모바일단축번호 IN (SELECT 모바일단축번호 FROM stops WHERE 관리도시명 = '서울BIS')) AS 같은_단축번호 FROM stops WHERE 관리도시명 = '경기BIS' AND 도시명 = '서울특별시'"`,
-        },
-        {
-          title: '서울BIS 정류장 점 만들기',
-          why: 'MakePoint(경도, 위도, 4326): 텍스트 좌표 → 위경도 점. WHERE 범위: 이상 좌표 행 제외. 관리도시명 서울BIS: 중복 없이 한쪽만(서울 버스가 서는 경기·인천 일부 포함, 경기BIS에만 있는 광역 정류장은 빠짐). AS: 한글 열 → 영문. -nlt POINT: 도형 종류 고정.',
-          tool: 'gdal',
-          run: `ogr2ogr -f GPKG /work/stops.gpkg /work/stops.csv -nln stops -nlt POINT -dialect SQLite -sql "SELECT MakePoint(CAST(경도 AS REAL), CAST(위도 AS REAL), 4326) AS geom, 정류장번호 AS id, 정류장명 AS name, 모바일단축번호 AS ars FROM stops WHERE 관리도시명 = '서울BIS' AND ${IN_KOREA}"`,
-        },
-      ],
+      key: 'id',
+      preprocess,
     }),
+    ...serverRecipes({ category: 'attribute', layer: 'stops', preprocess, work: '/work/stops.gpkg', geom: 'point', bounds: [126.43, 37.18, 127.19, 37.83] }),
   ],
   alternatives: [
     { tool: 'geopandas', cmd: "df = pd.read_csv('molit_bus_stops.csv', encoding='cp949'); gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['경도'], df['위도']), crs=4326)", note: 'pandas 표 → 점 GeoDataFrame.' },

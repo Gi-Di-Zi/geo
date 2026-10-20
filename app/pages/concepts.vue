@@ -49,6 +49,22 @@ useHead({ title: '개념 | 공간 데이터 웹 처리' })
         </div>
       </section>
 
+      <section id="fidelity" class="concept">
+        <h2>{{ label('fidelity') }}</h2>
+        <div class="prose">
+          <p>웹 결과물 = 화면에 빨리 그리기 위한 사본. 원본과 달라지는 지점:</p>
+          <ul>
+            <li>MVT 좌표: 타일 한 장을 4096 × 4096 정수 격자로 반올림 → 서울 위도에서 줌 11은 약 3.8 m, 줌 16은 약 0.12 m 단위.</li>
+            <li>타일 경계: 도형이 타일마다 잘려 한 피처가 여러 조각. 면적·길이 계산은 조각이 아닌 원본으로.</li>
+            <li>작은 도형·밀집 피처: PostGIS <code>ST_AsMVTGeom</code>은 타일 좌표로 바꾸는 중 도형이 낮은 차원으로 줄거나 사라질 수 있음. tippecanoe <code>--drop-densest-as-needed</code>는 타일 크기 한도를 넘으면 밀집 피처부터 제거.</li>
+            <li>GeoJSON 좌표 7자리 ≈ 1 cm. GeoServer WFS 기본 4자리 ≈ 11 m → 이 사이트는 7자리로 지정.</li>
+            <li>WMS·WMTS: 서버가 그린 그림 → 화면에서 속성·좌표 직접 조회 불가.</li>
+          </ul>
+          <p>이 사이트의 구분: 화면 표시 = MVT·PMTiles·WMS·WMTS. 조회·계산 = 전체 속성을 둔 PostGIS 표(서버 레시피, 2D SHP는 원본 좌표계 EPSG:5181 그대로), WFS·GeoJSON(전체 속성, 좌표 7자리).</p>
+          <p>확인 방법: 벡터타일 레시피마다 "무결성 확인 (타일 전후 피처 수)" 단계 — 줌별로 남은 피처 수를 변환 전과 비교. 서버 출력은 확인 요청의 응답 크기·피처 수·시간 기록. 래스터·지형·점군은 아직 입력·형식 검사만, 변환 전후 값 비교 없음.</p>
+        </div>
+      </section>
+
       <section id="range" class="concept">
         <h2>{{ label('range') }}</h2>
         <div class="split">

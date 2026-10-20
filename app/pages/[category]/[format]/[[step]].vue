@@ -19,6 +19,8 @@ const recipeId = computed({
   set: tool => router.replace({ query: tool === spec.recipes[0]!.id ? {} : { tool } }),
 })
 const recipe = computed(() => spec.recipes.find(r => r.id === recipeId.value) ?? spec.recipes[0]!)
+// 레시피 선택 막대: 파일로 굽는 레시피와 서버에 발행하는 레시피를 나눠 보여 준다
+const groups = ([['파일', spec.recipes.filter(r => !isService(r))], ['서버', spec.recipes.filter(r => isService(r))]] as const).filter(([, rs]) => rs.length)
 
 // 실측 기록은 public/ 정적 파일이라 브라우저에서 받는다 (SSR 내부 요청은 public/을 못 본다)
 const dir = `${useRuntimeConfig().app.baseURL}data/${spec.category}/${spec.id}`
@@ -60,7 +62,10 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
   <div class="format-page" :class="{ 'map-step': step === 'view' }" :style="{ '--c': cat.color }">
     <FlowSteps :spec="spec.closed ? undefined : spec" :step>
       <div v-if="spec.recipes.length > 1 || mine" class="seg" role="group" aria-label="변환 도구 선택">
-        <button v-for="r in spec.recipes" :key="r.id" type="button" :aria-pressed="!mine && r.id === recipe.id" @click="recipeId = r.id">{{ r.title }}</button>
+        <template v-for="[name, rs] in groups" :key="name">
+          <span v-if="groups.length > 1" class="sep">{{ name }}</span>
+          <button v-for="r in rs" :key="r.id" type="button" :aria-pressed="!mine && r.id === recipe.id" @click="recipeId = r.id">{{ r.title }}</button>
+        </template>
         <button v-if="mine" type="button" aria-pressed="true">내 파일</button>
       </div>
       <NuxtLink v-if="step === 'view'" to="/" class="btn back">← 다른 데이터 보기</NuxtLink>

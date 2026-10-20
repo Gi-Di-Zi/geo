@@ -1,5 +1,6 @@
 // DEM은 원본 포맷(GeoTIFF, ERDAS IMG …)만 다르고 Terrain-RGB·quantized-mesh로 바꾸는 과정은 같다
 import type { FormatSpec, Step } from '../../types.ts'
+import { geoserverRaster } from '../_server.ts'
 
 /** 타일로 구울 범위: 줌 10 타일 경계에 맞춘 EPSG:3857 범위와 픽셀 크기, 데이터 범위(위경도), 처음 시점 */
 interface DemArea {
@@ -30,6 +31,12 @@ interface DemFormat {
 }
 
 export function demSpec(f: DemFormat): FormatSpec {
+  const inspect: Step = {
+    title: '무결성 확인',
+    why: '-stats: 최저·최고·평균 높이(m). 격자 크기·좌표계 확인. GDAL_PAM_ENABLED NO: 원본 옆 .aux.xml 미생성.',
+    tool: 'gdal',
+    run: `gdalinfo -stats --config GDAL_PAM_ENABLED NO ${f.raw} | grep -E 'Size is|GEOGCRS|Pixel Size|STATISTICS_(MINIMUM|MAXIMUM|MEAN)'`,
+  }
   return {
   id: f.id,
   category: 'terrain',
@@ -47,12 +54,7 @@ export function demSpec(f: DemFormat): FormatSpec {
       title: 'GDAL + mago 3DTerrainer',
       preprocess: [
         ...(f.toTiff ? [f.toTiff] : []),
-        {
-          title: '무결성 확인',
-          why: '-stats: 최저·최고·평균 높이(m). 격자 크기·좌표계 확인. GDAL_PAM_ENABLED NO: 원본 옆 .aux.xml 미생성.',
-          tool: 'gdal',
-          run: `gdalinfo -stats --config GDAL_PAM_ENABLED NO ${f.raw} | grep -E 'Size is|GEOGCRS|Pixel Size|STATISTICS_(MINIMUM|MAXIMUM|MEAN)'`,
-        },
+        inspect,
         {
           title: '웹 타일 격자 재투영',
           why: '-t_srs EPSG:3857 -te -ts: 웹 타일 경계에 정확히 맞춤. -ot Float32: 정수(Int16) 높이 → 실수, 다음 단계 인코딩 계산의 16비트 넘침 방지. -dstnodata 0: 빈칸 → 높이 0(해수면), -10000m 절벽 방지.',
@@ -96,6 +98,29 @@ export function demSpec(f: DemFormat): FormatSpec {
         cesium: { output: 'mesh' },
       },
     },
+    geoserverRaster({
+      name: `dem_${f.id}`,
+      preprocess: [inspect],
+      file: `/serve/terrain/${f.id}/dem.tif`,
+      prepare: {
+        title: '서버용 COG 만들기 (높이 값 유지)',
+        why: '-of COG: 내부 블록 + 내부 축소본 → 서버가 화면 범위·축척에 맞는 블록만 읽음. 높이 값(m)·좌표계 그대로 → 색·음영은 서버 스타일. DEFLATE + PREDICTOR=2: 정수 높이 무손실 압축.',
+        tool: 'gdal',
+        run: `mkdir -p /serve/terrain/${f.id} && gdal_translate -of COG -co COMPRESS=DEFLATE -co PREDICTOR=2 ${f.raw} /serve/terrain/${f.id}/dem.tif`,
+      },
+      // 높이 단계는 북한산(최고 836m)에 맞춘 값
+      symbolizer: [
+        '      <ColorMap>',
+        ...([[0, '4E7A3A'], [200, 'A8B866'], [450, 'C9A86A'], [700, '8A5A2B'], [850, 'F2EEE8']] as const).map(([q, c]) => `        <ColorMapEntry color="#${c}" quantity="${q}"/>`),
+        '      </ColorMap>',
+        '      <ShadedRelief><BrightnessOnly>false</BrightnessOnly><ReliefFactor>5</ReliefFactor></ShadedRelief>',
+      ].join('\n'),
+      styleWhy: 'ColorMap: 높이 구간 사이 색 보간(낮은 곳 초록 → 높은 곳 갈색·흰색). ShadedRelief: 경사·방향으로 음영 → 산세 표현. BrightnessOnly false: 높이 색 위에 음영(true면 회색 음영만). NoData는 서버가 투명 처리 → ColorMap에 넣으면 오류.',
+      bounds: f.area.bounds,
+      maxzoom: 15,
+      // 서버 결과는 평면 그림 → 기울이지 않는다
+      view: { center: f.area.view.center, zoom: f.area.view.zoom },
+    }),
   ],
   alternatives: [
     { tool: 'rio-rgbify', cmd: 'rio rgbify -b -10000 -i 0.1 seoul_dem.tif rgb.tif', note: 'Terrain-RGB 인코딩 한 줄. 2022년 이후 업데이트 없음.' },

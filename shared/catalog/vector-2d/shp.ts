@@ -1,5 +1,6 @@
 import type { FormatSpec, Step } from '../../types.ts'
-import { shpEncoding, vectorUpload } from './_vector.ts'
+import { serverRecipes } from '../_server.ts'
+import { shpEncoding, tileCount, vectorUpload } from './_vector.ts'
 
 // 레시피 GDAL·tippecanoe가 같이 쓰는 전처리
 const gdalPreprocess: Step[] = [
@@ -22,6 +23,18 @@ const gdalPreprocess: Step[] = [
       run: "ogr2ogr -f GPKG /work/trdar.gpkg /work/clip.gpkg -nln trdar -t_srs EPSG:4326 -makevalid -sql 'SELECT TRDAR_CD_N AS name, TRDAR_SE_1 AS kind, SIGNGU_CD_ AS gu, ADSTRD_CD_ AS dong, RELM_AR AS area_m2, geom FROM clip'",
     },
   ]
+
+// 타일 전후 피처 수 (상권 이름은 시청 일대 30개에서 고유)
+const TILE_COUNT = { layer: 'trdar', key: 'name', minzoom: 11, maxzoom: 16 }
+
+// 서버 레시피(GeoServer·martin): 추출만 하고 원본 좌표계(EPSG:5181) 그대로 상시 PostGIS에 적재 → 요청 좌표계로는 서버가 변환
+const BOUNDS: [number, number, number, number] = [126.964, 37.545, 127.016, 37.578]
+const serverLoad: Step = {
+  title: 'PostGIS 적재 (원본 좌표계 유지)',
+  why: '좌표계 변환 없이 EPSG:5181 그대로 → 서버가 요청마다 변환(국내 운영 DB의 흔한 형태). -sql: 10자로 잘린 필드 이름 → name·kind·gu·dong·area_m2. -nlt PROMOTE_TO_MULTI: Polygon·MultiPolygon 통일. -makevalid: 꼬인 도형 수정. -overwrite: 다시 실행 시 표 교체.',
+  tool: 'gdal',
+  run: "ogr2ogr -f PostgreSQL PG:dbname=gis /work/clip.gpkg -nln trdar -overwrite -nlt PROMOTE_TO_MULTI -makevalid -lco GEOMETRY_NAME=geom -sql 'SELECT TRDAR_CD_N AS name, TRDAR_SE_1 AS kind, SIGNGU_CD_ AS gu, ADSTRD_CD_ AS dong, RELM_AR AS area_m2, geom FROM clip'",
+}
 
 export default {
   id: 'shp',
@@ -76,6 +89,7 @@ export default {
           tool: 'gdal',
           run: 'ogr2ogr -f MVT /out/tiles /work/trdar.gpkg -dsco MINZOOM=11 -dsco MAXZOOM=16 -dsco COMPRESS=NO',
         },
+        tileCount({ ...TILE_COUNT, work: '/work/trdar.gpkg', tiles: '/out/tiles/$z' }),
       ],
       outputs: [
         { id: 'features', kind: 'geojson', path: 'ogc/collections/trdar/items.json', label: 'GeoJSON', why: '상권 전체 한 파일. 소규모 데이터에 가장 단순.' },
@@ -105,6 +119,7 @@ export default {
           tool: 'tippecanoe',
           run: 'tippecanoe -o /out/trdar.pmtiles -l trdar -Z11 -z16 --drop-densest-as-needed --force /work/trdar.geojson',
         },
+        tileCount({ ...TILE_COUNT, work: '/work/trdar.gpkg', tiles: '-oo ZOOM_LEVEL=$z /out/trdar.pmtiles' }),
       ],
       outputs: [
         { id: 'pmtiles', kind: 'pmtiles', path: 'trdar.pmtiles', minzoom: 11, maxzoom: 16, layer: 'trdar', label: 'PMTiles', why: '타일 전체 단일 파일. 정적 호스팅에 적합.' },
@@ -140,6 +155,7 @@ export default {
           tool: 'psycopg',
           run: 'python /scripts/pg_mvt.py trdar trdar /out/tiles 11 16 126.96 37.54 127.02 37.58',
         },
+        tileCount({ ...TILE_COUNT, work: 'PG:dbname=gis', tiles: '/out/tiles/$z' }),
         {
           title: 'GeoJSON 생성 (ST_AsGeoJSON)',
           why: 'ST_Transform: EPSG:3857 → 위경도. ST_AsGeoJSON: 행 → Feature(좌표 7자리). json_agg: FeatureCollection 하나로 집계.',
@@ -158,6 +174,7 @@ export default {
         cesium: { output: 'features', note: 'MVT 미지원 → GeoJSON 사용.' },
       },
     },
+    ...serverRecipes({ category: 'vector-2d', layer: 'trdar', preprocess: gdalPreprocess.slice(0, 2), load: serverLoad, geom: 'polygon', bounds: BOUNDS }),
   ],
   alternatives: [
     { tool: 'geopandas', cmd: "gpd.read_file('seoul_trdar.zip', encoding='cp949').to_crs(4326).to_file('trdar.geojson')", note: 'Python 스크립트로 같은 처리.' },

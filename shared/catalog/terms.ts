@@ -5,6 +5,7 @@ export const terms: Term[] = [
   { id: 'crs', label: '좌표계 (EPSG)', match: 'EPSG(?::\\d+)?|좌표계', short: '지구 위 위치를 숫자로 적는 약속. EPSG:4326: 위경도, EPSG:3857: 웹 지도 미터 좌표, EPSG:5186: 국내 중부원점.' },
   { id: 'tiles', label: '타일 피라미드 (XYZ)', match: 'XYZ 타일|z/x/y|\\{z\\}/\\{x\\}/\\{y\\}', short: '줌 단계별로 256px 조각으로 미리 잘라 둔 지도. 줌 1단계마다 조각 수 4배.' },
   { id: 'vector-tiles', label: '벡터타일 (MVT)', match: 'MVT|벡터타일', short: '점·선·면을 타일 한 장 크기로 잘라 담은 이진 파일. 그림이 아닌 도형 → 브라우저에서 색·두께 변경 가능.' },
+  { id: 'fidelity', label: '표시용 결과와 원본', match: '사라진 피처', short: '웹 결과물은 화면용 사본. 타일 좌표 반올림, 경계 잘림, 작은 도형 제거로 원본과 달라질 수 있음 → 조회·계산은 원본 쪽 데이터로.' },
   { id: 'range', label: 'Range 요청', match: 'Range 요청', short: '파일 일부만("100~200바이트") 받는 HTTP 요청. COG·PMTiles는 이것으로 서버 없이 필요한 조각만 읽기.' },
   { id: 'cog', label: 'COG', match: 'COG', short: '웹 부분 읽기용 블록·축소본을 넣은 GeoTIFF. 확장자는 그대로 .tif.' },
   { id: 'pmtiles', label: 'PMTiles', match: 'PMTiles', short: '타일 수천 장을 파일 하나에 묶은 형식. 앞쪽 목차 + Range 요청으로 필요한 타일만 읽기.' },

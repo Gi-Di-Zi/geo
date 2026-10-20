@@ -1,8 +1,25 @@
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { vectorRecipe, vectorUpload } from './_vector.ts'
 
 const RAW = '/raw/hrdk_test_sites.gpkg'
 const LAYER = '국가기술자격시험장소_GIS'
+
+// 파일 레시피(GDAL)와 서버 레시피(GeoServer·martin)가 같이 쓰는 전처리
+const preprocess: Step[] = [
+  {
+    title: '무결성 확인',
+    why: '레이어·피처 수·범위·좌표계(EPSG:4326)·필드. 필드명이 한글·공백·괄호 포함(도로명 주소, 경도(X)).',
+    tool: 'gdal',
+    run: `ogrinfo -so -al ${RAW}`,
+  },
+  {
+    title: '속성 정리',
+    why: '-sql: 한글 필드명 → 영문(name·address·uses). 좌표 중복 필드(경도(X)·위도(Y))와 우편번호 제외. 큰따옴표: 공백 포함 필드명.',
+    tool: 'gdal',
+    run: `ogr2ogr -f GPKG /work/sites.gpkg ${RAW} -nln sites -dialect SQLite -sql "SELECT geom, 시험장 AS name, \\"도로명 주소\\" AS address, 기술자격사용횟수 AS uses FROM \\"${LAYER}\\""`,
+  },
+]
 
 export default {
   id: 'gpkg',
@@ -48,21 +65,11 @@ export default {
       layer: 'sites',
       minzoom: 6,
       maxzoom: 14,
-      preprocess: [
-        {
-          title: '무결성 확인',
-          why: '레이어·피처 수·범위·좌표계(EPSG:4326)·필드. 필드명이 한글·공백·괄호 포함(도로명 주소, 경도(X)).',
-          tool: 'gdal',
-          run: `ogrinfo -so -al ${RAW}`,
-        },
-        {
-          title: '속성 정리',
-          why: '-sql: 한글 필드명 → 영문(name·address·uses). 좌표 중복 필드(경도(X)·위도(Y))와 우편번호 제외. 큰따옴표: 공백 포함 필드명.',
-          tool: 'gdal',
-          run: `ogr2ogr -f GPKG /work/sites.gpkg ${RAW} -nln sites -dialect SQLite -sql "SELECT geom, 시험장 AS name, \\"도로명 주소\\" AS address, 기술자격사용횟수 AS uses FROM \\"${LAYER}\\""`,
-        },
-      ],
+      // 같은 시험장 행이 원본에 중복 → 이름·주소·사용 횟수 조합
+      key: 'name || address || uses',
+      preprocess,
     }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'sites', preprocess, work: '/work/sites.gpkg', geom: 'point', bounds: [124.67, 33.24, 129.57, 38.45] }),
   ],
   alternatives: [
     { tool: 'geopandas', cmd: "gpd.read_file('hrdk_test_sites.gpkg')", note: '레이어 하나면 이름 없이 읽기.' },

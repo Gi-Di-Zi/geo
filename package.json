@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare && node scripts/copy-cesium.ts",
     "setup": "node scripts/pipeline.ts all",
     "pipeline": "node scripts/pipeline.ts",
+    "services": "docker compose up -d --wait",
     "check": "node scripts/check.ts"
   },
   "dependencies": {

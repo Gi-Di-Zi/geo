@@ -1,4 +1,5 @@
 import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { shpEncoding } from '../vector-2d/_vector.ts'
 import { buildingRecipes, buildingUpload } from './_buildings.ts'
 
@@ -6,7 +7,7 @@ const ZIP = '/raw/gwacheon_buildings.zip'
 // 배포 zip 안 폴더 이름에 기준일이 들어 있다. 다시 받아 날짜가 바뀌면 여기를 고친다
 const RAW = `/vsizip/${ZIP}/경기도_과천시_새주소건물_20260818/새주소건물/TL_SPBD_BULD.SHP`
 
-// 세 레시피가 같이 쓰는 전처리: 국내 SHP의 좌표계·글자를 풀고 층수로 높이를 채운다
+// 모든 레시피(파일 셋, 서버 둘)가 같이 쓰는 전처리: 국내 SHP의 좌표계·글자를 풀고 층수로 높이를 채운다
 const preprocess: Step[] = [
   {
     title: '무결성 확인',
@@ -56,7 +57,10 @@ export default {
     { source: 'nsdi', dataset: 'GIS건물통합정보 (시도별 SHP)', note: '건물별 지상층수·높이, 국내 대표 건물 데이터. 로그인 다운로드.' },
     { source: 'vworld', dataset: 'GIS건물통합정보 (지상층수·높이)', note: '같은 데이터. 약관상 재배포는 운영기관 확인 필요.' },
   ],
-  recipes: buildingRecipes(preprocess),
+  recipes: [
+    ...buildingRecipes(preprocess),
+    ...serverRecipes({ category: 'vector-25d', layer: 'buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [126.964, 37.402, 127.037, 37.466], height: 'height' }),
+  ],
   alternatives: [
     { tool: 'geopandas', cmd: "gpd.read_file('gwacheon_buildings.zip', encoding='cp949').set_crs(5186).to_crs(4326)", note: 'Python으로 같은 정리.' },
   ],

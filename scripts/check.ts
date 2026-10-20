@@ -31,8 +31,24 @@ const checkViewers = (at: string, r: Recipe) => {
   }
 }
 
+// 서버 도구의 이미지는 compose.yaml이 실제로 띄우는 것과 같아야 한다 (도구 화면에 실행 이미지로 나온다)
+const composeFile = readFileSync(join(root, 'compose.yaml'), 'utf8')
+for (const t of tools) if (t.endpoint && !composeFile.includes(`image: ${t.image}`)) bad(`tools.ts ${t.id}: 이미지 ${t.image}가 compose.yaml과 다름`)
+
+// 서버 레이어(DB 표·GeoServer 레이어·martin 소스)는 서버 하나에 모이므로 확장자끼리 이름이 겹치면 서로 덮어쓴다
+const serverLayers = new Map<string, string>()
+
 for (const f of await loadFormats()) {
   const at = `${f.category}/${f.id}`
+  for (const r of f.closed ? [] : f.recipes) {
+    for (const o of r.outputs) {
+      if (!o.path.startsWith('/svc/') || !o.layer) continue
+      const key = `${o.path.split('/')[2]}:${o.layer}`
+      const other = serverLayers.get(key)
+      if (other && other !== at) bad(`${at}/${r.id}: 서버 레이어 이름 '${o.layer}'이 ${other}와 겹침`)
+      serverLayers.set(key, at)
+    }
+  }
   if (!categories.some(c => c.id === f.category)) bad(`${at}: 없는 유형 '${f.category}'`)
   if (!origins[f.id]) bad(`${at}: origins.ts에 출신(표준/회사) 없음`)
   const src = sources.find(s => s.id === f.collect.source)
@@ -70,7 +86,11 @@ for (const f of await loadFormats()) {
     const steps = [...r.preprocess.map(s => ['preprocess', s] as const), ...r.convert.map(s => ['convert', s] as const)]
     if (report.steps.length !== steps.length || steps.some(([stage, s], i) => report.steps[i]?.run !== s.run || report.steps[i]?.stage !== stage)) bad(`${rat}: 명령이 마지막 실행과 다름 (npm run pipeline -- ${rat})`)
     for (const s of report.steps) if (s.code !== 0) bad(`${rat}: "${s.title}" 종료 코드 ${s.code}`)
-    for (const o of r.outputs) if (!existsSync(join(pub, r.id, o.path.split('{')[0]!))) bad(`${rat}: 출력 없음 ${o.path}`)
+    for (const o of r.outputs) {
+      // 서버 출력은 pipeline이 확인 요청으로 검사했다 (report.outputs). 여기서는 그 서버가 주소를 갖는지만
+      if (o.path.startsWith('/svc/')) { if (!tools.find(t => t.id === o.path.split('/')[2])?.endpoint) bad(`${rat}: 주소(endpoint) 없는 서버 ${o.path}`) }
+      else if (!existsSync(join(pub, r.id, o.path.split('{')[0]!))) bad(`${rat}: 출력 없음 ${o.path}`)
+    }
   }
 
   // 업로드 레시피: 올린 파일($INPUT)만 읽고, 네트워크 없이 돈다
@@ -84,7 +104,8 @@ for (const f of await loadFormats()) {
   if (![...u.preprocess, ...u.convert].some(s => s.run.includes('$INPUT'))) bad(`${uat}: 올린 파일($INPUT) 읽는 단계 없음`)
   for (const s of [...u.preprocess, ...u.convert]) {
     if (/\/raw\/(?!input)/.test(s.run)) bad(`${uat}: 샘플 원본 경로 읽음 (${s.title})`)
-    if (tools.find(t => t.id === s.tool)?.type === 'db') bad(`${uat}: 업로드에 DB 도구 사용 불가 (${s.title})`)
+    const type = tools.find(t => t.id === s.tool)?.type
+    if (type === 'db' || type === 'server') bad(`${uat}: 업로드에 DB·서버 도구 사용 불가 (${s.title})`)
   }
 }
 

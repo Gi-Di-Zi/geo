@@ -30,7 +30,8 @@ function addVector(m: maplibregl.Map, src: object, suffix = ''): string[] {
 function addData(m: maplibregl.Map): string[] {
   const o = props.output
   const url = props.url
-  const range = { minzoom: o.minzoom, maxzoom: o.maxzoom, ...(o.bounds && { bounds: o.bounds }) }
+  // 없는 값은 넘기지 않는다 (maxzoom: undefined가 기본값 22를 덮어쓰면 타일 계산이 멈춘다. 줌 제한 없는 서버 타일)
+  const range = Object.fromEntries(Object.entries({ minzoom: o.minzoom, maxzoom: o.maxzoom, bounds: o.bounds }).filter(([, v]) => v !== undefined))
   switch (o.kind) {
     case 'geojson':
       m.addSource('data', { type: 'geojson', data: url })

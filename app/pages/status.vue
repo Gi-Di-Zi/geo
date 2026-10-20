@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { viewers } from '#shared/viewers'
-import type { FormatSpec, StatusEntry } from '#shared/types'
+import type { FormatSpec, StatusEntry, ViewerId } from '#shared/types'
 
 // 실측 현황은 public/ 정적 파일이라 브라우저에서 받는다
 const { data: status } = useFetch<StatusEntry[]>(`${useRuntimeConfig().app.baseURL}data/status.json`, { server: false, default: () => [] })
 const entryOf = (f: FormatSpec) => status.value.find(s => s.format === `${f.category}/${f.id}`)
 const recipeState = (f: FormatSpec, id: string) => entryOf(f)?.recipes.find(r => r.id === id)
+/** 뷰어마다 레시피 중 가장 좋은 처리 수준 */
+const levelOf = (f: FormatSpec, v: ViewerId) => supportOrder.find(l => f.recipes.some(r => supportOf(f, r, v, recipeState(f, r.id)?.state === 'done') === l))!
 
 const groups = computed(() => categories.map(c => ({ cat: c, list: formatsOf(c.id) })).filter(g => g.list.length))
 // 닫힌 확장자(샘플 없음)는 세지 않는다
@@ -22,7 +24,7 @@ const processLink = (f: FormatSpec, id: string) => ({ path: stepPath(f, 'convert
 const planned = [
   { ext: '.indoorgml', note: '실내 공간 표준(IndoorGML). 재배포 가능한 공개 샘플 탐색 중.' },
 ]
-const candidates = 'KML, CSV, GPX, DXF, ECW, ASC, HGT, E57, PLY, OBJ, FBX, OSM PBF, COPC'
+const candidates = 'KML, GPX, DXF, ECW, ASC, HGT, E57, PLY, OBJ, FBX, OSM PBF, COPC'
 
 useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
 </script>
@@ -42,6 +44,7 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
       </p>
       <p class="prose small muted">
         샘플 기준: 국내 기관이 그 형식 그대로 배포하는 원본. 로그인 없이, 재배포 허용. 없으면 샘플 없음.
+        뷰어 칸: 레시피 중 가장 좋은 처리 수준. 직접 처리(원본 형식 그대로), 변환 후 처리, 일부 기능만, 미검증(성공한 실행 기록 없음), 미지원.
         DEM(수치표고모델)은 확장자가 아닌 데이터 종류. 대표 형식: <NuxtLink to="/terrain/tif">GeoTIFF(.tif)</NuxtLink>, ERDAS IMG(.img, 국내 공개DEM은 로그인 필요 → 샘플 없음).
       </p>
 
@@ -104,8 +107,8 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
             <div class="small">
               <span class="lbl">뷰어</span>
               <ul class="viewers">
-                <li v-for="v in viewers" :key="v.id" :class="f.recipes.some(r => supports(r, v.id)) ? 'ok' : 'no'">
-                  {{ f.recipes.some(r => supports(r, v.id)) ? '✓' : '✗' }} {{ v.name }}
+                <li v-for="v in viewers" :key="v.id">
+                  {{ v.name }} <span :class="`lv-${levelOf(f, v.id)}`">{{ supportLabels[levelOf(f, v.id)] }}</span>
                 </li>
               </ul>
             </div>
@@ -140,7 +143,7 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
 .group { margin-top: 48px; }
 .group h2 { font-size: var(--fs-2); padding-left: 12px; border-left: 4px solid var(--c, var(--ink)); }
 .group h2 a { color: inherit; text-decoration: none; }
-.head-row, .row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 9rem 15rem 9rem 9rem; gap: 20px; }
+.head-row, .row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 9rem 15rem 13rem 9rem; gap: 20px; }
 .head-row { margin-top: 16px; padding: 0 4px 8px; border-bottom: 1px solid var(--rule); }
 .rows { list-style: none; padding: 0; margin: 0; }
 .row { padding: 16px 4px; border-bottom: 1px solid var(--rule); align-items: start; }

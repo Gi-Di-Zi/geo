@@ -52,6 +52,9 @@ async function addData(): Promise<unknown> {
     case 'image':
       viewer.imageryLayers.addImageryProvider(await C.SingleTileImageryProvider.fromUrl(url, { rectangle: rect }))
       return
+    case 'wms':
+      viewer.imageryLayers.addImageryProvider(new C.WebMapServiceImageryProvider({ url, layers: o.layer!, rectangle: rect, parameters: { transparent: true, format: 'image/png' } }))
+      return
     case 'quantized-mesh':
       // 있는 타일은 layer.json의 available로만 판단한다. 일부만 받아 온 타일셋에서 타일 안 metadata(하위 타일 목록)를 읽으면 없는 타일을 찾아 실패한다
       viewer.terrainProvider = await C.CesiumTerrainProvider.fromUrl(url, { requestVertexNormals: true, requestMetadata: false })

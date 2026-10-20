@@ -1,5 +1,6 @@
 import { readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { tools } from './shared/catalog/tools'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
@@ -48,4 +49,7 @@ export default defineNuxtConfig({
     },
   ],
   nitro: { prerender: { crawlLinks: true, routes: ['/'] } },
+  // 서비스 레시피의 서버(compose.yaml)를 같은 주소 아래로 연다: /svc/<도구 id>/** → endpoint
+  // ponytail: 주소는 빌드 때 고정 (127.0.0.1). 서버를 다른 호스트에 두면 endpoint를 환경 변수로
+  routeRules: Object.fromEntries(tools.filter(t => t.endpoint).map(t => [`/svc/${t.id}/**`, { proxy: `${t.endpoint}/**` }])),
 })

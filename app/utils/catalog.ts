@@ -2,7 +2,7 @@ import { categories } from '#shared/catalog/categories'
 import { originLabels, origins } from '#shared/catalog/origins'
 import { sources } from '#shared/catalog/sources'
 import { tools, toolTypes } from '#shared/catalog/tools'
-import type { FormatSpec, OutputKind, Recipe, ViewerId } from '#shared/types'
+import type { FormatSpec, Output, OutputKind, Recipe, Report, Support, ViewerId } from '#shared/types'
 
 // <category>/<format>.ts만 spec이다 (_로 시작하는 파일은 spec을 만드는 도우미). 목록은 nuxt.config.ts의 모듈이 만든다
 // @ts-expect-error 빌드 때 생기는 파일이라 타입 검사기가 모른다
@@ -29,6 +29,7 @@ export const viewerApi: Record<ViewerId, Partial<Record<OutputKind, string>>> = 
     'cog': 'WebGLTileLayer + GeoTIFF 소스 — 블록 Range 요청',
     'xyz-raster': 'TileLayer + XYZ',
     'image': 'ImageLayer + ImageStatic — 네 모서리 범위',
+    'wms': 'ImageLayer + ImageWMS — 화면 범위 GetMap',
   },
   maplibre: {
     'geojson': 'geojson 소스 + fill·line·circle (높이 있으면 fill-extrusion)',
@@ -55,8 +56,15 @@ export const viewerApi: Record<ViewerId, Partial<Record<OutputKind, string>>> = 
     'quantized-mesh': 'CesiumTerrainProvider',
     '3dtiles': 'Cesium3DTileset',
     'glb': 'Model.fromGltfAsync',
+    'wms': 'WebMapServiceImageryProvider — 타일 단위 GetMap',
   },
 }
+
+/** 서비스 레시피: 떠 있는 서버(GeoServer·martin 등)에 발행하고 서버 주소를 결과물로 쓴다 */
+export const isService = (r?: Recipe) => !!r?.convert.some(s => toolOf(s.tool)?.type === 'server')
+
+/** 결과물 주소. 서버 출력(/svc/…)은 그대로, 파일 출력은 결과 폴더 기준 */
+export const outPath = (dir: string, o: Output) => (o.path.startsWith('/') ? o.path : dir + o.path)
 
 /** 확장자 자체가 웹 결과물 종류인 경우. 결과물이 원본과 같은 형식인지 표시하는 데 쓴다 */
 export const nativeKind: Record<string, OutputKind> = { geojson: 'geojson', mvt: 'mvt', pmtiles: 'pmtiles', cog: 'cog', terrain: 'quantized-mesh', pnts: '3dtiles', i3dm: '3dtiles', glb: 'glb' }
@@ -72,12 +80,21 @@ export const formatOf = (categoryId: string, id: string) => formats.find(f => f.
 
 export const supports = (recipe: Recipe, viewer: ViewerId) => 'output' in recipe.viewers[viewer]
 
-/** 확장자 검색: '.laz', 'laz', 'LAS' 모두 찾는다 */
-export function searchFormats(q: string) {
-  const s = q.trim().toLowerCase().replace(/^\./, '')
-  if (!s) return []
-  return formats.filter(f => f.extensions.some(e => e.slice(1).startsWith(s)) || f.name.toLowerCase().includes(s))
+export const supportLabels: Record<Support, string> = { direct: '직접 처리', converted: '변환 후 처리', partial: '일부 기능만', untested: '미검증', no: '미지원' }
+/** 좋은 순서. 여러 레시피 중 가장 좋은 수준을 고를 때 */
+export const supportOrder: Support[] = ['direct', 'converted', 'partial', 'untested', 'no']
+
+/** 뷰어가 레시피 결과를 처리하는 수준. ran = 그 레시피의 마지막 실행 성공 여부 */
+export function supportOf(spec: FormatSpec, recipe: Recipe, viewer: ViewerId, ran: boolean): Support {
+  const use = recipe.viewers[viewer]
+  if (!('output' in use)) return 'no'
+  if (!ran) return 'untested'
+  if (use.caution) return 'partial'
+  return nativeKind[spec.id] === recipe.outputs.find(o => o.id === use.output)?.kind ? 'direct' : 'converted'
 }
+
+/** 실행 기록이 레시피대로 끝까지 성공했는지 (pipeline writeStatus와 같은 기준) */
+export const succeeded = (recipe: Recipe, rep?: Report | null) => !!rep && rep.outputs.length === recipe.outputs.length && rep.steps.every(s => s.code === 0)
 
 /** 이 도구를 쓰는 곳 (실행 레시피·대안) */
 export function usagesOf(toolId: string) {

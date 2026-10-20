@@ -1,4 +1,5 @@
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { vectorRecipe, vectorUpload } from './_vector.ts'
 
 const ZIP = '/raw/semas_dining_areas.zip'
@@ -6,6 +7,22 @@ const NAME = '소상공인시장진흥공단_소상공인365_회식상권_AI친�
 // zip 안 폴더·파일 이름이 CP949라 GDAL에 알려 줘야 열린다
 const ENC = '--config CPL_ZIP_ENCODING CP949'
 const RAW = `/vsizip/${ZIP}/${NAME}/2.개방데이터/${NAME}_2024-01.geojson`
+
+// 파일 레시피(GDAL)와 서버 레시피(GeoServer·martin)가 같이 쓰는 전처리
+const preprocess: Step[] = [
+  {
+    title: '무결성 확인',
+    why: '/vsizip/: 압축 해제 없이 읽기. CPL_ZIP_ENCODING CP949: zip 안 한글 경로 해석. 전국 상권 904개, 위경도(CRS84) 다각형, 한글 속성 이름.',
+    tool: 'gdal',
+    run: `ogrinfo -so -al ${ENC} ${RAW} | grep -E 'Geometry|Feature Count|주요상권명|시도명|라벨명|면적'`,
+  },
+  {
+    title: '서울 상권 추출·속성 정리',
+    why: 'WHERE 시도명: 서울특별시만. AS name·label·area_m2: 한글 키 → 영문(뷰어 스타일·코드용).',
+    tool: 'gdal',
+    run: `ogr2ogr -f GPKG /work/areas.gpkg ${ENC} ${RAW} -nln areas -dialect SQLite -sql "SELECT geometry, 주요상권명 AS name, 라벨명 AS label, 면적 AS area_m2 FROM \\"${NAME}_2024-01\\" WHERE 시도명 = '서울특별시'"`,
+  },
+]
 
 export default {
   id: 'geojson',
@@ -46,22 +63,11 @@ export default {
       layer: 'areas',
       minzoom: 10,
       maxzoom: 15,
+      key: 'name || label',
       sameWhy: '원본도 GeoJSON — 전국→서울 추림, 한글 키→영문, 좌표 7자리, OGC API Features 경로(/collections/{id}/items)로 재배치.',
-      preprocess: [
-        {
-          title: '무결성 확인',
-          why: '/vsizip/: 압축 해제 없이 읽기. CPL_ZIP_ENCODING CP949: zip 안 한글 경로 해석. 전국 상권 904개, 위경도(CRS84) 다각형, 한글 속성 이름.',
-          tool: 'gdal',
-          run: `ogrinfo -so -al ${ENC} ${RAW} | grep -E 'Geometry|Feature Count|주요상권명|시도명|라벨명|면적'`,
-        },
-        {
-          title: '서울 상권 추출·속성 정리',
-          why: 'WHERE 시도명: 서울특별시만. AS name·label·area_m2: 한글 키 → 영문(뷰어 스타일·코드용).',
-          tool: 'gdal',
-          run: `ogr2ogr -f GPKG /work/areas.gpkg ${ENC} ${RAW} -nln areas -dialect SQLite -sql "SELECT geometry, 주요상권명 AS name, 라벨명 AS label, 면적 AS area_m2 FROM \\"${NAME}_2024-01\\" WHERE 시도명 = '서울특별시'"`,
-        },
-      ],
+      preprocess,
     }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'areas', preprocess, work: '/work/areas.gpkg', geom: 'polygon', bounds: [126.81, 37.45, 127.16, 37.66] }),
   ],
   alternatives: [
     { tool: 'mapshaper', cmd: 'mapshaper areas.geojson -simplify 10% -o areas_small.geojson', note: '경계 꼭짓점 축소 → 용량 절감.' },

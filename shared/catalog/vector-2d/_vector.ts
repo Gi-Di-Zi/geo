@@ -8,9 +8,25 @@ interface VectorRecipe {
   layer: string
   minzoom: number
   maxzoom: number
+  /** 피처를 가르는 속성(식). 타일 전후 피처 수 비교에 쓴다 */
+  key: string
   preprocess: Step[]
   /** 원본도 GeoJSON일 때 다시 만드는 이유. GeoJSON 결과물 설명을 대신한다 */
   sameWhy?: string
+}
+
+/**
+ * 무결성 확인: 타일로 바꾼 뒤 줌마다 피처가 몇 개 남았는지 센다. 변환 전후 같은 key 식의 고유 개수를 비교한다.
+ * work = 변환 전 데이터(GDAL 경로), tiles = 줌 $z 타일을 여는 GDAL 인자 (폴더: /out/tiles/$z, PMTiles: -oo ZOOM_LEVEL=$z 파일)
+ */
+export function tileCount(t: { work: string; layer: string; key: string; tiles: string; minzoom: number; maxzoom: number }): Step {
+  const sql = (cols: string) => `-dialect SQLite -sql "SELECT ${cols} FROM ${t.layer}"`
+  return {
+    title: '무결성 확인 (타일 전후 피처 수)',
+    why: `줌마다 타일 속 고유 ${t.key} 수 = 남은 피처, 전체 행 = 조각(타일 경계에서 잘려 여러 타일에 든 것 포함). 피처가 변환 전보다 적으면 그 줌에서 사라진 피처(너무 작은 도형·밀집 제거). 줌 하나의 타일 전체 = GDAL 레이어 하나.`,
+    tool: 'gdal',
+    run: `n() { ogrinfo -ro -q "$@" | awk '/ = /{print $NF}'; }\necho "변환 전: 피처 $(n ${t.work} ${sql(`count(DISTINCT ${t.key})`)})"\nfor z in $(seq ${t.minzoom} ${t.maxzoom}); do set -- $(n ${t.tiles} ${sql(`count(DISTINCT ${t.key}), count(*)`)}); echo "줌 $z: 피처 $1, 조각 $2"; done`,
+  }
 }
 
 export function vectorRecipe(r: VectorRecipe): Recipe {
@@ -31,6 +47,7 @@ export function vectorRecipe(r: VectorRecipe): Recipe {
         tool: 'gdal',
         run: `ogr2ogr -f MVT /out/tiles ${r.work} -nln ${r.layer} -dsco MINZOOM=${r.minzoom} -dsco MAXZOOM=${r.maxzoom} -dsco COMPRESS=NO`,
       },
+      tileCount({ work: r.work, layer: r.layer, key: r.key, tiles: '/out/tiles/$z', minzoom: r.minzoom, maxzoom: r.maxzoom }),
     ],
     outputs: [
       { id: 'features', kind: 'geojson', path: `ogc/collections/${r.layer}/items.json`, label: 'GeoJSON', why: r.sameWhy ?? '파일 하나에 전체. 소규모 데이터에 가장 단순.' },
@@ -44,9 +61,6 @@ export function vectorRecipe(r: VectorRecipe): Recipe {
     },
   }
 }
-
-export const BBOX = '126.970 37.555 126.990 37.570'
-export const BBOX_CSV = '126.970,37.555,126.990,37.570'
 
 /**
  * 올린 벡터 파일: 레이어를 하나로 합치고 GeoJSON + PMTiles로. 데이터 크기를 모르니 줌 범위는 tippecanoe가 정한다.

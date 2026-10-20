@@ -9,14 +9,14 @@ export const viewers: { id: ViewerId; name: string; dims: string; summary: strin
 
 /** 각 뷰어 컴포넌트가 구현한 출력 종류. check 스크립트와 화면이 같이 쓴다 */
 export const viewerKinds: Record<ViewerId, OutputKind[]> = {
-  ol: ['geojson', 'mvt', 'pmtiles', 'image', 'cog', 'xyz-raster'],
+  ol: ['geojson', 'mvt', 'pmtiles', 'image', 'cog', 'xyz-raster', 'wms'],
   maplibre: ['geojson', 'mvt', 'pmtiles', 'image', 'xyz-raster', 'terrain-rgb'],
   deck: ['geojson', 'mvt', 'pmtiles', 'image', 'xyz-raster', 'terrain-rgb', '3dtiles', 'glb'],
-  cesium: ['geojson', 'image', 'xyz-raster', 'quantized-mesh', '3dtiles', 'glb'],
+  cesium: ['geojson', 'image', 'xyz-raster', 'quantized-mesh', '3dtiles', 'glb', 'wms'],
 }
 
 export const kindLabels: Record<OutputKind, string> = {
-  'geojson': 'GeoJSON (OGC API Features)',
+  'geojson': 'GeoJSON',
   'mvt': 'MVT 벡터타일',
   'pmtiles': 'PMTiles',
   'image': '단일 이미지',
@@ -26,4 +26,5 @@ export const kindLabels: Record<OutputKind, string> = {
   'quantized-mesh': 'Quantized-mesh',
   '3dtiles': '3D Tiles',
   'glb': 'glTF (GLB)',
+  'wms': 'WMS 이미지',
 }

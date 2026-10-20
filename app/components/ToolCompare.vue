@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { viewers } from '#shared/viewers'
-import type { FormatSpec, Report } from '#shared/types'
+import type { FormatSpec, Report, ViewerUse } from '#shared/types'
 
 const props = defineProps<{ spec: FormatSpec; current: string }>()
 const emit = defineEmits<{ select: [id: string] }>()
@@ -13,13 +13,18 @@ const rows = computed(() => props.spec.recipes.map((r, i) => {
   const rep = reports.value[i]
   return {
     recipe: r,
+    svc: isService(r),
     ms: rep?.totalMs ?? 0,
     bytes: rep?.outputs.reduce((a, o) => a + o.bytes, 0) ?? 0,
     files: rep?.outputs.reduce((a, o) => a + o.files, 0) ?? 0,
+    level: Object.fromEntries(viewers.map(v => [v.id, supportOf(props.spec, r, v.id, succeeded(r, rep))])),
   }
 }))
+const hint = (u: ViewerUse) => ('unsupported' in u ? u.unsupported : u.caution ?? u.note ?? '')
+// 측정 조건: 기록마다 같은 기계에서 돌지만, 마지막에 돈 기록 기준으로 보인다
+const env = computed(() => reports.value.filter(r => r?.env).sort((a, b) => b!.ranAt.localeCompare(a!.ranAt))[0]?.env)
 const maxMs = computed(() => Math.max(1, ...rows.value.map(r => r.ms)))
-const maxBytes = computed(() => Math.max(1, ...rows.value.map(r => r.bytes)))
+const maxBytes = computed(() => Math.max(1, ...rows.value.filter(r => !r.svc).map(r => r.bytes)))
 </script>
 
 <template>
@@ -43,19 +48,25 @@ const maxBytes = computed(() => Math.max(1, ...rows.value.map(r => r.bytes)))
               <button type="button" :aria-pressed="row.recipe.id === current">{{ row.recipe.title }}</button>
             </th>
             <td><span class="bar" :style="{ width: `${(row.ms / maxMs) * 100}%` }" />{{ row.ms ? seconds(row.ms) : '-' }}</td>
-            <td><span class="bar" :style="{ width: `${(row.bytes / maxBytes) * 100}%` }" />{{ row.bytes ? bytes(row.bytes) : '-' }}</td>
-            <td>{{ row.files ? row.files.toLocaleString() : '-' }}</td>
-            <td v-for="v in viewers" :key="v.id" class="v">
-              <span v-if="'output' in row.recipe.viewers[v.id]" class="ok" :title="(row.recipe.viewers[v.id] as any).caution">
-                ✓<span v-if="(row.recipe.viewers[v.id] as any).caution" class="warn">*</span>
-              </span>
-              <span v-else class="no" :title="(row.recipe.viewers[v.id] as any).unsupported">✗</span>
+            <td v-if="row.svc" colspan="2" class="muted">서버가 요청마다 생성</td>
+            <template v-else>
+              <td><span class="bar" :style="{ width: `${(row.bytes / maxBytes) * 100}%` }" />{{ row.bytes ? bytes(row.bytes) : '-' }}</td>
+              <td>{{ row.files ? row.files.toLocaleString() : '-' }}</td>
+            </template>
+            <td v-for="v in viewers" :key="v.id" class="v" :class="`lv-${row.level[v.id]}`" :title="hint(row.recipe.viewers[v.id])">
+              {{ supportLabels[row.level[v.id]!] }}
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="small muted">*: 표시 가능하나 주의점 있음 — 위 "뷰어별 처리" 참고.</p>
+    <p class="small muted">
+      직접 처리: 원본과 같은 형식을 그대로 읽음. 변환 후 처리: 바꾼 결과물을 읽음. 일부 기능만: 그리지만 빠지는 기능 있음(위 "뷰어별 처리"). 미검증: 성공한 실행 기록 없음.
+    </p>
+    <p v-if="env" class="small muted">
+      측정 조건: 레시피당 1회 실행, 도구 이미지 받아 둔 상태, 서버 기동 시간 제외. 걸린 시간 = 단계 컨테이너 실행 시간 합.
+      {{ env.cpu }}, Docker {{ env.docker }} ({{ env.cores }}코어·메모리 {{ env.memGB }}GB), {{ env.os }}.
+    </p>
   </section>
 </template>
 
@@ -73,5 +84,5 @@ th button { font: inherit; font-weight: 600; border: 0; background: none; paddin
 td { position: relative; min-width: 110px; }
 .bar { display: block; height: 4px; border-radius: 2px; background: var(--ink-2); opacity: 0.35; margin-bottom: 4px; }
 .v { text-align: center; min-width: 0; }
-.warn { color: #9A5B00; }
+.compare > p + p { margin-top: 4px; }
 </style>

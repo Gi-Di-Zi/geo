@@ -107,6 +107,8 @@ a.chip:hover { border-color: var(--ink-2); }
   padding: 4px 12px; border-radius: 4px; cursor: pointer;
 }
 .seg button[aria-pressed='true'] { background: var(--ink); color: #fff; }
+.seg .sep { align-self: center; padding: 0 2px 0 8px; font-size: 0.75rem; color: var(--ink-2); }
+.seg .sep:not(:first-child) { margin-left: 4px; border-left: 1px solid var(--rule); }
 
 .btn {
   font: inherit; font-size: var(--fs-0);
@@ -144,6 +146,10 @@ details[open] > summary::before { content: '▾ '; }
 
 .ok { color: var(--ok); }
 .no { color: var(--no); }
+/* 처리 수준 (supportLabels) */
+.lv-direct, .lv-converted { color: var(--ok); }
+.lv-partial { color: #8A5300; }
+.lv-untested, .lv-no { color: var(--no); }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

@@ -10,6 +10,7 @@ import VectorTileLayer from 'ol/layer/VectorTile'
 import WebGLTileLayer from 'ol/layer/WebGLTile'
 import GeoTIFF from 'ol/source/GeoTIFF'
 import ImageStatic from 'ol/source/ImageStatic'
+import ImageWMS from 'ol/source/ImageWMS'
 import VectorSource from 'ol/source/Vector'
 import VectorTileSource from 'ol/source/VectorTile'
 import XYZ from 'ol/source/XYZ'
@@ -51,6 +52,12 @@ function dataLayer() {
       return new TileLayer({ source: new XYZ({ url, minZoom: o.minzoom, maxZoom: o.maxzoom, crossOrigin: 'anonymous' }) })
     case 'image':
       return new ImageLayer({ source: new ImageStatic({ url, imageExtent: transformExtent(o.bounds!, 'EPSG:4326', 'EPSG:3857') }) })
+    case 'wms':
+      // 지도를 움직일 때마다 화면 범위 그림 한 장을 서버에 요청한다
+      return new ImageLayer({
+        extent: o.bounds && transformExtent(o.bounds, 'EPSG:4326', 'EPSG:3857'),
+        source: new ImageWMS({ url, params: { LAYERS: o.layer, TRANSPARENT: true }, crossOrigin: 'anonymous' }),
+      })
     default:
       throw new Error(`OpenLayers 뷰어에 없는 출력 종류: ${o.kind}`)
   }
