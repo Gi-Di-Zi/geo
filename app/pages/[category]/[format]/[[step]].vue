@@ -19,8 +19,8 @@ const recipeId = computed({
   set: tool => router.replace({ query: tool === spec.recipes[0]!.id ? {} : { tool } }),
 })
 const recipe = computed(() => spec.recipes.find(r => r.id === recipeId.value) ?? spec.recipes[0]!)
-// 레시피 선택 막대: 파일로 굽는 레시피와 서버에 발행하는 레시피를 나눠 보여 준다
-const groups = ([['파일', spec.recipes.filter(r => !isService(r))], ['서버', spec.recipes.filter(r => isService(r))]] as const).filter(([, rs]) => rs.length)
+// 레시피 선택 막대: 파일 방식과 서버 방식을 나눠 보여 준다
+const groups = recipeGroups(spec)
 
 // 실측 기록은 public/ 정적 파일이라 브라우저에서 받는다 (SSR 내부 요청은 public/을 못 본다)
 const dir = `${useRuntimeConfig().app.baseURL}data/${spec.category}/${spec.id}`
@@ -51,7 +51,7 @@ onBeforeUnmount(() => clearTimeout(timer))
 
 const uploadRecipe = 'recipe' in spec.upload ? spec.upload.recipe : undefined
 const shown = computed<Recipe>(() => (mine.value && uploadRecipe ? job.value?.job.recipe ?? uploadRecipe : recipe.value))
-const shownReport = computed(() => (mine.value ? job.value?.report ?? null : report.value))
+const shownReport = computed(() => (mine.value ? job.value?.report : report.value) ?? null)
 const steps = computed(() => `${job.value?.report?.steps.length ?? 0}/${uploadRecipe ? uploadRecipe.preprocess.length + uploadRecipe.convert.length : 0}`)
 const stepLink = (id: FlowStep) => ({ path: stepPath(spec, id), query: route.query })
 
@@ -61,10 +61,11 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 <template>
   <div class="format-page" :class="{ 'map-step': step === 'view' }" :style="{ '--c': cat.color }">
     <FlowSteps :spec="spec.closed ? undefined : spec" :step>
-      <div v-if="spec.recipes.length > 1 || mine" class="seg" role="group" aria-label="변환 도구 선택">
-        <template v-for="[name, rs] in groups" :key="name">
-          <span v-if="groups.length > 1" class="sep">{{ name }}</span>
-          <button v-for="r in rs" :key="r.id" type="button" :aria-pressed="!mine && r.id === recipe.id" @click="recipeId = r.id">{{ r.title }}</button>
+      <!-- 변환 단계는 본문 카드로 고른다 -->
+      <div v-if="(spec.recipes.length > 1 || mine) && step !== 'convert'" class="seg" role="group" aria-label="변환 방식 선택">
+        <template v-for="g in groups" :key="g.name">
+          <span v-if="groups.length > 1" class="sep">{{ g.name }}</span>
+          <button v-for="r in g.recipes" :key="r.id" type="button" :aria-pressed="!mine && r.id === recipe.id" @click="recipeId = r.id">{{ r.title }}</button>
         </template>
         <button v-if="mine" type="button" aria-pressed="true">내 파일</button>
       </div>
@@ -97,8 +98,8 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
         <h1>{{ flow[at]!.name }}</h1>
         <p class="lead">{{ flow[at]!.text }}</p>
       </header>
-      <StepRoute :step :spec :recipe="shown" :report="shownReport" :collected :upload="mine ? job?.job : undefined" />
-      <ToolCompare v-if="step === 'convert' && !mine && spec.recipes.length > 1" :spec :current="recipe.id" @select="recipeId = $event" />
+      <RecipePicker v-if="step === 'convert' && !mine && spec.recipes.length > 1" :spec :current="recipe.id" @select="recipeId = $event" />
+      <StepRoute :step :spec :recipe="shown" :report="shownReport" :collected="collected ?? null" :upload="mine ? job?.job : undefined" />
       <nav class="pager" aria-label="단계 이동">
         <NuxtLink v-if="prev" :to="stepLink(prev.id)" class="btn">← {{ prev.name }}</NuxtLink>
         <NuxtLink v-else :to="{ path: '/', query: { type: cat.id } }" class="btn">← 확장자 다시 고르기</NuxtLink>
@@ -109,7 +110,7 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 </template>
 
 <style scoped>
-/* 화면 비교 단계는 단계 막대 아래를 지도가 다 채운다 */
+/* 시각화·렌더링 단계는 단계 막대 아래를 지도가 다 채운다 */
 .map-step { height: 100dvh; display: flex; flex-direction: column; }
 .body { padding-top: 32px; }
 .head { margin-bottom: 28px; }

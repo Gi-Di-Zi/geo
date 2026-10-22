@@ -20,4 +20,11 @@ const spec = modelSpec({
   magoInput: 'mkdir -p /work/in && cp /raw/Lantern/* /work/in/',
 })
 
-export default { ...spec, closed: '국내 glTF: 문화포털 실감형 3D(공공누리 1유형)는 원본 신청서(이름·이메일) 제출 필요 → 자동 수집 불가.' }
+export default {
+  ...spec,
+  otherSources: [
+    ...spec.otherSources,
+    { source: 'poly-haven', dataset: 'wooden_table_02 등 (.gltf + .bin + 텍스처)', note: '해상도 1k~4k 선택.' },
+  ],
+  noDomestic: '국내 glTF: 문화포털 실감형 3D(공공누리 1유형)는 원본 신청서(이름·이메일) 제출 필요 → 자동 수집 불가.',
+}

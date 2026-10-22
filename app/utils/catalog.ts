@@ -2,10 +2,9 @@ import { categories } from '#shared/catalog/categories'
 import { originLabels, origins } from '#shared/catalog/origins'
 import { sources } from '#shared/catalog/sources'
 import { tools, toolTypes } from '#shared/catalog/tools'
-import type { FormatSpec, Output, OutputKind, Recipe, Report, Support, ViewerId } from '#shared/types'
+import type { FormatSpec, Output, OutputKind, Recipe, Report, Source, Support, ViewerId } from '#shared/types'
 
 // <category>/<format>.ts만 spec이다 (_로 시작하는 파일은 spec을 만드는 도우미). 목록은 nuxt.config.ts의 모듈이 만든다
-// @ts-expect-error 빌드 때 생기는 파일이라 타입 검사기가 모른다
 import specs from '#build/catalog-formats'
 export const formats = specs as FormatSpec[]
 
@@ -16,7 +15,7 @@ export const flow = [
   { id: 'collect', name: '수집', text: '공개 원본 수집 또는 내 파일 업로드.' },
   { id: 'preprocess', name: '전처리', text: '무결성 확인, 좌표계·인코딩·범위·속성 정리.' },
   { id: 'convert', name: '웹 형태 변환', text: '브라우저가 바로 읽는 포맷으로 변환. 뷰어별 처리 방식.' },
-  { id: 'view', name: '화면 비교', text: '지도 라이브러리 4종에서 결과 확인.' },
+  { id: 'view', name: '시각화·렌더링', text: '렌더러별로 결과 그리기. 웹: OpenLayers·MapLibre·Deck.gl·CesiumJS, 엔진: Cesium for Unreal(수동 확인).' },
 ] as const
 export type FlowStep = (typeof flow)[number]['id']
 
@@ -63,6 +62,12 @@ export const viewerApi: Record<ViewerId, Partial<Record<OutputKind, string>>> = 
 /** 서비스 레시피: 떠 있는 서버(GeoServer·martin 등)에 발행하고 서버 주소를 결과물로 쓴다 */
 export const isService = (r?: Recipe) => !!r?.convert.some(s => toolOf(s.tool)?.type === 'server')
 
+/** 레시피 두 방식. 상단 선택 막대와 변환 방식 표가 같이 쓴다 */
+export const recipeGroups = (f: FormatSpec) => [
+  { name: '파일 방식', text: '결과를 파일로 구워 정적 호스팅. 브라우저가 파일을 직접 읽음.', recipes: f.recipes.filter(r => !isService(r)) },
+  { name: '서버 방식', text: '떠 있는 서버에 발행. 요청마다 서버가 응답 생성.', recipes: f.recipes.filter(r => isService(r)) },
+].filter(g => g.recipes.length)
+
 /** 결과물 주소. 서버 출력(/svc/…)은 그대로, 파일 출력은 결과 폴더 기준 */
 export const outPath = (dir: string, o: Output) => (o.path.startsWith('/') ? o.path : dir + o.path)
 
@@ -77,6 +82,23 @@ export const toolOf = (id: string) => tools.find(t => t.id === id)
 export const sourceOf = (id: string) => sources.find(s => s.id === id)
 export const formatsOf = (categoryId: string) => formats.filter(f => f.category === categoryId)
 export const formatOf = (categoryId: string, id: string) => formats.find(f => f.category === categoryId && f.id === id)
+
+export const scopeLabels: Record<Source['scope'], string> = { domestic: '국내', abroad: '해외', personal: '개인·커뮤니티' }
+export const accessLabels: Record<Source['access'], string> = { auto: '로그인 없이', key: '인증키', login: '로그인', approval: '승인' }
+export const redistLabels: Record<Source['redistribute'], string> = { yes: '재배포 가능', conditional: '조건부 (출처표시 등)', no: '재배포 불가' }
+/** 확장자의 다른 수급처를 국내·해외·개인 순으로 묶는다 */
+export const sourcesByScope = (f: FormatSpec) => (Object.keys(scopeLabels) as Source['scope'][])
+  .map(scope => ({ scope, list: f.otherSources.filter(o => sourceOf(o.source)?.scope === scope) }))
+  .filter(g => g.list.length)
+
+/** 샘플 분류. 기타 = 다른 형식에서 바꾼 샘플이거나 개인·커뮤니티 자료 */
+export type SampleKind = 'domestic' | 'abroad' | 'other' | 'none'
+export const sampleLabels: Record<SampleKind, string> = { domestic: '국내 공공 데이터', abroad: '해외 데이터', other: '기타 데이터', none: '샘플 없음' }
+export function sampleOf(f: FormatSpec): SampleKind {
+  if (f.closed) return 'none'
+  const scope = sourceOf(f.collect.source)?.scope
+  return f.collect.converted || scope === 'personal' ? 'other' : scope === 'domestic' ? 'domestic' : 'abroad'
+}
 
 export const supports = (recipe: Recipe, viewer: ViewerId) => 'output' in recipe.viewers[viewer]
 
@@ -105,12 +127,10 @@ export function usagesOf(toolId: string) {
   ])
 }
 
-export function formatsFromSource(sourceId: string) {
-  return formats.flatMap(f => [
-    ...(f.collect.source === sourceId ? [{ format: f, used: true }] : []),
-    ...f.otherSources.filter(o => o.source === sourceId).map(() => ({ format: f, used: false })),
-  ])
-}
+/** 이 수급처에서 받을 수 있는 확장자 (확장자당 하나, used = 샘플 출처) */
+export const formatsFromSource = (sourceId: string) => formats
+  .filter(f => f.collect.source === sourceId || f.otherSources.some(o => o.source === sourceId))
+  .map(f => ({ format: f, used: f.collect.source === sourceId }))
 
 export const bytes = (n: number) =>
   n < 1024 ? `${n}B` : n < 1024 ** 2 ? `${(n / 1024).toFixed(0)}KB` : `${(n / 1024 ** 2).toFixed(1)}MB`

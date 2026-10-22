@@ -32,7 +32,10 @@ export default imageSpec({
       },
     ],
   },
-  otherSources: imageOthers,
-  closed: '월드파일 포함 국내 JPG 공개 원본 없음. 국토정보플랫폼 정사영상은 로그인 필요.',
+  otherSources: [
+    ...imageOthers,
+    { source: 'gsi-japan', dataset: '写真 seamlessphoto/{z}/{x}/{y}.jpg', note: 'XYZ 타일(월드파일 없음).' },
+  ],
+  noDomestic: '월드파일 포함 국내 JPG 공개 원본 없음. 국토정보플랫폼 정사영상은 로그인 필요.',
   view: { center: [9.9885, 53.5463], zoom: 15.2, basemap: 'osm' },
 })

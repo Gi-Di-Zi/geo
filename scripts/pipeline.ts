@@ -9,7 +9,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { sources } from '../shared/catalog/sources.ts'
 import { tools } from '../shared/catalog/tools.ts'
-import type { CollectReport, FormatSpec, Job, Output, Recipe, Report, StatusEntry, Step } from '../shared/types.ts'
+import type { CollectReport, EngineReport, FormatSpec, Job, Output, Recipe, Report, StatusEntry, Step } from '../shared/types.ts'
 
 const root = resolve(import.meta.dirname, '..')
 // 원본을 사이트에서 바로 받게 하는 크기 상한 (넘으면 출처에서 받게 안내)
@@ -115,7 +115,7 @@ function sizeOf(path: string, ext = ''): { bytes: number; files: number } {
 }
 
 function bboxOf(fc: any): number[] {
-  const b = [Infinity, Infinity, -Infinity, -Infinity]
+  const b: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity]
   const walk = (c: any): void => {
     if (typeof c[0] === 'number') {
       b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1])
@@ -299,6 +299,20 @@ function tilesetBounds(file: string): Bounds | undefined {
 }
 
 /** 업로드 결과의 출력마다 범위·줌을 채우고, 그 범위로 처음 시점을 정한다 */
+/** 기록이 지금 레시피 명령과 같은지 (명령을 고친 뒤 다시 돌리지 않았으면 화면의 명령과 기록·시간·로그가 어긋난다) */
+export function sameCommands(recipe: Recipe, report: Report) {
+  const steps = [...recipe.preprocess.map(s => ['preprocess', s] as const), ...recipe.convert.map(s => ['convert', s] as const)]
+  return report.steps.length === steps.length && steps.every(([stage, s], i) => report.steps[i]?.run === s.run && report.steps[i]?.stage === stage)
+}
+
+/** 다시 돌릴 필요 없음: 기록이 지금 명령과 같고 모든 단계 성공, 출력 수 맞음 (--missing) */
+function upToDate(recipe: Recipe, pubDir: string) {
+  const file = join(pubDir, recipe.id, 'report.json')
+  if (!existsSync(file)) return false
+  const rep = JSON.parse(readFileSync(file, 'utf8')) as Report
+  return sameCommands(recipe, rep) && rep.steps.every(s => s.code === 0) && rep.outputs.length === recipe.outputs.length
+}
+
 export function fillView(recipe: Recipe, out: string): Recipe {
   const outputs = recipe.outputs.map((o): Output => {
     const file = join(out, o.path.split('{')[0]!)
@@ -367,6 +381,7 @@ export async function writeStatus() {
         const rep = read<Report>(join(pub, r.id, 'report.json'))
         if (!rep) return { id: r.id, state: 'none' as const }
         const failed = rep.steps.find(s => s.code !== 0)
+        const engine = read<EngineReport>(join(pub, r.id, 'unreal.json'))
         return {
           id: r.id,
           state: failed || rep.outputs.length !== r.outputs.length ? 'failed' as const : 'done' as const,
@@ -374,6 +389,7 @@ export async function writeStatus() {
           totalMs: rep.totalMs,
           bytes: rep.outputs.reduce((a, o) => a + o.bytes, 0),
           failedStep: failed?.title,
+          ...(engine && { engine: engine.ok ? 'done' as const : 'failed' as const }),
         }
       }),
     }
@@ -386,7 +402,7 @@ async function main() {
   const [target = '', ...flags] = process.argv.slice(2)
   if (target === '--job') return runJob(resolve(flags[0]!))
   if (target === '--status') return writeStatus()
-  if (!target) throw new Error('사용법: node scripts/pipeline.ts <category/format[/recipe]> | <category> | all [--recollect]')
+  if (!target) throw new Error('사용법: node scripts/pipeline.ts <category/format[/recipe]> | <category> | all [--recollect] [--missing]')
   try { process.loadEnvFile(join(root, '.env')) } catch {}
   const [cat, fmt, recipeId] = target.split('/')
   const specs = (await loadFormats()).filter(s => cat === 'all' || (s.category === cat && (!fmt || s.id === fmt)))
@@ -398,6 +414,7 @@ async function main() {
     const pubDir = join(root, 'public/data', spec.category, spec.id)
     collect(spec, rawDir, pubDir, flags.includes('--recollect'))
     for (const recipe of spec.recipes.filter(r => !recipeId || r.id === recipeId)) {
+      if (flags.includes('--missing') && upToDate(recipe, pubDir)) { console.log(`  · ${recipe.id}: 최신 기록 있음, 건너뜀`); continue }
       const r = await runRecipe(spec, recipe, rawDir, pubDir)
       console.log(`  ✓ ${recipe.id}: ${(r.totalMs / 1000).toFixed(1)}초, ${r.outputs.map(o => `${o.id} ${(o.bytes / 1024).toFixed(0)}KB/${o.ms === undefined ? `${o.files}개` : `${o.ms}ms`}`).join(', ')}`)
     }

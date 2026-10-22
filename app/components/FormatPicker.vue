@@ -13,12 +13,12 @@ onMounted(() => watch(() => props.category, id => {
   if (!id) dialog.value!.close()
 }, { immediate: true }))
 
-// 준비 상태: 파이프라인이 쓰는 현황(status.json)에서 변환이 하나라도 성공했으면 준비됨
+// 샘플 분류(국내 공공·해외·기타·샘플 없음). 현황(status.json)에서 변환이 하나도 성공하지 않았으면 준비 중
 const { data: status } = useFetch<StatusEntry[]>(`${useRuntimeConfig().app.baseURL}data/status.json`, { server: false, default: () => [] })
 const stateOf = (f: FormatSpec) => {
-  if (f.closed) return { id: 'closed', label: '샘플 없음' }
-  const done = status.value.find(s => s.format === `${f.category}/${f.id}`)?.recipes.some(r => r.state === 'done')
-  return done ? { id: 'ready', label: '준비됨' } : { id: 'wip', label: '준비 중' }
+  const kind = sampleOf(f)
+  const done = kind === 'none' || status.value.find(s => s.format === `${f.category}/${f.id}`)?.recipes.some(r => r.state === 'done')
+  return done ? { id: kind, label: sampleLabels[kind] } : { id: 'wip', label: '준비 중' }
 }
 
 // 설명 말풍선. 창 안 스크롤에 잘리지 않게 화면 기준(fixed)으로 띄우고, 오른쪽에 자리가 없으면 ? 아래(또는 위)로 놓는다
@@ -62,7 +62,7 @@ const origin = computed(() => tip.value && origins[tip.value.f.id])
             type="button" class="help" :aria-label="`${f.name} 설명`" :aria-describedby="tip?.f === f ? 'picker-tip' : undefined"
             @mouseenter="show(f, $event)" @mouseleave="tip = null" @focus="show(f, $event)" @blur="tip = null"
           >?</button>
-          <span class="state" :class="stateOf(f).id">{{ stateOf(f).label }}</span>
+          <span class="sk state" :class="`sk-${stateOf(f).id}`">{{ stateOf(f).label }}</span>
         </li>
       </ul>
       <p v-if="!list.length" class="muted">준비 중.</p>
@@ -75,13 +75,14 @@ const origin = computed(() => tip.value && origins[tip.value.f.id])
       <p class="small">{{ origin.note }}</p>
       <p class="small muted">{{ tip.f.summary }}</p>
       <p v-if="tip.f.closed" class="small warn">샘플 없음: {{ tip.f.closed }}</p>
+      <p v-else class="small muted">샘플: {{ sampleLabels[sampleOf(tip.f)] }} · {{ sourceOf(tip.f.collect.source)?.name }}<template v-if="tip.f.collect.converted"> (변환)</template></p>
     </div>
   </dialog>
 </template>
 
 <style scoped>
 .picker {
-  width: min(27rem, calc(100vw - 32px)); padding: 0; border: 1px solid var(--rule); border-radius: 14px;
+  width: min(34rem, calc(100vw - 32px)); padding: 0; border: 1px solid var(--rule); border-radius: 14px;
   background: var(--surface); color: var(--ink); box-shadow: 0 20px 48px rgb(22 32 42 / 0.18);
 }
 .picker::backdrop { background: rgb(22 32 42 / 0.35); }
@@ -102,12 +103,7 @@ h2 .chip-dot { width: 12px; height: 12px; background: var(--c); }
   color: var(--ink-2); font: inherit; font-size: 0.75rem; font-weight: 700; line-height: 1; cursor: help;
 }
 .help:hover, .help:focus-visible { border-color: var(--ink); color: var(--ink); }
-.state { margin-left: auto; flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--ink-2); }
-.state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--no); }
-.state.ready { color: var(--ok); }
-.state.ready::before { background: var(--ok); }
-.state.wip::before { background: #C9A227; }
-.state.closed::before { background: transparent; border: 1.5px solid var(--no); width: 5px; height: 5px; }
+.state { margin-left: auto; }
 .tip {
   position: fixed; z-index: 1; margin: 0; padding: 12px 14px; display: grid; gap: 6px;
   background: var(--ink); color: #E6EDF3; border-radius: 12px; box-shadow: 0 12px 32px rgb(22 32 42 / 0.25);

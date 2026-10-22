@@ -33,6 +33,8 @@ export default {
   otherSources: [
     { source: 'geofabrik', dataset: 'south-korea shortbread MBTiles', note: '한국 전체 벡터타일, MBTiles 한 파일(약 480MB).' },
     { source: 'protomaps', dataset: '배경지도 PMTiles', note: '같은 벡터타일의 PMTiles 아카이브(.pmtiles 페이지).' },
+    { source: 'gsi-japan', dataset: '地理院ベクトルタイル experimental_bvmap/{z}/{x}/{y}.pbf', note: '일본 전역 벡터타일.' },
+    { source: 'bbbike', dataset: 'Seoul.osm.mbtiles-shortbread.zip', note: 'MBTiles 안의 MVT 타일.' },
   ],
   recipes: [
     {
@@ -78,5 +80,5 @@ export default {
   ],
   upload: { unsupported: '타일 한 장(.pbf)만으로는 위치(z/x/y) 불명. 타일 묶음 → pmtiles convert로 PMTiles 변환 후 .pmtiles 페이지에서 업로드.' },
   view: { center: [126.979, 37.5625], zoom: 15.5 },
-  closed: '국내 기관 MVT 벡터타일 공개 원본 없음. OSM 서울 타일(VersaTiles)은 해외 플랫폼.',
+  noDomestic: '국내 기관 MVT 벡터타일 공개 원본 없음. OSM 서울 타일(VersaTiles)은 해외 플랫폼.',
 } satisfies FormatSpec

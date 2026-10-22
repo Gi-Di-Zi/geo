@@ -1,4 +1,5 @@
 import type { FormatSpec, Recipe, Step, Upload } from '../../types.ts'
+import { geoserverRaster } from '../_server.ts'
 
 export const TCI = 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/52/S/CG/2026/5/S2B_52SCG_20260531_0_L2A/TCI.tif'
 
@@ -64,6 +65,13 @@ export const rasterUpload: Upload = {
   },
 }
 
+const inspect: Step = {
+  title: '무결성 확인',
+  why: 'LAYOUT=COG·블록 크기·오버뷰 있으면 웹용 COG. 좌표계: UTM 52N (Sentinel-2 기본).',
+  tool: 'gdal',
+  run: "gdalinfo /raw/seoul_s2_tci.tif | grep -E 'Size is|PROJCRS|LAYOUT|COMPRESSION|Block=|Overviews'",
+}
+
 export default {
   id: 'cog',
   category: 'raster',
@@ -93,19 +101,15 @@ export default {
   },
   otherSources: [
     { source: 'ngii', dataset: '정사영상 51cm TIF', note: '더 선명한 국내 항공사진. 로그인 후 다운로드 → COG 변환(.tif 페이지).' },
+    { source: 'esa-worldcover', dataset: 'ESA_WorldCover_10m_2021_v200_N36E126_Map.tif', note: '수도권 포함 타일.' },
+    { source: 'openaerialmap', dataset: 'OIN 영상 COG', note: '한국 커버리지 미확인.' },
+    { source: 'planetary-computer', dataset: 'sentinel-2-l2a, landsat-c2-l2, esa-worldcover', note: '한국 포함.' },
   ],
   recipes: [
     {
       id: 'gdal',
       title: 'GDAL',
-      preprocess: [
-        {
-          title: '무결성 확인',
-          why: 'LAYOUT=COG·블록 크기·오버뷰 있으면 웹용 COG. 좌표계: UTM 52N (Sentinel-2 기본).',
-          tool: 'gdal',
-          run: "gdalinfo /raw/seoul_s2_tci.tif | grep -E 'Size is|PROJCRS|LAYOUT|COMPRESSION|Block=|Overviews'",
-        },
-      ],
+      preprocess: [inspect],
       convert: [
         toCog,
         toTiles,
@@ -113,6 +117,21 @@ export default {
       outputs: webOutputs,
       viewers: webViewers,
     },
+    geoserverRaster({
+      name: 's2_seoul',
+      preprocess: [inspect],
+      file: '/serve/raster/cog/s2_seoul.tif',
+      prepare: {
+        title: '원본 COG 그대로 서버 폴더에',
+        why: '원본이 이미 COG(내부 블록·축소본) → 변환 없이 복사. 서버가 화면 범위·축척에 맞는 블록만 읽음. 좌표계(UTM 52N) 그대로, 웹 메르카토르 재투영은 요청마다.',
+        tool: 'shell',
+        run: 'mkdir -p /serve/raster/cog && cp /raw/seoul_s2_tci.tif /serve/raster/cog/s2_seoul.tif',
+      },
+      symbolizer: '      <Opacity>1.0</Opacity>',
+      styleWhy: '트루컬러 RGB 3밴드 → 색 변환 없이 그대로.',
+      bounds: [126.90, 37.48, 127.08, 37.62],
+      maxzoom: 16,
+    }),
   ],
   alternatives: [
     { tool: 'rio-cogeo', cmd: 'rio cogeo validate seoul_s2_tci.tif', note: 'Python COG 규칙 검사.' },
@@ -120,5 +139,5 @@ export default {
   ],
   upload: { ...rasterUpload, accept: ['.tif'] },
   view: { center: [126.99, 37.55], zoom: 11.5 },
-  closed: '국내 기관 COG 배포처 없음. Sentinel-2 서울 영상은 해외(ESA).',
+  noDomestic: '국내 기관 COG 배포처 없음. Sentinel-2 서울 영상은 해외(ESA).',
 } satisfies FormatSpec

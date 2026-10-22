@@ -1,0 +1,4 @@
+# 어느 PC에서 받아도 줄 끝은 LF (Linux 컨테이너 안에서 도는 스크립트·설정이 CRLF면 깨진다). Windows 전용 스크립트만 CRLF
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf

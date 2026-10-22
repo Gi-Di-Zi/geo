@@ -51,4 +51,4 @@ const spec = demSpec({
   },
 })
 
-export default { ...spec, closed: '국내 IMG DEM은 국토정보플랫폼 공개DEM뿐. 로그인 필요 → 자동 수집 불가.' }
+export default { ...spec, noDomestic: '국내 IMG DEM은 국토정보플랫폼 공개DEM뿐. 로그인 필요 → 자동 수집 불가.' }

@@ -35,4 +35,14 @@ const spec = pointSpec({
   view: { center: [-122.396, 37.8018], zoom: 16, pitch: 60, bearing: -30, basemap: 'osm' },
 })
 
-export default { ...spec, closed: '국내 LAZ 공개 원본 없음. 공공데이터포털 점군은 LAS(LAS 참고).' }
+export default {
+  ...spec,
+  otherSources: [
+    ...spec.otherSources,
+    { source: 'opentopography', dataset: 'LiDAR 점군 (LAZ)', note: '주로 미국, 로그인 필요.' },
+    { source: 'ahn', dataset: 'AHN4 01_LAZ 도엽', note: '도엽당 수~십여 GB.' },
+    { source: 'planetary-computer', dataset: '3dep-lidar-copc (COPC = LAZ 1.4)', note: '미국만.' },
+    { source: 'nls-finland', dataset: 'laserkeilaus (도엽별 .laz)', note: '핀란드 전국.' },
+  ],
+  noDomestic: '국내 LAZ 공개 원본 없음. 공공데이터포털 점군은 LAS(LAS 참고).',
+}

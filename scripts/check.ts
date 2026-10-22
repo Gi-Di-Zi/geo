@@ -1,14 +1,14 @@
 // catalog 일관성 + 수집·변환 기록 검사. 문제가 있으면 exit 1
-// 열린 확장자: 국내 기관 원본, 수집 기록 = 원본 폴더, 원본 다운로드 가능, 레시피 기록이 지금 명령과 같고 성공·출력 있음
+// 열린 확장자: 재배포 가능 원본, 수집 기록 = 원본 폴더, 원본 다운로드 가능, 레시피 기록이 지금 명령과 같고 성공·출력 있음
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { categories } from '../shared/catalog/categories.ts'
 import { origins } from '../shared/catalog/origins.ts'
 import { sources } from '../shared/catalog/sources.ts'
 import { tools } from '../shared/catalog/tools.ts'
-import { viewerKinds } from '../shared/viewers.ts'
-import type { CollectReport, Recipe, Report, Step, ViewerId } from '../shared/types.ts'
-import { loadFormats } from './pipeline.ts'
+import { engineOutput, viewerKinds } from '../shared/viewers.ts'
+import type { CollectReport, EngineReport, Recipe, Report, Step, ViewerId } from '../shared/types.ts'
+import { loadFormats, sameCommands } from './pipeline.ts'
 
 const root = resolve(import.meta.dirname, '..')
 const problems: string[] = []
@@ -61,7 +61,8 @@ for (const f of await loadFormats()) {
   // 닫아 둔 확장자(샘플 없음)는 수집·변환 결과를 따지지 않는다
   const pub = join(root, 'public/data', f.category, f.id)
   if (!f.closed) {
-    if (!src?.domestic) bad(`${at}: 샘플은 국내 기관 원본만 (수급처 ${f.collect.source}는 domestic이 아님)`)
+    // 국내 공공 → 해외 → 기타 순. 국내에서 로그인 없이 받는 같은 형식이 있는데 해외·기타 샘플이면 이유(noDomestic)를 남긴다
+    if (src && src.scope !== 'domestic' && !f.noDomestic && f.otherSources.some(o => sources.find(s => s.id === o.source)?.scope === 'domestic')) bad(`${at}: 국내 수급처가 있는데 해외·기타 샘플 — noDomestic에 이유`)
     // 수집 기록 = 원본 폴더, 사이트에서 받을 수 있는지
     const cj = join(pub, 'collect.json')
     if (!existsSync(cj)) bad(`${at}: 수집 기록 없음 (npm run pipeline -- ${at} --recollect)`)
@@ -82,10 +83,16 @@ for (const f of await loadFormats()) {
     if (!existsSync(file)) { bad(`${rat}: 아직 변환하지 않음 (npm run pipeline -- ${rat})`); continue }
     const report = JSON.parse(readFileSync(file, 'utf8')) as Report
     if (report.outputs.length !== r.outputs.length) bad(`${rat}: 마지막 변환 실패 (report.json 확인)`)
-    // 명령을 고친 뒤 다시 돌리지 않았으면 화면의 명령과 기록(시간·로그)이 어긋난다
-    const steps = [...r.preprocess.map(s => ['preprocess', s] as const), ...r.convert.map(s => ['convert', s] as const)]
-    if (report.steps.length !== steps.length || steps.some(([stage, s], i) => report.steps[i]?.run !== s.run || report.steps[i]?.stage !== stage)) bad(`${rat}: 명령이 마지막 실행과 다름 (npm run pipeline -- ${rat})`)
+    if (!sameCommands(r, report)) bad(`${rat}: 명령이 마지막 실행과 다름 (npm run pipeline -- ${rat})`)
     for (const s of report.steps) if (s.code !== 0) bad(`${rat}: "${s.title}" 종료 코드 ${s.code}`)
+    // 엔진 렌더러 기록 (scripts/unreal.ts). 언리얼이 없는 PC에서는 없어도 된다
+    const engineFile = join(pub, r.id, 'unreal.json')
+    if (existsSync(engineFile)) {
+      const e = JSON.parse(readFileSync(engineFile, 'utf8')) as EngineReport
+      if (!engineOutput(r)) bad(`${rat}: 엔진 대상 아닌 레시피에 unreal.json`)
+      else if (!e.ok) bad(`${rat}: 엔진 렌더링 실패 — ${e.error} (npm run unreal -- ${rat})`)
+      else if (!existsSync(join(pub, r.id, 'unreal.png'))) bad(`${rat}: 엔진 스크린샷 없음`)
+    }
     for (const o of r.outputs) {
       // 서버 출력은 pipeline이 확인 요청으로 검사했다 (report.outputs). 여기서는 그 서버가 주소를 갖는지만
       if (o.path.startsWith('/svc/')) { if (!tools.find(t => t.id === o.path.split('/')[2])?.endpoint) bad(`${rat}: 주소(endpoint) 없는 서버 ${o.path}`) }

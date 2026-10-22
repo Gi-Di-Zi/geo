@@ -6,7 +6,7 @@ const TIF = '/raw/50110.tif'
 // 제주시 범위 (위경도). XYZ 타일 범위에 쓴다
 const JEJU: [number, number, number, number] = [126.133, 33.272, 126.972, 34.02]
 // 산사태 위험 등급(1 매우 높음 ~ 5 낮음) → 색. nv = 값 없음(0) 투명
-const RAMP = '1 215 48 39\\n2 252 141 89\\n3 254 224 139\\n4 145 207 96\\n5 26 152 80\\nnv 0 0 0 0'
+export const RAMP = '1 215 48 39\\n2 252 141 89\\n3 254 224 139\\n4 145 207 96\\n5 26 152 80\\nnv 0 0 0 0'
 
 const inspect: Step = {
   title: '무결성 확인 (블록·축소본)',
@@ -74,6 +74,9 @@ export default {
   otherSources: [
     { source: 'ngii', dataset: '정사영상 51cm TIF (도엽별)', note: '국내 항공사진. 로그인 후 다운로드, 공공누리 1유형(출처표시).' },
     { source: 'datagokr', dataset: '지자체 수치표고·주제도 TIF 파일데이터', note: '기관별 TIF 데이터셋. 라이선스는 데이터셋마다 다름.' },
+    { source: 'naturalearth', dataset: '음영기복 NE1_50M_SR (TIF+TFW)', note: '전 세계 소축척.' },
+    { source: 'egis', dataset: '중분류 토지피복지도 GeoTIFF', note: '분류값 주제도 래스터. 같은 판을 SHP와 함께 제공.' },
+    { source: 'ngii', dataset: '국토위성영상 (위성정사·모자이크)', note: 'TIFF, 로그인 후 다운로드, 공공누리 1유형.' },
   ],
   recipes: [
     {

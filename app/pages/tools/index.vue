@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { kindLabels, viewerKinds, viewers } from '#shared/viewers'
+import { engine, kindLabels, viewerKinds, viewers } from '#shared/viewers'
 
 const statusLabels = { active: '사용 중', stale: '업데이트 중단', dead: '개발 종료' }
 const filter = ref<string>('')
@@ -15,13 +15,18 @@ useHead({ title: '뷰어와 변환 도구 | 공간 데이터 웹 처리' })
       <h1>뷰어와 변환 도구</h1>
 
       <section id="viewers" class="block" aria-labelledby="viewers-title">
-        <h2 id="viewers-title">비교 뷰어</h2>
-        <p class="muted">같은 결과물을 지도 라이브러리 4개에 올려 나란히 비교.</p>
+        <h2 id="viewers-title">렌더러</h2>
+        <p class="muted">시각화·렌더링 단계. 같은 결과물을 웹 렌더러 4개에서 나란히 비교, 3D 결과는 엔진에서도 확인.</p>
         <ul class="viewers">
           <li v-for="v in viewers" :key="v.id" class="viewer">
             <p><strong>{{ v.name }}</strong> <span class="chip">{{ v.dims }}</span></p>
             <p class="muted small">{{ v.summary }}</p>
             <p class="kinds small"><span v-for="k in viewerKinds[v.id]" :key="k">{{ kindLabels[k] }}</span></p>
+          </li>
+          <li class="viewer engine">
+            <p><strong>{{ engine.name }}</strong> <span class="chip">{{ engine.dims }} · 수동 확인</span></p>
+            <p class="muted small">{{ engine.summary }} 파이프라인이 언리얼로 렌더링해 스크린샷을 남김(npm run unreal).</p>
+            <p class="kinds small"><span v-for="k in engine.kinds" :key="k">{{ kindLabels[k] }}</span></p>
           </li>
         </ul>
       </section>
@@ -76,4 +81,5 @@ useHead({ title: '뷰어와 변환 도구 | 공간 데이터 웹 처리' })
 .status.stale { color: #9A5B00; }
 .status.dead { color: #A3262E; }
 @media (max-width: 768px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+.viewer.engine { border-style: dashed; }
 </style>

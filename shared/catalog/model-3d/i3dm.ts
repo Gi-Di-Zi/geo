@@ -118,5 +118,5 @@ export default {
     viewers: { ...no2d, deck: noDeck, cesium: { output: 'tiles' } },
   }),
   view: { center: [8.5405, 47.3805], zoom: 17, pitch: 55, bearing: 20, height: 450, basemap: 'osm' },
-  closed: '국내 i3dm 공개 원본 없음.',
+  noDomestic: '국내 i3dm 공개 원본 없음.',
 } satisfies FormatSpec

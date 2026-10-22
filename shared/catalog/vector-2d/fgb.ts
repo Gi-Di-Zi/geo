@@ -1,7 +1,23 @@
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { vectorRecipe, vectorUpload } from './_vector.ts'
 
 const RAW = '/raw/countries.fgb'
+
+const preprocess: Step[] = [
+  {
+    title: '무결성 확인',
+    why: '피처 수·범위·좌표계 확인. 이미 위경도(EPSG:4326) → 좌표계 변환 불필요.',
+    tool: 'gdal',
+    run: `ogrinfo -so -al ${RAW}`,
+  },
+  {
+    title: '꼬인 도형 수정',
+    why: '-makevalid: 남극·캐나다의 비정상 다각형(안 닫힘·자기 교차) 수정. 미수정 시 GeoJSON 변환에서 "LinearRing 미폐합" 오류.',
+    tool: 'gdal',
+    run: `ogr2ogr -f GPKG /work/countries.gpkg ${RAW} -nln countries -makevalid`,
+  },
+]
 
 export default {
   id: 'fgb',
@@ -30,28 +46,20 @@ export default {
       },
     ],
   },
-  otherSources: [],
+  otherSources: [
+    { source: 'source-coop', dataset: 'VIDA 건물 KOR.fgb (flatgeobuf/by_country/country_iso=KOR)', note: '한국 건물 외곽선 약 241MB, ODbL.' },
+    { source: 'openstreetmap', dataset: 'south-korea-latest.osm.pbf (Geofabrik)', note: 'PBF → ogr2ogr -f FlatGeobuf 변환 필요.' },
+  ],
   recipes: [
     vectorRecipe({
       work: '/work/countries.gpkg',
       layer: 'countries',
+      key: 'name',
       minzoom: 0,
       maxzoom: 5,
-      preprocess: [
-        {
-          title: '무결성 확인',
-          why: '피처 수·범위·좌표계 확인. 이미 위경도(EPSG:4326) → 좌표계 변환 불필요.',
-          tool: 'gdal',
-          run: `ogrinfo -so -al ${RAW}`,
-        },
-        {
-          title: '꼬인 도형 수정',
-          why: '-makevalid: 남극·캐나다의 비정상 다각형(안 닫힘·자기 교차) 수정. 미수정 시 GeoJSON 변환에서 "LinearRing 미폐합" 오류.',
-          tool: 'gdal',
-          run: `ogr2ogr -f GPKG /work/countries.gpkg ${RAW} -nln countries -makevalid`,
-        },
-      ],
+      preprocess,
     }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'countries', preprocess, work: '/work/countries.gpkg', geom: 'polygon', bounds: [-180, -85, 180, 85] }),
   ],
   alternatives: [
     { tool: 'gdal', cmd: 'ogrinfo /vsicurl/https://flatgeobuf.org/test/data/countries.fgb -spat 124 33 132 39', note: '원격 FGB에서 범위 내 피처만 Range 요청. 브라우저는 flatgeobuf 라이브러리로 동일.' },
@@ -59,5 +67,5 @@ export default {
   ],
   upload: vectorUpload({ accept: ['.fgb'], note: 'FlatGeobuf 파일 하나.' }),
   view: { center: [127, 30], zoom: 1.6, basemap: 'osm' },
-  closed: '국내 FlatGeobuf 배포처 없음.',
+  noDomestic: '국내 FlatGeobuf 배포처 없음.',
 } satisfies FormatSpec

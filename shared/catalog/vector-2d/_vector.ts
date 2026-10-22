@@ -25,7 +25,8 @@ export function tileCount(t: { work: string; layer: string; key: string; tiles: 
     title: '무결성 확인 (타일 전후 피처 수)',
     why: `줌마다 타일 속 고유 ${t.key} 수 = 남은 피처, 전체 행 = 조각(타일 경계에서 잘려 여러 타일에 든 것 포함). 피처가 변환 전보다 적으면 그 줌에서 사라진 피처(너무 작은 도형·밀집 제거). 줌 하나의 타일 전체 = GDAL 레이어 하나.`,
     tool: 'gdal',
-    run: `n() { ogrinfo -ro -q "$@" | awk '/ = /{print $NF}'; }\necho "변환 전: 피처 $(n ${t.work} ${sql(`count(DISTINCT ${t.key})`)})"\nfor z in $(seq ${t.minzoom} ${t.maxzoom}); do set -- $(n ${t.tiles} ${sql(`count(DISTINCT ${t.key}), count(*)`)}); echo "줌 $z: 피처 $1, 조각 $2"; done`,
+    // awk가 ogrinfo 오류(없는 열 등)를 삼켜 종료 코드 0이 되므로, 변환 전 수를 못 읽으면 직접 실패시킨다
+    run: `n() { ogrinfo -ro -q "$@" | awk '/ = /{print $NF}'; }\nb=$(n ${t.work} ${sql(`count(DISTINCT ${t.key})`)})\n[ -n "$b" ] || { echo "피처 수 읽기 실패: ${t.key}"; exit 1; }\necho "변환 전: 피처 $b"\nfor z in $(seq ${t.minzoom} ${t.maxzoom}); do set -- $(n ${t.tiles} ${sql(`count(DISTINCT ${t.key}), count(*)`)}); echo "줌 $z: 피처 $1, 조각 $2"; done`,
   }
 }
 

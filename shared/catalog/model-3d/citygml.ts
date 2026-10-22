@@ -57,6 +57,7 @@ export default {
   },
   otherSources: [
     { source: 'vworld', dataset: '3D 건물 모델', note: '국내 3D 건물은 VWorld에 있으나 공개제한. 재배포 가능한 국내 CityGML 미확보.' },
+    { source: 'nyc-3d', dataset: 'DA_WISE_GML.zip', note: 'CityGML 1.0, 구역별 파일.' },
   ],
   recipes: [
     {
@@ -182,5 +183,5 @@ export default {
     },
   },
   view: { center: [139.7666, 35.6812], zoom: 16.4, pitch: 60, bearing: -25, basemap: 'osm' },
-  closed: '국내 CityGML 공개 원본 없음. VWorld 3D 건물은 공개제한.',
+  noDomestic: '국내 CityGML 공개 원본 없음. VWorld 3D 건물은 공개제한.',
 } satisfies FormatSpec

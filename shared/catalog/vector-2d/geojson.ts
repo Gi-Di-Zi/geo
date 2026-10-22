@@ -56,6 +56,13 @@ export default {
   otherSources: [
     { source: 'datagokr', dataset: '기관별 GeoJSON 파일데이터', note: '기관 직접 업로드 GeoJSON. 포털 확장자 표기 오류 잦음 → 받아서 확인 필요.' },
     { source: 'vworld', dataset: '2D 데이터 API (GeoJSON 응답)', note: '인증키 필요, 약관 확인 전.' },
+    { source: 'geoboundaries', dataset: 'geoBoundaries-KOR-ADM2.geojson', note: '한국 시군구 229개. 간략화본·TopoJSON도 제공.' },
+    { source: 'admdongkor', dataset: 'HangJeongDong_ver20261001.geojson', note: '전국 행정동 약 35MB, EPSG:4326, UTF-8.' },
+    { source: 'southkorea-maps', dataset: 'kostat/2013/json/skorea_municipalities_geo_simple.json', note: '통계청 2013 시군구 단순화본.' },
+    { source: 'click-that-hood', dataset: 'public/data/seoul.geojson', note: '서울 행정동 약 1.3MB, 원출처 admdongkor.' },
+    { source: 'bbbike', dataset: 'Seoul.osm.geojson.xz', note: '서울 OSM, xz 압축 약 74MB.' },
+    { source: 'overpass-turbo', dataset: 'Export → GeoJSON', note: '질의 영역·태그 자유 지정.' },
+    { source: 'naturalearth', dataset: 'ne_10m_admin_0_countries.geojson (GitHub 미러)', note: '약 13MB.' },
   ],
   recipes: [
     vectorRecipe({

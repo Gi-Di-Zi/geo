@@ -7,6 +7,7 @@ if (!tool) throw createError({ statusCode: 404, message: '없는 도구' })
 const type = toolTypes.find(t => t.id === tool.type)
 const usages = usagesOf(tool.id)
 const statusLabels = { active: '사용 중', stale: '업데이트 중단', dead: '개발 종료' }
+const serves = tool.serves?.map(k => kindLabels[k]).join(', ')
 useHead({ title: `${tool.name} | 공간 데이터 웹 처리` })
 </script>
 
@@ -28,8 +29,8 @@ useHead({ title: `${tool.name} | 공간 데이터 웹 처리` })
         <template v-if="tool.image">
           <dt>실행 이미지</dt><dd><code>{{ tool.image.startsWith('local:') ? '로컬 빌드 (pipeline/Dockerfile 등)' : tool.image }}</code></dd>
         </template>
-        <template v-if="tool.serves">
-          <dt>서빙하는 출력</dt><dd>{{ tool.serves.map(k => kindLabels[k]).join(', ') }}</dd>
+        <template v-if="serves">
+          <dt>서빙하는 출력</dt><dd>{{ serves }}</dd>
         </template>
         <dt>홈페이지</dt><dd><a :href="tool.url" target="_blank" rel="noopener">{{ tool.url }}</a></dd>
       </dl>

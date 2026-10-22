@@ -2,7 +2,7 @@ import { pointSpec } from './_points.ts'
 
 const RAW = '/raw/chiak_sample.las'
 
-export default pointSpec({
+const spec = pointSpec({
   id: 'las',
   name: 'LAS',
   ext: '.las',
@@ -48,3 +48,12 @@ export default pointSpec({
   colorize: false,
   view: { center: [128.0717, 37.4224], zoom: 19.3, pitch: 60, bearing: -20 },
 })
+
+export default {
+  ...spec,
+  otherSources: [
+    ...spec.otherSources,
+    { source: 'datagokr', dataset: '인천지하철1호선 포인트클라우드 샘플 15111216', note: '역사 내부 LiDAR LAS, zip 약 140MB. 데이터 한계란에 공개제한 언급 → 확인 필요.' },
+    { source: 'ngii', dataset: '정밀도로지도 점군 (MMS)', note: '로그인 후 다운로드. 점군 파일 형식 미확인.' },
+  ],
+}

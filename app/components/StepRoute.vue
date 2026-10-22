@@ -9,11 +9,22 @@ const dataDir = computed(() => `${base}data/${props.spec.category}/${props.spec.
 const outDir = computed(() => `${dataDir.value}/${props.recipe.id}/`)
 const source = computed(() => sourceOf(props.spec.collect.source))
 const origin = computed(() => origins[props.spec.id])
-const domestic = computed(() => props.spec.otherSources.filter(o => sourceOf(o.source)?.domestic))
+const kind = computed(() => sampleOf(props.spec))
+const where = computed(() => sourcesByScope(props.spec))
 const total = computed(() => props.collected?.files.reduce((a, f) => a + f.bytes, 0) ?? 0)
 const records = (stage: 'preprocess' | 'convert') => props.report?.steps.filter(s => s.stage === stage)
 const statOf = (id: string) => props.report?.outputs.find(o => o.id === id)
 const sameFormat = (o: Output) => nativeKind[props.spec.id] === o.kind
+
+// 선택한 레시피 요약 (서버 방식은 용량 대신 확인 요청의 첫 응답 시간)
+const svc = computed(() => isService(props.recipe))
+const outBytes = computed(() => props.report?.outputs.reduce((a, o) => a + o.bytes, 0) ?? 0)
+const outFiles = computed(() => props.report?.outputs.reduce((a, o) => a + o.files, 0) ?? 0)
+const firstMs = computed(() => {
+  const ms = props.report?.outputs.flatMap(o => o.ms ?? []) ?? []
+  const lo = Math.min(...ms), hi = Math.max(...ms)
+  return !ms.length ? '-' : lo === hi ? `${lo}ms` : `${lo}–${hi}ms`
+})
 
 // 뷰어마다: 쓰는 결과물, 그 결과물을 읽는 API, 메모, 최소 코드 (코드 속 주소는 브라우저 주소 기준이라 붙은 뒤에 만든다)
 const mounted = ref(false)
@@ -24,6 +35,7 @@ const perViewer = computed(() => viewers.map(v => {
   return {
     v,
     output,
+    level: supportOf(props.spec, props.recipe, v.id, succeeded(props.recipe, props.report)),
     api: output && viewerApi[v.id][output.kind],
     note: ('caution' in use && use.caution) || ('note' in use && use.note) || '',
     caution: 'caution' in use && !!use.caution,
@@ -35,7 +47,7 @@ const perViewer = computed(() => viewers.map(v => {
 
 <template>
   <div class="route">
-    <!-- 1 수집: 포맷 소개 + 샘플 원본(또는 올린 파일) + 국내 수급처 + 내 파일 올리기 -->
+    <!-- 1 수집: 포맷 소개 + 샘플 원본(또는 올린 파일) + 데이터 받는 곳(국내·해외·개인) + 내 파일 올리기 -->
     <div v-if="step === 'collect'" class="cols">
       <section class="about" aria-labelledby="about-title">
         <p class="exts">{{ spec.extensions.join(' ') }}</p>
@@ -67,13 +79,19 @@ const perViewer = computed(() => viewers.map(v => {
         </section>
         <template v-else>
           <section class="card">
-            <h3>샘플 원본</h3>
+            <h3 class="sample-head">샘플 원본 <span class="sk" :class="`sk-${kind}`">{{ sampleLabels[kind] }}</span></h3>
             <p><a :href="spec.collect.url" target="_blank" rel="noopener">{{ spec.collect.dataset }}</a></p>
             <dl class="facts small">
               <dt>출처 표시</dt><dd>{{ spec.collect.attribution ?? source?.attribution ?? source?.name }}</dd>
               <dt>라이선스</dt><dd>{{ spec.collect.license ?? source?.license }}</dd>
               <template v-if="spec.collect.derived">
                 <dt>범위</dt><dd>{{ spec.collect.derived }}</dd>
+              </template>
+              <template v-if="spec.collect.converted">
+                <dt>변환</dt><dd>{{ spec.collect.converted }}</dd>
+              </template>
+              <template v-if="spec.noDomestic">
+                <dt>국내 원본</dt><dd>{{ spec.noDomestic }}</dd>
               </template>
             </dl>
             <template v-if="collected?.published">
@@ -89,15 +107,20 @@ const perViewer = computed(() => viewers.map(v => {
             <p v-else-if="collected" class="small muted">용량·재배포 조건상 출처에서 직접 받기.</p>
           </section>
           <section class="card">
-            <h3>국내에서 받는 곳</h3>
-            <ul v-if="domestic.length" class="domestic">
-              <li v-for="o in domestic" :key="o.source + o.dataset">
-                <a :href="sourceOf(o.source)!.url" target="_blank" rel="noopener">{{ sourceOf(o.source)!.name }}</a>
-                <span>{{ o.dataset }}</span>
-                <p class="small muted">{{ o.note }}</p>
-              </li>
-            </ul>
-            <p v-else class="small muted">같은 형식의 국내 공개 데이터 없음.</p>
+            <h3>데이터 받는 곳</h3>
+            <template v-for="g in where" :key="g.scope">
+              <h4 class="scope small">{{ scopeLabels[g.scope] }}</h4>
+              <ul class="where">
+                <li v-for="o in g.list" :key="o.source + o.dataset">
+                  <a :href="sourceOf(o.source)!.url" target="_blank" rel="noopener">{{ sourceOf(o.source)!.name }}</a>
+                  <span>{{ o.dataset }}</span>
+                  <span class="muted small"> · {{ accessLabels[sourceOf(o.source)!.access] }}</span>
+                  <p class="small muted">{{ o.note }}</p>
+                </li>
+              </ul>
+            </template>
+            <p v-if="!where.length" class="small muted">같은 형식의 다른 공개 데이터 없음.</p>
+            <p class="small more"><NuxtLink to="/sources">사이트 모음 전체 →</NuxtLink></p>
           </section>
         </template>
         <section class="card">
@@ -110,8 +133,25 @@ const perViewer = computed(() => viewers.map(v => {
     <!-- 2 전처리 -->
     <StepList v-else-if="step === 'preprocess'" :steps="recipe.preprocess" :records="records('preprocess')" class="narrow" />
 
-    <!-- 3 웹 형태 변환: 변환 단계 → 결과물 → 뷰어별 처리 -->
+    <!-- 3 웹 형태 변환: 요약 → 변환 단계 → 결과물 → 뷰어별 처리 -->
     <template v-else-if="step === 'convert'">
+      <section class="card summary" aria-labelledby="summary-title">
+        <h2 id="summary-title">{{ recipe.title }} 요약 <span class="chip">{{ svc ? '서버 방식' : '파일 방식' }}</span></h2>
+        <dl class="stats">
+          <div><dt>걸린 시간</dt><dd>{{ report ? seconds(report.totalMs) : '-' }}</dd></div>
+          <div v-if="svc"><dt>첫 응답</dt><dd>{{ firstMs }}</dd></div>
+          <template v-else>
+            <div><dt>결과 용량</dt><dd>{{ report ? bytes(outBytes) : '-' }}</dd></div>
+            <div><dt>파일 수</dt><dd>{{ report ? outFiles.toLocaleString() : '-' }}</dd></div>
+          </template>
+          <div><dt>그릴 수 있는 뷰어</dt><dd>{{ perViewer.filter(p => p.output).length }} / {{ viewers.length }}</dd></div>
+        </dl>
+        <p v-if="report?.env" class="small muted">
+          측정 조건: 1회 실행, 도구 이미지 받아 둔 상태, 서버 기동 시간 제외. 걸린 시간 = 단계 컨테이너 실행 시간 합.<template v-if="svc"> 첫 응답 = 결과물마다 확인 요청 1회.</template>
+          {{ report.env.cpu }}, Docker {{ report.env.docker }} ({{ report.env.cores }}코어·메모리 {{ report.env.memGB }}GB), {{ report.env.os }}.
+        </p>
+      </section>
+
       <div class="cols">
         <section aria-labelledby="process-title">
           <h2 id="process-title">변환 단계</h2>
@@ -136,10 +176,13 @@ const perViewer = computed(() => viewers.map(v => {
       </div>
 
       <section aria-labelledby="per-viewer-title">
-        <h2 id="per-viewer-title">뷰어별 처리</h2>
+        <h2 id="per-viewer-title">뷰어별 처리 <span class="muted">· {{ recipe.title }}</span></h2>
         <ul class="viewers">
           <li v-for="p in perViewer" :key="p.v.id" class="card" :class="{ off: !p.output }">
-            <p class="v-head"><strong>{{ p.v.name }}</strong> <span class="muted small">{{ p.v.dims }}</span></p>
+            <p class="v-head">
+              <strong>{{ p.v.name }}</strong> <span class="muted small">{{ p.v.dims }}</span>
+              <span class="lv small" :class="`lv-${p.level}`">{{ supportLabels[p.level] }}</span>
+            </p>
             <template v-if="p.output">
               <dl class="facts small">
                 <dt>결과물</dt><dd>{{ p.output.label }} <span class="muted">({{ p.output.path }})</span></dd>
@@ -150,9 +193,12 @@ const perViewer = computed(() => viewers.map(v => {
               </dl>
               <pre v-if="p.code" class="code"><code>{{ p.code }}</code></pre>
             </template>
-            <p v-else class="small no">미지원 — {{ p.unsupported }}</p>
+            <p v-else class="small no">{{ p.unsupported }}</p>
           </li>
         </ul>
+        <p class="small muted legend">
+          직접 처리: 원본과 같은 형식을 그대로 읽음. 변환 후 처리: 바꾼 결과물을 읽음. 일부 기능만: 그리지만 빠지는 기능 있음(카드의 주의). 미검증: 성공한 실행 기록 없음.
+        </p>
       </section>
 
       <section v-if="spec.alternatives.length" aria-labelledby="alt-title">
@@ -198,10 +244,19 @@ const perViewer = computed(() => viewers.map(v => {
 .dl::before { content: ''; width: 12px; height: 12px; background: currentColor; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 1v7M3 5l3 3 3-3M1.5 11h9' stroke='black' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
 .dl span { font-weight: 400; opacity: 0.75; }
 .dl:hover { background: color-mix(in srgb, var(--ink) 85%, var(--c)); }
-.domestic { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.domestic li > a { font-weight: 600; margin-right: 6px; }
+.sample-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.scope { margin: 12px 0 6px; color: var(--ink-2); font-weight: 600; }
+.scope:first-of-type { margin-top: 0; }
+.where { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.where li > a { font-weight: 600; margin-right: 6px; }
+.more { margin-top: 12px; }
 .narrow { max-width: 56rem; }
 
+.summary { margin-bottom: 36px; }
+.summary h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px 24px; margin: 14px 0 10px; }
+.stats dt { font-size: var(--fs-0); color: var(--ink-2); }
+.stats dd { margin: 0; font-size: var(--fs-3); font-weight: 600; line-height: 1.3; }
 .outputs { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
 .outputs .card { display: grid; gap: 4px; }
 .out-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -210,6 +265,8 @@ const perViewer = computed(() => viewers.map(v => {
 .viewers .card { display: grid; gap: 8px; align-content: start; min-width: 0; }
 .viewers .off { background: var(--paper); }
 .v-head { display: flex; align-items: baseline; gap: 8px; }
+.v-head .lv { margin-left: auto; font-weight: 600; }
+.legend { margin-top: 10px; }
 .viewers .facts { margin: 0; }
 .code { max-height: 240px; overflow: auto; font-size: 0.75rem; white-space: pre; }
 .caution { color: #8A5300; }

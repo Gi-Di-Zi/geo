@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { kindLabels, viewers } from '#shared/viewers'
-import type { FormatSpec, Output, Recipe, ViewerId } from '#shared/types'
+import { engine, engineOutput, engineTarget, kindLabels, viewers } from '#shared/viewers'
+import type { EngineReport, FormatSpec, Output, Recipe, ViewerId } from '#shared/types'
 
 /** base: 결과 폴더 URL. 없으면 미리 변환해 둔 샘플(public/data) */
 const props = defineProps<{ spec: FormatSpec; recipe: Recipe; color: string; base?: string }>()
@@ -67,10 +67,22 @@ watch(tiles, t => {
   if (!t.find(x => x.meta.id === current.value)?.output) current.value = t.find(x => x.meta.id === 'deck' && x.output)?.meta.id ?? t.find(x => x.output)?.meta.id ?? 'ol'
 }, { immediate: true })
 const cur = computed(() => tiles.value.find(t => t.meta.id === current.value)!)
+
+// 엔진(Cesium for Unreal): 페이지에서 그릴 수 없어 지도 대신 불러오는 방법 카드. 결과물 중 3D Tiles·지형 (CesiumJS가 쓰는 것 먼저)
+const showEngine = ref(false)
+const engineOut = computed(() => engineOutput(props.recipe))
+// 카드는 눌러야 열리므로 브라우저 주소를 써도 된다
+const engineUrl = computed(() => engineOut.value && location.origin + outPath(dir.value, { ...engineOut.value, path: engineTarget(engineOut.value) }))
+// 엔진 렌더링 기록 (npm run unreal). 샘플에만 있다 (올린 파일은 엔진으로 돌리지 않음)
+const engineRep = ref<EngineReport | null>(null)
+watch([showEngine, dir], async ([open]) => {
+  engineRep.value = null
+  if (open && engineOut.value && !props.base) engineRep.value = await $fetch<EngineReport>(`${dir.value}unreal.json`).catch(() => null)
+})
 </script>
 
 <template>
-  <section ref="root" class="stage" aria-label="뷰어 4개 결과 비교">
+  <section ref="root" class="stage" aria-label="렌더러별 결과 (웹 뷰어 4종 + 엔진)">
     <div class="viewer">
       <ViewerTile
         v-for="t in tiles" v-show="current === t.meta.id" :key="`${dir}-${t.meta.id}`"
@@ -89,6 +101,10 @@ const cur = computed(() => tiles.value.find(t => t.meta.id === current.value)!)
             v-for="t in tiles" :key="t.meta.id" type="button" :class="{ off: !t.output }"
             :aria-pressed="current === t.meta.id" @click="current = t.meta.id"
           >{{ t.meta.name }} <span class="small">{{ t.output ? t.meta.dims : '표시 불가' }}</span></button>
+          <p class="menu-head small">엔진 · 수동 확인</p>
+          <button type="button" :class="{ off: !engineOut }" :aria-pressed="showEngine" @click="showEngine = !showEngine">
+            {{ engine.name }} <span class="small">{{ engineOut ? engine.dims : '표시 불가' }}</span>
+          </button>
         </div>
       </details>
       <details name="stage-pop" class="pop">
@@ -110,6 +126,35 @@ const cur = computed(() => tiles.value.find(t => t.meta.id === current.value)!)
         </div>
       </details>
     </div>
+    <aside v-if="showEngine" class="float engine panel" aria-labelledby="engine-title">
+      <header>
+        <h2 id="engine-title">{{ engine.name }}에서 보기</h2>
+        <button class="btn" type="button" @click="showEngine = false">닫기</button>
+      </header>
+      <p class="small muted">{{ engine.summary }}</p>
+      <template v-if="engineOut">
+        <figure v-if="engineRep?.ok" class="shot">
+          <a :href="`${dir}unreal.png`" target="_blank" rel="noopener"><img :src="`${dir}unreal.png`" :alt="`${engine.name} 렌더링 결과`"></a>
+          <figcaption class="small">
+            <span class="lv-direct">엔진 확인</span> {{ new Date(engineRep.ranAt).toLocaleDateString('ko-KR') }} · {{ engineRep.gpu }} ·
+            UE {{ engineRep.engine }} · Cesium {{ engineRep.cesium }} · 준비 {{ seconds(engineRep.loadMs) }}
+          </figcaption>
+        </figure>
+        <p v-else-if="engineRep" class="small"><span class="bad">렌더링 실패</span> {{ engineRep.error }}</p>
+        <p v-else class="small"><span class="lv-untested">미확인</span> — 엔진 렌더링 기록 없음 (언리얼 있는 PC에서 npm run unreal).</p>
+        <details :open="!engineRep?.ok" class="small">
+          <summary>언리얼 에디터에서 직접 불러오기</summary>
+          <ol>
+            <li>언리얼 엔진 5.6+에 Cesium for Unreal 플러그인 설치.</li>
+            <li>Cesium 패널 → Blank 3D Tiles Tileset 추가 → Source: From Url.</li>
+            <li>Url ({{ kindLabels[engineOut.kind] }}): <code>{{ engineUrl }}</code></li>
+            <li>CesiumGeoreference 원점: 경도 {{ view.center[0] }}, 위도 {{ view.center[1] }}, 높이 {{ view.height ?? 0 }}m.</li>
+          </ol>
+          <p class="muted">주소는 이 사이트가 떠 있는 PC에서만 접근.</p>
+        </details>
+      </template>
+      <p v-else class="small">이 레시피 결과물은 3D Tiles·지형이 아님 → 엔진 연계 대상 아님. 웹 뷰어로 확인.</p>
+    </aside>
     <div class="float tools panel" role="group" aria-label="지도 도구">
       <button type="button" title="확대" aria-label="확대" @click="move({ zoom: camera.zoom + 1 })">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
@@ -146,7 +191,7 @@ const cur = computed(() => tiles.value.find(t => t.meta.id === current.value)!)
 </template>
 
 <style scoped>
-/* 부모(화면 비교 단계)가 남은 높이를 다 준다. 전체 화면에서도 같은 배치 */
+/* 부모(시각화·렌더링 단계)가 남은 높이를 다 준다. 전체 화면에서도 같은 배치 */
 .stage { position: relative; flex: 1; min-height: 320px; background: var(--stage); }
 .viewer { position: absolute; inset: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
 
@@ -175,6 +220,18 @@ const cur = computed(() => tiles.value.find(t => t.meta.id === current.value)!)
 .menu button[aria-pressed='true'] span { color: inherit; opacity: 0.7; }
 .menu button:disabled { opacity: 0.4; cursor: not-allowed; }
 .menu p { padding: 0 10px 4px; }
+.menu-head { margin-top: 2px; padding: 6px 10px 0 !important; border-top: 1px solid var(--rule); color: var(--ink-2); }
+
+/* 엔진 안내 카드: 지도 위 왼쪽 아래 */
+.engine { left: 12px; bottom: 12px; width: min(28rem, calc(100% - 24px)); padding: 14px 16px; display: grid; gap: 8px; }
+.engine header { display: flex; align-items: center; gap: 8px; }
+.engine h2 { font-size: var(--fs-1); margin-right: auto; }
+.engine ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.engine code { word-break: break-all; }
+.engine details ol { margin-top: 6px; }
+.shot { margin: 0; display: grid; gap: 6px; }
+.shot img { display: block; width: 100%; border-radius: 8px; border: 1px solid var(--rule); }
+.bad { color: #B42318; font-weight: 600; }
 .sync { display: flex; gap: 6px; align-items: center; padding: 6px 10px 4px; border-top: 1px solid var(--rule); cursor: pointer; }
 
 .tools { right: 12px; top: 12px; display: grid; padding: 3px; gap: 2px; }

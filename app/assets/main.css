@@ -151,6 +151,15 @@ details[open] > summary::before { content: '▾ '; }
 .lv-partial { color: #8A5300; }
 .lv-untested, .lv-no { color: var(--no); }
 
+/* 샘플 분류 (sampleLabels). 점 + 글자, 준비 중은 sk-wip */
+.sk { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 500; color: var(--sk, var(--ink-2)); white-space: nowrap; }
+.sk::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--sk, var(--no)); }
+.sk-domestic { --sk: var(--ok); }
+.sk-abroad { --sk: var(--link); }
+.sk-other { --sk: #7A4CB0; }
+.sk-wip::before { background: #C9A227; }
+.sk-none::before { background: transparent; border: 1.5px solid var(--no); width: 5px; height: 5px; }
+
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {

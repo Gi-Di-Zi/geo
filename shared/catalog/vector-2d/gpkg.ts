@@ -58,6 +58,10 @@ export default {
   },
   otherSources: [
     { source: 'ngii', dataset: '수치지형도 (NGI)', note: '로그인 다운로드. GDAL로 GeoPackage 변환 후 레이어별 정리 가능.' },
+    { source: 'naturalearth', dataset: 'natural_earth_vector.gpkg', note: '전체 벡터 테마, 436MB.' },
+    { source: 'gadm', dataset: 'gadm41_KOR.gpkg', note: '재배포 불가(비상업·학술 전용).' },
+    { source: '3dbag', dataset: '3DBAG 타일 GPKG', note: '네덜란드 건물. 높이 속성(b3_h_max 등) → 2.5D 압출 가능.' },
+    { source: 'bbbike', dataset: 'Seoul.osm.geopackage.zip', note: '서울 OSM, 약 107MB.' },
   ],
   recipes: [
     vectorRecipe({

@@ -85,7 +85,7 @@ onMounted(() => {
   map.once('rendercomplete', () => emit('ready'))
   map.on('moveend', () => {
     const v = map!.getView()
-    const [lon, lat] = toLonLat(v.getCenter()!)
+    const [lon, lat] = toLonLat(v.getCenter()!) as [number, number]
     emitCamera({ lon, lat, zoom: v.getZoom()! - 1, bearing: -v.getRotation() / deg, pitch: camera.value.pitch })
   })
   map.on('singleclick', e => {

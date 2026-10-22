@@ -86,5 +86,5 @@ export default {
     },
   }),
   view: { center: [7.6586, 45.9763], zoom: 12, pitch: 60, bearing: 20, height: 3000, basemap: 'osm' },
-  closed: '국내 quantized-mesh 공개 원본 없음. 대구 3D지도 지형은 공공누리 미표시 → 대구시 정책상 사전 협의 필요.',
+  noDomestic: '국내 quantized-mesh 공개 원본 없음. 대구 3D지도 지형은 공공누리 미표시 → 대구시 정책상 사전 협의 필요.',
 } satisfies FormatSpec

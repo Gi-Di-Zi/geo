@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.8",
+	"Category": "",
+	"Description": "파이프라인 결과(3D Tiles, quantized-mesh 지형)를 Cesium for Unreal로 그려 스크린샷과 기록을 남기는 렌더러. 지도·블루프린트 없이 C++만 (scripts/unreal.ts가 실행)",
+	"Modules": [
+		{
+			"Name": "GeoRender",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "CesiumForUnreal",
+			"Enabled": true
+		}
+	]
+}

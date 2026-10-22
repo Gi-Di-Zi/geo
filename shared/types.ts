@@ -56,8 +56,8 @@ export interface Source {
   /** 재배포가 조건부/불가일 때 이유 한 줄 */
   note?: string
   attribution?: string
-  /** 국내 수급처. 수집 단계의 "국내에서 받는 곳"에 모은다 */
-  domestic?: true
+  /** 국내 = 국내 공공기관, 해외 = 해외 기관·글로벌 플랫폼, 개인 = 개인·커뮤니티(블로그, 개인 저장소). 수집 단계 "데이터 받는 곳"과 /sources가 이 순서로 묶는다 */
+  scope: 'domestic' | 'abroad' | 'personal'
 }
 
 export interface Step {
@@ -115,9 +115,10 @@ export interface FormatSpec {
   convertible: boolean
   /**
    * derived: 같은 형식에서 범위만 잘라 낸 샘플이면 어떻게 잘랐는지 (다른 형식에서 만든 샘플은 쓰지 않는다).
+   * converted: 그 형식 원본이 없어 다른 형식 원본을 바꿔 만든 샘플이면 무엇을 어떻게 바꿨는지 (기타 데이터로 분류).
    * license·attribution: 수급처 안에서도 데이터셋마다 다를 때 덮어쓴다
    */
-  collect: { source: string; dataset: string; url: string; how: string; steps: Step[]; derived?: string; license?: string; attribution?: string }
+  collect: { source: string; dataset: string; url: string; how: string; steps: Step[]; derived?: string; converted?: string; license?: string; attribution?: string }
   otherSources: { source: string; dataset: string; note: string }[]
   recipes: Recipe[]
   alternatives: { tool: string; cmd?: string; note: string }[]
@@ -127,6 +128,8 @@ export interface FormatSpec {
   upload: Upload
   /** 이 확장자 그대로 배포되는 원본 샘플을 찾지 못해 닫아 둔 이유. 있으면 선택할 수 없고 파이프라인도 건너뛴다 */
   closed?: string
+  /** 국내 원본 대신 해외·기타 샘플을 쓴 이유 (국내 수급처 조사 결과) */
+  noDomestic?: string
 }
 
 /**
@@ -160,6 +163,20 @@ export interface Report {
   outputs: { id: string; bytes: number; files: number; features?: number; ms?: number; cachedMs?: number }[]
 }
 
+/** 엔진 렌더러(Cesium for Unreal) 기록 (public/data/<cat>/<fmt>/<recipe>/unreal.json + unreal.png). scripts/unreal.ts가 쓴다 */
+export interface EngineReport {
+  ranAt: string
+  ok: boolean
+  /** 엔진이 읽은 주소 (file:///…) */
+  url: string
+  /** 시작부터 타일·셰이더 준비 끝까지 (첫 실행은 셰이더 컴파일 포함) */
+  loadMs: number
+  gpu: string
+  engine: string
+  cesium?: string
+  error?: string
+}
+
 /** 수집 기록 (public/data/<cat>/<fmt>/collect.json) */
 export interface CollectReport {
   ranAt: string
@@ -176,5 +193,6 @@ export interface StatusEntry {
   raw: { files: number; bytes: number } | null
   /** 원본을 사이트에서 내려받을 수 있는지 (재배포 가능 + 50MB 미만, pipeline.ts PUBLISH_LIMIT) */
   published: boolean
-  recipes: { id: string; state: 'done' | 'failed' | 'none'; ranAt?: string; totalMs?: number; bytes?: number; failedStep?: string }[]
+  /** engine: 엔진 렌더러 기록이 있으면 그 결과 (unreal.json) */
+  recipes: { id: string; state: 'done' | 'failed' | 'none'; ranAt?: string; totalMs?: number; bytes?: number; failedStep?: string; engine?: 'done' | 'failed' }[]
 }

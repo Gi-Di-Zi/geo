@@ -2,7 +2,7 @@ export type Basemap = 'vworld' | 'satellite' | 'osm'
 
 export const basemapLabels: Record<Basemap, string> = { vworld: 'VWorld', satellite: '위성', osm: 'OSM' }
 
-export function basemapTiles(kind: Basemap, key: string) {
+function basemapTiles(kind: Basemap, key: string) {
   if (kind === 'osm' || !key) {
     return { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', minzoom: 0, maxzoom: 19, attribution: '© OpenStreetMap contributors' }
   }

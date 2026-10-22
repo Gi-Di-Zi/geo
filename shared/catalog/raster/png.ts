@@ -33,7 +33,10 @@ export default imageSpec({
       },
     ],
   },
-  otherSources: imageOthers,
-  closed: '월드파일 포함 국내 PNG 공개 원본 없음.',
+  otherSources: [
+    ...imageOthers,
+    { source: 'gsi-japan', dataset: '標準地図 std/{z}/{x}/{y}.png', note: 'XYZ 타일(월드파일 없음).' },
+  ],
+  noDomestic: '월드파일 포함 국내 PNG 공개 원본 없음.',
   view: { center: [10.0, 53.55], zoom: 10.5, basemap: 'osm' },
 })

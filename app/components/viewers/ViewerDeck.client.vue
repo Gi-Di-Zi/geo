@@ -9,7 +9,7 @@ tile3dProto._updateTileset = function (v: any) { updateTileset.call(this, Object
 
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 import { MapLibreOverlay } from '@deck.gl/maplibre'
 import { BitmapLayer, GeoJsonLayer } from '@deck.gl/layers'
 import { MVTLayer, TerrainLayer, TileLayer } from '@deck.gl/geo-layers'

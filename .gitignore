@@ -9,3 +9,11 @@ pipeline/work
 pipeline/raw
 pipeline/serve
 public/data
+# 언리얼 렌더러: 빌드 결과·엔진 캐시·플러그인(GitHub 릴리스 1.2GB)은 npm run unreal -- setup으로 다시 만든다
+pipeline/unreal/_download
+pipeline/unreal/GeoRender/Binaries
+pipeline/unreal/GeoRender/Intermediate
+pipeline/unreal/GeoRender/Saved
+pipeline/unreal/GeoRender/DerivedDataCache
+pipeline/unreal/GeoRender/Plugins
+pipeline/unreal/GeoRender/cesium-request-cache.sqlite*

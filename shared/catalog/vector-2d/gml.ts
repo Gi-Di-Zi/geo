@@ -1,8 +1,24 @@
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { vectorRecipe, vectorUpload } from './_vector.ts'
 
 const RAW = '/raw/nl_provinces.gml'
 const WFS = 'https://service.pdok.nl/cbs/gebiedsindelingen/2025/wfs/v1_0?service=WFS&version=2.0.0&request=GetFeature&typeNames=gebiedsindelingen:provincie_gegeneraliseerd'
+
+const preprocess: Step[] = [
+  {
+    title: '무결성 확인',
+    why: 'srsName="urn:ogc:def:crs:EPSG::28992"(네덜란드 RD New, m)·posList 좌표 확인. 이 좌표계는 동쪽(X) 먼저, 위경도 GML은 위도 먼저.',
+    tool: 'shell',
+    run: `head -c 1600 ${RAW}`,
+  },
+  {
+    title: '위경도 변환',
+    why: 'GDAL: srsName 축 순서 해석 후 읽기. -t_srs EPSG:4326: 위경도 변환. 직접 파싱 시 X·Y 뒤바뀜 위험.',
+    tool: 'gdal',
+    run: `ogr2ogr -f GPKG /work/provinces.gpkg ${RAW} -nln provinces -t_srs EPSG:4326`,
+  },
+]
 
 export default {
   id: 'gml',
@@ -34,33 +50,23 @@ export default {
   otherSources: [
     { source: 'vworld', dataset: 'WFS GetFeature (GML 응답)', note: '인증키 필요, 약관 확인 전.' },
     { source: 'nsdi', dataset: '국가공간정보포털 WFS (GML 응답)', note: '인증키 필요.' },
+    { source: 'gsi-japan', dataset: '基盤地図情報 기본항목 (JPGIS 2.0 GML)', note: '일본 전역. 회원 로그인 필요.' },
   ],
   recipes: [
     vectorRecipe({
       work: '/work/provinces.gpkg',
       layer: 'provinces',
+      key: 'statcode',
       minzoom: 5,
       maxzoom: 10,
-      preprocess: [
-        {
-          title: '무결성 확인',
-          why: 'srsName="urn:ogc:def:crs:EPSG::28992"(네덜란드 RD New, m)·posList 좌표 확인. 이 좌표계는 동쪽(X) 먼저, 위경도 GML은 위도 먼저.',
-          tool: 'shell',
-          run: `head -c 1600 ${RAW}`,
-        },
-        {
-          title: '위경도 변환',
-          why: 'GDAL: srsName 축 순서 해석 후 읽기. -t_srs EPSG:4326: 위경도 변환. 직접 파싱 시 X·Y 뒤바뀜 위험.',
-          tool: 'gdal',
-          run: `ogr2ogr -f GPKG /work/provinces.gpkg ${RAW} -nln provinces -t_srs EPSG:4326`,
-        },
-      ],
+      preprocess,
     }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'provinces', preprocess, work: '/work/provinces.gpkg', geom: 'polygon', bounds: [3.3, 50.7, 7.3, 53.6] }),
   ],
   alternatives: [
-    { tool: 'geoserver', note: 'WFS 요청마다 GML 생성·응답.' },
+    { tool: 'geoserver', note: 'GeoServer 레시피의 WFS에서 outputFormat 생략 → GML 3.2 응답(원본과 같은 형식).' },
   ],
   upload: vectorUpload({ accept: ['.gml'], note: 'GML 파일 하나. 스키마(.xsd) 없어도 GDAL이 구조 추측.' }),
   view: { center: [5.3, 52.2], zoom: 6.3, basemap: 'osm' },
-  closed: '국내 GML 파일 배포처 없음. WFS(VWorld·국가공간정보포털)는 인증키 필요·재배포 제한.',
+  noDomestic: '국내 GML 파일 배포처 없음. WFS(VWorld·국가공간정보포털)는 인증키 필요·재배포 제한.',
 } satisfies FormatSpec

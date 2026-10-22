@@ -20,4 +20,15 @@ const spec = modelSpec({
   magoInput: 'mkdir -p /work/in && cp /raw/Lantern.glb /work/in/',
 })
 
-export default { ...spec, closed: '국내 glb 자동 수집 원본 없음. 국가유산청 3D(공공누리 1유형)는 로그인·승인 후 FBX, 뷰어 내부 glb는 이용조건 미표시. 문화포털 실감형 3D는 신청서(이름·이메일) 필요.' }
+export default {
+  ...spec,
+  otherSources: [
+    ...spec.otherSources,
+    { source: '3dbag', dataset: '3D Tiles 1.1 lod22 (타일 콘텐츠 GLB)', note: '네덜란드 건물.' },
+    { source: 'smithsonian-3d', dataset: 'Open Access(CC0) 3D 모델', note: 'GLB 제공 여부 객체별 확인.' },
+    { source: 'sketchfab', dataset: '모델 페이지 Download → GLB', note: '로그인, 모델별 라이선스.' },
+    { source: 'khs-digital', dataset: '국가유산 3D 에셋', note: '문화유산 스캔 3D. 원본 형식 자료별 → GLB 변환 필요.' },
+    { source: 'datagokr', dataset: '경주 불국사 다보탑 3D 모델링 15150537', note: 'OBJ zip(약 292MB), 공공누리 1유형, 로그인 불필요. OBJ → GLB 변환 필요.' },
+  ],
+  noDomestic: '국내 glb 자동 수집 원본 없음. 국가유산청 3D(공공누리 1유형)는 로그인·승인 후 FBX, 뷰어 내부 glb는 이용조건 미표시. 문화포털 실감형 3D는 신청서(이름·이메일) 필요.',
+}

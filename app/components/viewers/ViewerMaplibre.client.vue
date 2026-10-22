@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 import type { Output } from '#shared/types'
 
 const props = defineProps<{ output: Output; url: string; color: string }>()
@@ -65,7 +65,7 @@ function addData(m: maplibregl.Map): string[] {
   // 레이어 이름을 모르는 벡터타일(올린 PMTiles)은 파일 안 목록(vector_layers)의 레이어를 모두 그린다
   const ids: string[] = []
   const onData = (e: maplibregl.MapSourceDataEvent) => {
-    const layers = (m.getSource('data') as maplibregl.VectorTileSource | undefined)?.vectorLayerIds
+    const layers = (m.getSource('data') as maplibregl.Source | undefined)?.vectorLayerIds
     if (e.sourceId !== 'data' || !layers) return
     m.off('sourcedata', onData)
     for (const l of layers) ids.push(...addVector(m, { 'source-layer': l }, `-${l}`))

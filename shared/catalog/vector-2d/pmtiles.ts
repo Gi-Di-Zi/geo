@@ -17,20 +17,23 @@ export default {
   convertible: true,
   collect: {
     source: 'protomaps',
-    dataset: 'Protomaps 배경지도 일일 빌드 2026-10-13 (시청 일대 추출)',
+    dataset: 'Protomaps 배경지도 빌드 2026-08-11 (스키마 4.15.1, 시청 일대 추출)',
     url: 'https://docs.protomaps.com/basemaps/downloads',
     how: '전 세계 OSM 배경지도 PMTiles(약 130GB, 일일 빌드) → pmtiles extract가 Range 요청으로 시청 일대만 작은 PMTiles로 추출.',
     steps: [
       {
         title: '전 세계 파일에서 시청 일대 추출',
-        why: '130GB 전체 다운로드 없음 — 목차 읽고 필요한 타일 구간만 요청. --bbox: 시청 범위. --maxzoom=15: 최대 줌.',
+        why: '130GB 전체 다운로드 없음 — 목차 읽고 필요한 타일 구간만 요청. --bbox: 시청 범위. --maxzoom=15: 최대 줌. 20260811: 일일 빌드는 약 1주 뒤 삭제 → 스키마 버전(4.15.1)마다 남기는 빌드로 고정.',
         tool: 'go-pmtiles',
-        run: `pmtiles extract https://build.protomaps.com/20261013.pmtiles ${RAW} --bbox=126.970,37.555,126.990,37.570 --maxzoom=15`,
+        run: `pmtiles extract https://build.protomaps.com/20260811.pmtiles ${RAW} --bbox=126.970,37.555,126.990,37.570 --maxzoom=15`,
       },
     ],
   },
   otherSources: [
     { source: 'geofabrik', dataset: 'south-korea shortbread MBTiles', note: 'MBTiles 다운로드 → pmtiles convert로 변환 가능.' },
+    { source: 'overture', dataset: 'tiles/<릴리스>/buildings.pmtiles 등 테마별', note: '확인용(운영 비권장).' },
+    { source: 'source-coop', dataset: 'VIDA 건물 KOR.pmtiles', note: '한국 건물, ODbL.' },
+    { source: 'bbbike', dataset: 'Seoul.osm.pmtiles-shortbread.zip', note: '서울 shortbread 스키마, 약 29MB.' },
   ],
   recipes: [
     {
@@ -105,5 +108,5 @@ export default {
     },
   },
   view: { center: [126.979, 37.5635], zoom: 15 },
-  closed: '국내 기관 PMTiles 배포처 없음. OSM 서울 추출본(Protomaps)은 해외 플랫폼.',
+  noDomestic: '국내 기관 PMTiles 배포처 없음. OSM 서울 추출본(Protomaps)은 해외 플랫폼.',
 } satisfies FormatSpec

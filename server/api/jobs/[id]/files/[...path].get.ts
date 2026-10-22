@@ -24,9 +24,9 @@ export default defineEventHandler(event => {
       throw createError({ statusCode: 416 })
     }
     setResponseStatus(event, 206)
-    setResponseHeaders(event, { 'content-range': `bytes ${start}-${end}/${size}`, 'content-length': String(end - start + 1) })
+    setResponseHeaders(event, { 'content-range': `bytes ${start}-${end}/${size}`, 'content-length': end - start + 1 })
     return sendStream(event, createReadStream(file, { start, end }))
   }
-  setResponseHeader(event, 'content-length', String(size))
+  setResponseHeader(event, 'content-length', size)
   return sendStream(event, createReadStream(file))
 })

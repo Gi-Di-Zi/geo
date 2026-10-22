@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { viewers } from '#shared/viewers'
+import { engine, engineOutput, viewers } from '#shared/viewers'
 import type { FormatSpec, StatusEntry, ViewerId } from '#shared/types'
+import type { SampleKind } from '~/utils/catalog'
 
 // 실측 현황은 public/ 정적 파일이라 브라우저에서 받는다
 const { data: status } = useFetch<StatusEntry[]>(`${useRuntimeConfig().app.baseURL}data/status.json`, { server: false, default: () => [] })
 const entryOf = (f: FormatSpec) => status.value.find(s => s.format === `${f.category}/${f.id}`)
 const recipeState = (f: FormatSpec, id: string) => entryOf(f)?.recipes.find(r => r.id === id)
+/** 엔진 렌더러 상태: 대상(3D Tiles·지형 결과) 아니면 null. 레시피 하나라도 성공하면 확인 */
+function engineOf(f: FormatSpec) {
+  const rs = f.recipes.filter(r => engineOutput(r))
+  if (!rs.length) return null
+  const states = rs.map(r => recipeState(f, r.id)?.engine)
+  return states.includes('done') ? { cls: 'lv-direct', label: '엔진 확인' } : states.includes('failed') ? { cls: 'bad', label: '실패' } : { cls: 'lv-untested', label: '미확인' }
+}
 /** 뷰어마다 레시피 중 가장 좋은 처리 수준 */
 const levelOf = (f: FormatSpec, v: ViewerId) => supportOrder.find(l => f.recipes.some(r => supportOf(f, r, v, recipeState(f, r.id)?.state === 'done') === l))!
 
@@ -16,6 +24,8 @@ const openIds = new Set(openFormats.map(f => `${f.category}/${f.id}`))
 const recipes = computed(() => status.value.filter(s => openIds.has(s.format)).flatMap(s => s.recipes))
 const done = computed(() => recipes.value.filter(r => r.state === 'done').length)
 const uploadable = openFormats.filter(f => 'recipe' in f.upload).length
+/** 샘플 분류별 확장자 수 */
+const kinds = (Object.keys(sampleLabels) as SampleKind[]).map(k => ({ k, n: formats.filter(f => sampleOf(f) === k).length })).filter(x => x.n)
 
 /** 과정 보기 링크: 그 도구를 고른 확장자의 변환 단계 */
 const processLink = (f: FormatSpec, id: string) => ({ path: stepPath(f, 'convert'), query: id === f.recipes[0]!.id ? {} : { tool: id } })
@@ -39,13 +49,14 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
         성공한 변환 클릭 → 단계별 명령·로그.
       </p>
       <p v-if="status.length" class="prose summary">
-        샘플 있는 확장자 {{ openFormats.length }}개 (샘플 없음 {{ formats.length - openFormats.length }}개).
+        샘플 있는 확장자 {{ openFormats.length }}개 —
+        <template v-for="(x, i) in kinds" :key="x.k"><template v-if="i">, </template><span class="sk" :class="`sk-${x.k}`">{{ sampleLabels[x.k] }}</span> {{ x.n }}개</template>.
         변환 성공: 레시피 {{ recipes.length }}개 중 {{ done }}개. 파일 업로드 지원: {{ uploadable }}개 확장자.
       </p>
       <p class="prose small muted">
-        샘플 기준: 국내 기관이 그 형식 그대로 배포하는 원본. 로그인 없이, 재배포 허용. 없으면 샘플 없음.
+        샘플 기준: 국내 기관 원본(국내 공공) → 없으면 해외 기관 원본(해외) → 없으면 다른 형식에서 변환한 샘플·개인 자료(기타) → 샘플 없음. 공통: 로그인 없이, 재배포 허용. 사이트 목록: <NuxtLink to="/sources">데이터 받는 곳</NuxtLink>.
         뷰어 칸: 레시피 중 가장 좋은 처리 수준. 직접 처리(원본 형식 그대로), 변환 후 처리, 일부 기능만, 미검증(성공한 실행 기록 없음), 미지원.
-        DEM(수치표고모델)은 확장자가 아닌 데이터 종류. 대표 형식: <NuxtLink to="/terrain/tif">GeoTIFF(.tif)</NuxtLink>, ERDAS IMG(.img, 국내 공개DEM은 로그인 필요 → 샘플 없음).
+        DEM(수치표고모델)은 확장자가 아닌 데이터 종류. 대표 형식: <NuxtLink to="/terrain/tif">GeoTIFF(.tif)</NuxtLink>, ERDAS IMG(.img, 국내 공개DEM은 로그인 필요 → 해외 샘플).
       </p>
 
       <section v-for="g in groups" :key="g.cat.id" class="group" :style="{ '--c': g.cat.color }" :aria-labelledby="`g-${g.cat.id}`">
@@ -62,10 +73,13 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
 
             <div class="small">
               <span class="lbl">샘플 출처</span>
+              <p class="sk" :class="`sk-${sampleOf(f)}`">{{ sampleLabels[sampleOf(f)] }}</p>
               <p><a :href="f.collect.url" target="_blank" rel="noopener">{{ f.collect.dataset }}</a></p>
               <p class="muted">{{ sourceOf(f.collect.source)?.name }}, {{ sourceOf(f.collect.source)?.license }}</p>
               <p v-if="f.closed" class="derived">샘플 없음: {{ f.closed }}</p>
               <p v-else-if="f.collect.derived" class="muted">잘라 낸 범위: {{ f.collect.derived }}</p>
+              <p v-if="f.collect.converted" class="derived">변환: {{ f.collect.converted }}</p>
+              <p v-if="f.noDomestic" class="muted">국내 원본: {{ f.noDomestic }}</p>
               <p v-if="f.otherSources.length" class="muted">다른 경로</p>
               <ul v-if="f.otherSources.length" class="others muted">
                 <li v-for="o in f.otherSources" :key="o.source + o.dataset" :title="o.note">
@@ -110,6 +124,7 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
                 <li v-for="v in viewers" :key="v.id">
                   {{ v.name }} <span :class="`lv-${levelOf(f, v.id)}`">{{ supportLabels[levelOf(f, v.id)] }}</span>
                 </li>
+                <li v-if="engineOf(f)" class="engine-row">{{ engine.name }} <span :class="engineOf(f)!.cls">{{ engineOf(f)!.label }}</span></li>
               </ul>
             </div>
 
@@ -156,6 +171,7 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
 .recipes, .viewers { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .recipes li { display: grid; grid-template-columns: 1em 1fr; gap: 4px; }
 .bad { color: #B42318; }
+.engine-row { padding-top: 4px; border-top: 1px dashed var(--rule); }
 .lbl { display: none; }
 .planned { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
 @media (max-width: 1100px) {

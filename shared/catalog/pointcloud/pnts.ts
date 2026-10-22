@@ -91,5 +91,5 @@ export default {
     },
   }),
   view: { center: [138.452, 35.35], zoom: 17, pitch: 55, bearing: 30, height: 270, basemap: 'osm' },
-  closed: '국내 3D Tiles 점군 공개 원본 없음.',
+  noDomestic: '국내 3D Tiles 점군 공개 원본 없음.',
 } satisfies FormatSpec

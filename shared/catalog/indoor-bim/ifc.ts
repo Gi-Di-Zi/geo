@@ -33,7 +33,9 @@ export default {
       },
     ],
   },
-  otherSources: [],
+  otherSources: [
+    { source: 'ifc-community-samples', dataset: 'Duplex Apartment (IFC 2x3)', note: '같은 폴더에 MEP·전기 파일.' },
+  ],
   recipes: [
     {
       id: 'ifcconvert',
@@ -164,5 +166,5 @@ export default {
     },
   },
   view: { center: [126.9783, 37.5659], zoom: 19.3, pitch: 60, bearing: 35 },
-  closed: '국내 IFC 공개 원본 없음. 공공데이터포털 BIM 자료는 지침·CSV.',
+  noDomestic: '국내 IFC 공개 원본 없음. 공공데이터포털 BIM 자료는 지침·CSV.',
 } satisfies FormatSpec

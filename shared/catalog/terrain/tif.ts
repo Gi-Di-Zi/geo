@@ -37,6 +37,11 @@ export default demSpec({
   },
   otherSources: [
     { source: 'ngii', dataset: '공개DEM (도엽별 IMG)', note: '더 촘촘한 국내 DEM(5m). 로그인 후 다운로드.' },
+    { source: 'opentopography', dataset: 'Global DEM API: COP30 / SRTMGL1 / AW3D30 (GeoTIFF)', note: '한국 범위 추출 가능, API 키 필요.' },
+    { source: 'planetary-computer', dataset: 'cop-dem-glo-30, alos-dem, nasadem (COG)', note: '한국 포함.' },
+    { source: 'usgs-earthexplorer', dataset: 'SRTM 1 Arc-Second Global (GeoTIFF)', note: '한국 포함, 로그인 필요.' },
+    { source: 'pdok', dataset: 'AHN4 DTM 0.5m', note: '네덜란드, COG, CC0.' },
+    { source: 'nls-finland', dataset: 'dem2m (도엽별 .tif)', note: '핀란드 2m DEM.' },
   ],
   raw: RAW,
   accept: ['.tif', '.tiff'],

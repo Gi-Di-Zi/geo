@@ -1,4 +1,5 @@
 import type { FormatSpec, Step } from '../../types.ts'
+import { serverRecipes } from '../_server.ts'
 import { buildingRecipes, buildingUpload } from './_buildings.ts'
 
 const RAW = '/raw/sf_buildings.geojson'
@@ -57,12 +58,17 @@ export default {
   otherSources: [
     { source: 'vworld', dataset: 'GIS건물통합정보 (지상층수·높이)', note: '국내 건물 높이 데이터. SHP 로그인 다운로드, 약관 확인 전.' },
     { source: 'nsdi', dataset: 'GIS건물통합정보 (시도별 SHP)', note: 'GeoJSON이 아닌 SHP로 배포. 로그인 필요.' },
+    { source: 'overture', dataset: 'buildings/building (height 속성)', note: 'CLI -f geojson + 범위로 한국 추출. 높이는 일부 건물만.' },
+    { source: 'overpass-turbo', dataset: 'building + height / building:levels 질의', note: '한국 높이 태그 채움 정도 미확인.' },
   ],
-  recipes: buildingRecipes(preprocess, '원본도 GeoJSON — 문자열 높이→숫자, 빈 높이 9m, MultiPolygon 분해, 작은 구멍 메움, 좌표 7자리. 뷰어가 height만큼 바닥면 돌출.'),
+  recipes: [
+    ...buildingRecipes(preprocess, '원본도 GeoJSON — 문자열 높이→숫자, 빈 높이 9m, MultiPolygon 분해, 작은 구멍 메움, 좌표 7자리. 뷰어가 height만큼 바닥면 돌출.'),
+    ...serverRecipes({ category: 'vector-25d', layer: 'sf_buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [-122.421, 37.775, -122.39, 37.8], height: 'height' }),
+  ],
   alternatives: [
     { tool: 'py3dtiles', note: 'PostGIS 테이블 → 3D Tiles 직접 생성([postgres] 확장).' },
   ],
   upload: buildingUpload({ accept: ['.geojson', '.json'], note: '건물 등 면(Polygon) GeoJSON. 높이 열(height, 높이 …) 또는 층수 열(num_floors, GRND_FLR, 지상층수 …) 사용, 없으면 9m.' }),
   view: { center: [-122.399, 37.7915], zoom: 15.3, pitch: 58, bearing: -25, basemap: 'osm' },
-  closed: '높이·층수 포함 국내 건물 GeoJSON 배포처 없음. 국내 건물 높이는 SHP로만 배포(2.5D SHP 참고).',
+  noDomestic: '높이·층수 포함 국내 건물 GeoJSON 배포처 없음. 국내 건물 높이는 SHP로만 배포(2.5D SHP 참고).',
 } satisfies FormatSpec

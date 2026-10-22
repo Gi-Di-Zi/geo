@@ -1,6 +1,9 @@
 {
   "name": "geo-web-showcase",
   "private": true,
+  "engines": {
+    "node": "^22.21.0 || >=24.11.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
@@ -8,7 +11,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare && node scripts/copy-cesium.ts",
-    "setup": "node scripts/pipeline.ts all",
+    "setup": "node scripts/setup.ts",
+    "unreal": "node scripts/unreal.ts",
     "pipeline": "node scripts/pipeline.ts",
     "services": "docker compose up -d --wait",
     "check": "node scripts/check.ts"

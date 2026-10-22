@@ -71,6 +71,12 @@ export default {
   },
   otherSources: [
     { source: 'seoul', dataset: '서울시 버스정류소 위치정보 OA-15067', note: 'CRDNT_X·CRDNT_Y(위경도) 열, CP949. 2024년 8월 이후 파일은 XLSX.' },
+    { source: 'admdongkor', dataset: '행정동 중심점 coordinate_UTMK_이름포함.tsv', note: 'TSV, UTM-K(EPSG:5179).' },
+    { source: 'overpass-turbo', dataset: '[out:csv(::lat,::lon,name)] 질의', note: '예: 지하철역 좌표.' },
+    { source: 'geonames', dataset: 'KR.zip', note: '한국 지명 위경도, TSV.' },
+    { source: 'ourairports', dataset: 'airports.csv', note: 'iso_country=KR 필터.' },
+    { source: 'kma', dataset: '관측지점정보 (지상관측 지점 목록)', note: '지점번호·위도·경도·해발고도, MS949. 로그인 없이 CSV.' },
+    { source: 'khs-gis', dataset: '국가유산 위치 API (spca.do)', note: 'XML 응답. UTM-K 좌표 → CSV 변환 후 사용. 인증키 불필요.' },
   ],
   recipes: [
     vectorRecipe({

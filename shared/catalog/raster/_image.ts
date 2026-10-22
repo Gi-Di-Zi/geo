@@ -1,5 +1,6 @@
 // PNG·JPG·WebP는 "좌표 없는 그림 + 월드파일"이라 처리 흐름이 같다. 포맷별 샘플과 좌표계만 받아 spec을 만든다.
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
+import { geoserverRaster } from '../_server.ts'
 
 type Bounds = [number, number, number, number]
 
@@ -26,12 +27,19 @@ interface ImageFormat {
   collect: FormatSpec['collect']
   otherSources: FormatSpec['otherSources']
   view: FormatSpec['view']
-  closed?: string
+  noDomestic?: string
 }
 
 export function imageSpec(f: ImageFormat): FormatSpec {
   const raw = `/raw/${f.base}${f.ext}`
   const input = f.palette ? '/work/rgb.vrt' : raw
+  const inspect: Step = {
+    title: '무결성 확인 (월드파일)',
+    why: `1줄: 픽셀 가로 크기(m), 2·3줄: 회전, 4줄: 픽셀 세로 크기(음수), 5·6줄: 왼쪽 위 픽셀 좌표. 단위 m → 원래 좌표계(${f.srs.label}) 필요.`,
+    tool: 'shell',
+    run: `cat /raw/${f.base}${f.worldExt}`,
+  }
+  const served = `/serve/raster/${f.id}/image_${f.id}.tif`
   return {
     id: f.id,
     category: 'raster',
@@ -51,12 +59,7 @@ export function imageSpec(f: ImageFormat): FormatSpec {
         id: 'gdal',
         title: 'GDAL',
         preprocess: [
-          {
-            title: '무결성 확인 (월드파일)',
-            why: `1줄: 픽셀 가로 크기(m), 2·3줄: 회전, 4줄: 픽셀 세로 크기(음수), 5·6줄: 왼쪽 위 픽셀 좌표. 단위 m → 원래 좌표계(${f.srs.label}) 필요.`,
-            tool: 'shell',
-            run: `cat /raw/${f.base}${f.worldExt}`,
-          },
+          inspect,
           ...(f.palette ? [{
             title: '색상표 → RGB 펼치기',
             why: '-expand rgb: 색 번호(0~255) → R·G·B 세 밴드. 번호끼리 보간하면 엉뚱한 색. -of VRT: 새 파일 없이 가상 래스터.',
@@ -94,6 +97,21 @@ export function imageSpec(f: ImageFormat): FormatSpec {
           cesium: { output: 'image' },
         },
       },
+      geoserverRaster({
+        name: `image_${f.id}`,
+        preprocess: [inspect],
+        file: served,
+        prepare: {
+          title: '서버용 COG 만들기 (월드파일 + 좌표계)',
+          why: `위치: 월드파일(GDAL 자동 인식). -a_srs ${f.srs.epsg}: 월드파일에 없는 좌표계 지정. -of COG: 내부 블록·축소본 → 서버가 화면 범위·축척 블록만 읽음. 재투영은 서버가 요청마다.${f.palette ? ' 색상표 그대로(축소본은 NEAREST).' : ''} GeoServer 그림+월드파일 저장소(WorldImage)는 WebP 미지원 → 세 형식 모두 GeoTIFF로.`,
+          tool: 'gdal',
+          run: `mkdir -p /serve/raster/${f.id} && gdal_translate -a_srs ${f.srs.epsg} -of COG -co COMPRESS=DEFLATE ${raw} ${served}`,
+        },
+        symbolizer: '      <Opacity>1.0</Opacity>',
+        styleWhy: `그림 색 그대로${f.palette ? '(색상표)' : ''}. 서버는 요청 범위만 잘라 웹 메르카토르로 재투영.`,
+        bounds: f.bounds,
+        maxzoom: 18,
+      }),
     ],
     alternatives: [
       { tool: 'gdal', cmd: `gdal raster tile --min-zoom 12 --max-zoom 18 web_3857.tif tiles`, note: '큰 그림: 한 장 대신 XYZ 타일 분할 (COG 페이지 참고).' },
@@ -144,7 +162,7 @@ export function imageSpec(f: ImageFormat): FormatSpec {
       },
     },
     view: f.view,
-    ...(f.closed && { closed: f.closed }),
+    ...(f.noDomestic && { noDomestic: f.noDomestic }),
   }
 }
 
