@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { engine, engineOutput, engineTarget, kindLabels, viewers } from '#shared/viewers'
+import { engine, engineOutput, engineTarget, kindLabels, streamId, viewers } from '#shared/viewers'
 import type { EngineReport, FormatSpec, Output, Recipe, ViewerId } from '#shared/types'
 
 /** base: 결과 폴더 URL. 없으면 미리 변환해 둔 샘플(public/data) */
@@ -75,9 +75,21 @@ const engineOut = computed(() => engineOutput(props.recipe))
 const engineUrl = computed(() => engineOut.value && location.origin + outPath(dir.value, { ...engineOut.value, path: engineTarget(engineOut.value) }))
 // 엔진 렌더링 기록 (npm run unreal). 샘플에만 있다 (올린 파일은 엔진으로 돌리지 않음)
 const engineRep = ref<EngineReport | null>(null)
+// 실시간 보기 (npm run unreal -- stream): 이 PC의 언리얼 화면을 Pixel Streaming 플레이어로 받아 뷰어 자리에 띄운다.
+// 플레이어는 이 레시피 ID의 언리얼에만 붙고, 다른 레시피가 떠 있으면 기다리다 멈춘다
+const live = ref(false)
+const streamUp = ref<boolean | null>(null)
+const streamBase = computed(() => `${location.protocol}//${location.hostname}:${engine.streamPort}/`)
+const liveId = computed(() => streamId(props.spec, props.recipe))
+const liveUrl = computed(() => `${streamBase.value}?StreamerId=${encodeURIComponent(liveId.value)}&AutoConnect=true&AutoPlayVideo=true&StartVideoMuted=true`)
+watch(dir, () => { live.value = false })
 watch([showEngine, dir], async ([open]) => {
   engineRep.value = null
-  if (open && engineOut.value && !props.base) engineRep.value = await $fetch<EngineReport>(`${dir.value}unreal.json`).catch(() => null)
+  streamUp.value = null
+  if (!open || !engineOut.value || props.base) return
+  // 응답 내용은 못 읽어도(no-cors) 연결 거부만 아니면 떠 있는 것
+  fetch(streamBase.value, { mode: 'no-cors' }).then(() => true, () => false).then(up => { streamUp.value = up })
+  engineRep.value = await $fetch<EngineReport>(`${dir.value}unreal.json`).catch(() => null)
 })
 </script>
 
@@ -88,18 +100,19 @@ watch([showEngine, dir], async ([open]) => {
         v-for="t in tiles" v-show="current === t.meta.id" :key="`${dir}-${t.meta.id}`"
         v-bind="t" :color :active="mounted(t.meta.id)"
       />
+      <iframe v-if="live" class="live" :src="liveUrl" :title="`${engine.name} 실시간 화면`" allow="autoplay; fullscreen" />
     </div>
 
     <!-- 지도 위에 뜨는 도구: 왼쪽 위 = 뷰어·배경지도 (누르면 펼침, 다시 누르면 닫힘), 오른쪽 = 지도 조작 -->
     <div class="float top">
       <details name="stage-pop" class="pop">
         <summary class="panel" title="뷰어 전환">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" /><path d="M3 8h14" /></svg>{{ cur.meta.name }}
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" /><path d="M3 8h14" /></svg>{{ live ? `${engine.name} · 실시간` : cur.meta.name }}
         </summary>
         <div class="panel menu" role="group" aria-label="뷰어 전환">
           <button
             v-for="t in tiles" :key="t.meta.id" type="button" :class="{ off: !t.output }"
-            :aria-pressed="current === t.meta.id" @click="current = t.meta.id"
+            :aria-pressed="current === t.meta.id && !live" @click="current = t.meta.id; live = false"
           >{{ t.meta.name }} <span class="small">{{ t.output ? t.meta.dims : '표시 불가' }}</span></button>
           <p class="menu-head small">엔진 · 수동 확인</p>
           <button type="button" :class="{ off: !engineOut }" :aria-pressed="showEngine" @click="showEngine = !showEngine">
@@ -142,6 +155,11 @@ watch([showEngine, dir], async ([open]) => {
         </figure>
         <p v-else-if="engineRep" class="small"><span class="bad">렌더링 실패</span> {{ engineRep.error }}</p>
         <p v-else class="small"><span class="lv-untested">미확인</span> — 엔진 렌더링 기록 없음 (언리얼 있는 PC에서 npm run unreal).</p>
+        <div v-if="!base" class="small live-row">
+          <button v-if="streamUp" class="btn" type="button" @click="live = true; showEngine = false">실시간 보기</button>
+          <p v-if="streamUp" class="muted">Pixel Streaming — 언리얼이 이 PC에서 그린 화면을 영상으로 받음. 화면 클릭 후 마우스로 시점, WASD·QE로 이동.</p>
+          <p v-else-if="streamUp === false" class="muted">실시간 보기: 스트리밍 꺼짐. 언리얼 있는 PC에서 <code>npm run unreal -- stream {{ liveId }}</code></p>
+        </div>
         <details :open="!engineRep?.ok" class="small">
           <summary>언리얼 에디터에서 직접 불러오기</summary>
           <ol>
@@ -156,22 +174,25 @@ watch([showEngine, dir], async ([open]) => {
       <p v-else class="small">이 레시피 결과물은 3D Tiles·지형이 아님 → 엔진 연계 대상 아님. 웹 뷰어로 확인.</p>
     </aside>
     <div class="float tools panel" role="group" aria-label="지도 도구">
-      <button type="button" title="확대" aria-label="확대" @click="move({ zoom: camera.zoom + 1 })">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
-      </button>
-      <button type="button" title="축소" aria-label="축소" @click="move({ zoom: camera.zoom - 1 })">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12" /></svg>
-      </button>
-      <hr>
-      <button type="button" title="처음 위치" aria-label="처음 위치" @click="reset(view)">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.5 10 4l6.5 5.5M5.5 8v8h9V8" /></svg>
-      </button>
-      <button type="button" title="북쪽 위로, 기울기 없애기" aria-label="북쪽 위로" @click="move({ bearing: 0, pitch: 0 })">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path class="solid" d="M10 2.5l4 8h-8z" /><path d="M6 10.5h8l-4 7z" /></svg>
-      </button>
-      <button type="button" title="이 뷰어 코드" aria-label="이 뷰어 코드" :disabled="!cur.output" @click="openCode(cur.meta.id, cur.output!, cur.path!)">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 6 3 10l4 4M13 6l4 4-4 4" /></svg>
-      </button>
+      <!-- 지도 조작은 웹 뷰어에만. 실시간 화면은 플레이어 안에서 조작 -->
+      <template v-if="!live">
+        <button type="button" title="확대" aria-label="확대" @click="move({ zoom: camera.zoom + 1 })">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
+        </button>
+        <button type="button" title="축소" aria-label="축소" @click="move({ zoom: camera.zoom - 1 })">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12" /></svg>
+        </button>
+        <hr>
+        <button type="button" title="처음 위치" aria-label="처음 위치" @click="reset(view)">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 9.5 10 4l6.5 5.5M5.5 8v8h9V8" /></svg>
+        </button>
+        <button type="button" title="북쪽 위로, 기울기 없애기" aria-label="북쪽 위로" @click="move({ bearing: 0, pitch: 0 })">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path class="solid" d="M10 2.5l4 8h-8z" /><path d="M6 10.5h8l-4 7z" /></svg>
+        </button>
+        <button type="button" title="이 뷰어 코드" aria-label="이 뷰어 코드" :disabled="!cur.output" @click="openCode(cur.meta.id, cur.output!, cur.path!)">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 6 3 10l4 4M13 6l4 4-4 4" /></svg>
+        </button>
+      </template>
       <button type="button" :title="full ? '전체 화면 끝내기' : '전체 화면'" :aria-label="full ? '전체 화면 끝내기' : '전체 화면'" @click="toggleFull">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path v-if="!full" d="M4 8V4h4M12 4h4v4M16 12v4h-4M8 16H4v-4" /><path v-else d="M8 4v4H4M16 8h-4V4M12 16v-4h4M4 12h4v4" /></svg>
       </button>
@@ -230,6 +251,9 @@ watch([showEngine, dir], async ([open]) => {
 .engine code { word-break: break-all; }
 .engine details ol { margin-top: 6px; }
 .shot { margin: 0; display: grid; gap: 6px; }
+.live-row { display: flex; align-items: center; gap: 8px; }
+.live-row p { margin: 0; }
+.live { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
 .shot img { display: block; width: 100%; border-radius: 8px; border: 1px solid var(--rule); }
 .bad { color: #B42318; font-weight: 600; }
 .sync { display: flex; gap: 6px; align-items: center; padding: 6px 10px 4px; border-top: 1px solid var(--rule); cursor: pointer; }

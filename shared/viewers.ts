@@ -1,4 +1,4 @@
-import type { Output, OutputKind, Recipe, ViewerId } from './types.ts'
+import type { FormatSpec, Output, OutputKind, Recipe, ViewerId } from './types.ts'
 
 export const viewers: { id: ViewerId; name: string; dims: string; summary: string }[] = [
   { id: 'ol', name: 'OpenLayers', dims: '2D', summary: '2D 지도의 정석. 좌표계·래스터(COG) 직접 처리에 강점.' },
@@ -15,7 +15,11 @@ export const engine = {
   name: 'Cesium for Unreal', dims: '엔진', family: 'cesium' as ViewerId,
   summary: '언리얼 엔진 플러그인. CesiumJS와 같은 형식(3D Tiles·quantized-mesh 지형)을 C++ 런타임(cesium-native)으로 읽음. 게임 엔진급 화질·시뮬레이션·VR.',
   kinds: ['3dtiles', 'quantized-mesh'] as OutputKind[],
+  /** 실시간 보기(Pixel Streaming) 웹 포트. scripts/unreal.ts stream이 띄우고 사이트가 같은 호스트의 이 포트를 iframe으로 연다 */
+  streamPort: 8700,
 }
+/** 실시간 보기 스트리머 ID = 레시피 경로. 플레이어가 이 ID의 언리얼에만 붙는다 */
+export const streamId = (spec: FormatSpec, recipe: Recipe) => `${spec.category}/${spec.id}/${recipe.id}`
 
 /** 엔진이 읽을 결과물: CesiumJS가 쓰는 것이 3D Tiles·지형이면 그것, 아니면 첫 3D Tiles·지형. 사이트 카드와 scripts/unreal.ts가 같이 쓴다 */
 export function engineOutput(recipe: Recipe): Output | undefined {

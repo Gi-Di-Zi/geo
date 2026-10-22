@@ -1,13 +1,14 @@
 // 엔진 렌더러: 파이프라인 결과(3D Tiles·quantized-mesh 지형)를 Cesium for Unreal로 그려 스크린샷과 기록을 남긴다.
-//   node scripts/unreal.ts setup                         플러그인 받기(GitHub 릴리스) + 에디터 타깃 빌드
+//   node scripts/unreal.ts setup                         플러그인 받기(GitHub 릴리스) + 에디터 타깃 빌드 + 실시간 보기용 시그널링 서버 받기·빌드
 //   node scripts/unreal.ts <유형>/<확장자>[/<레시피>] | <유형> | all [--missing]   렌더링 → public/data/<유형>/<확장자>/<레시피>/unreal.png, unreal.json
 //     --missing: 성공 기록이 있는 레시피는 건너뜀
+//   node scripts/unreal.ts stream <유형>/<확장자>[/<레시피>]  실시간 보기: 시그널링 서버 + 언리얼(창 없음, 조작 가능)을 띄워 브라우저로 보냄 (Pixel Streaming 2). Ctrl+C로 종료
 // 언리얼 위치: .env UE_ROOT (기본 C:/Program Files/Epic Games/UE_5.8). 패키징 없이 에디터 실행 파일의 -game 모드로 돈다
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { engineOutput, engineTarget } from '../shared/viewers.ts'
+import { engine, engineOutput, engineTarget, streamId } from '../shared/viewers.ts'
 import type { EngineReport, FormatSpec, Recipe, Report } from '../shared/types.ts'
 import { loadFormats, writeStatus } from './pipeline.ts'
 
@@ -15,6 +16,12 @@ const root = resolve(import.meta.dirname, '..')
 const project = join(root, 'pipeline/unreal/GeoRender')
 const uproject = join(project, 'GeoRender.uproject')
 const CESIUM = 'v2.30.0' // 언리얼 5.6~5.8용 빌드본이 있는 릴리스
+// 실시간 보기: Epic 시그널링 서버·웹 플레이어 (PixelStreamingInfrastructure). 엔진 버전별 릴리스 — 언리얼을 바꾸면 같이 바꾼다
+const PS = 'UE5.8-0.1.0'
+const psDir = join(project, '../PixelStreaming')
+const psServer = join(psDir, 'SignallingWebServer')
+const STREAMER_PORT = 8888 // 언리얼 → 시그널링 서버 (127.0.0.1만)
+const streamReady = () => existsSync(join(psServer, 'dist/index.js')) && existsSync(join(psServer, 'www/player.html'))
 try { process.loadEnvFile(join(root, '.env')) } catch {}
 export const UE_ROOT = process.env.UE_ROOT || 'C:/Program Files/Epic Games/UE_5.8'
 const editor = join(UE_ROOT, 'Engine/Binaries/Win64/UnrealEditor.exe')
@@ -33,11 +40,11 @@ export function unrealState() {
   }
 }
 
-function run(cmd: string, args: string[], bat = false) {
-  // .bat은 셸로만 실행된다 (Node 보안 정책). 공백 있는 경로는 따옴표로
+function run(cmd: string, args: string[], bat = false, cwd?: string) {
+  // .bat·.cmd(npm)는 셸로만 실행된다 (Node 보안 정책). 공백 있는 것만 따옴표로: 경로 없이 따옴표 친 "npm"은 cmd가 %~dp0을 현재 폴더로 잡아 깨진다
   const r = bat
-    ? spawnSync([cmd, ...args].map(a => `"${a}"`).join(' '), { shell: true, stdio: 'inherit' })
-    : spawnSync(cmd, args, { stdio: 'inherit' })
+    ? spawnSync([cmd, ...args].map(a => (a.includes(' ') ? `"${a}"` : a)).join(' '), { shell: true, stdio: 'inherit', cwd })
+    : spawnSync(cmd, args, { stdio: 'inherit', cwd })
   if (r.status !== 0) throw new Error(`실패 (${r.status}): ${basename(cmd)} ${args.join(' ')}`)
 }
 
@@ -60,6 +67,8 @@ export function setup() {
   // 2) 에디터 타깃 빌드: -game을 에디터 실행 파일로 돌리므로 이 모듈 DLL만 있으면 된다
   console.log(`  · GeoRender 빌드 (언리얼 ${MajorVersion}.${MinorVersion})`)
   run(join(UE_ROOT, 'Engine/Build/BatchFiles/Build.bat'), ['GeoRenderEditor', 'Win64', 'Development', `-Project=${uproject}`, '-WaitMutex', '-NoHotReloadFromIDE'], true)
+  // 3) 실시간 보기 서버 (Node만 필요)
+  if (!streamReady()) buildStreamServer()
 }
 
 /**
@@ -72,23 +81,35 @@ function cameraOf(view: FormatSpec['view']) {
   return { lon, lat, height: view.height ?? 0, dist: (mpp * RES[1]) / 2 / Math.tan(Math.PI / 6), pitch: view.pitch ?? 0, bearing: view.bearing ?? 0 }
 }
 
-function render(spec: FormatSpec, recipe: Recipe) {
-  const dir = join(root, 'public/data', spec.category, spec.id, recipe.id)
+const recipeDir = (spec: FormatSpec, recipe: Recipe) => join(root, 'public/data', spec.category, spec.id, recipe.id)
+
+/** 변환이 성공한 결과만 그린다 (없으면 엔진도 읽을 게 없다) */
+function converted(spec: FormatSpec, recipe: Recipe) {
+  const rep = join(recipeDir(spec, recipe), 'report.json')
+  return existsSync(rep) && (JSON.parse(readFileSync(rep, 'utf8')) as Report).steps.every(st => st.code === 0)
+}
+
+/** 창 없는 -game 실행 + 장면(결과물 주소·카메라·배경지도). 스크린샷과 실시간 보기가 같이 쓴다 */
+function sceneArgs(spec: FormatSpec, recipe: Recipe) {
   const out = engineOutput(recipe)!
-  const target = join(dir, engineTarget(out))
+  const cam = cameraOf(recipe.view ?? spec.view)
+  const url = pathToFileURL(join(recipeDir(spec, recipe), engineTarget(out))).href
+  return { url, args: [
+    uproject, '-game', '-RenderOffscreen', `-ResX=${RES[0]}`, `-ResY=${RES[1]}`, '-windowed', '-unattended', '-nosound', '-NoSplash', '-NoLoadingScreen', '-log',
+    `-Tileset=${url}`, `-Lon=${cam.lon}`, `-Lat=${cam.lat}`, `-Height=${cam.height}`, `-Dist=${cam.dist.toFixed(1)}`, `-Pitch=${cam.pitch}`, `-Bearing=${cam.bearing}`,
+    `-Basemap=${BASEMAP}`, ...(out.kind === 'quantized-mesh' ? ['-Drape'] : []),
+  ] }
+}
+
+function render(spec: FormatSpec, recipe: Recipe) {
+  const dir = recipeDir(spec, recipe)
   const shot = join(dir, 'unreal.png')
   const report = join(dir, 'unreal.json')
   rmSync(shot, { force: true })
   rmSync(report, { force: true })
-  const cam = cameraOf(recipe.view ?? spec.view)
-  const url = pathToFileURL(target).href
+  const { url, args } = sceneArgs(spec, recipe)
   const t0 = Date.now()
-  const r = spawnSync(editor, [
-    uproject, '-game', '-RenderOffscreen', `-ResX=${RES[0]}`, `-ResY=${RES[1]}`, '-windowed', '-unattended', '-nosound', '-NoSplash', '-NoLoadingScreen', '-log',
-    `-Tileset=${url}`, `-Lon=${cam.lon}`, `-Lat=${cam.lat}`, `-Height=${cam.height}`, `-Dist=${cam.dist.toFixed(1)}`, `-Pitch=${cam.pitch}`, `-Bearing=${cam.bearing}`,
-    `-Shot=${shot}`, `-Report=${report}`, `-Timeout=${TIMEOUT_S}`,
-    `-Basemap=${BASEMAP}`, ...(out.kind === 'quantized-mesh' ? ['-Drape'] : []),
-  ], { stdio: 'ignore', timeout: (TIMEOUT_S + 120) * 1000 })
+  const r = spawnSync(editor, [...args, `-Shot=${shot}`, `-Report=${report}`, `-Timeout=${TIMEOUT_S}`], { stdio: 'ignore', timeout: (TIMEOUT_S + 120) * 1000 })
   // 게임 모드가 기록을 못 남기고 죽으면(빌드 불일치·충돌) 여기서 실패 기록
   const rep: Omit<EngineReport, 'ranAt'> = existsSync(report)
     ? JSON.parse(readFileSync(report, 'utf8'))
@@ -99,20 +120,59 @@ function render(spec: FormatSpec, recipe: Recipe) {
   return full
 }
 
+/** 시그널링 서버·웹 플레이어 받기 + 빌드 (처음 stream 때 한 번). 저장소 작업 공간 중 서버·플레이어에 쓰는 것만 (SFU의 mediasoup은 C++ 빌드 도구가 필요해 뺌) */
+function buildStreamServer() {
+  const zip = join(project, '../_download', `ps-${PS}.zip`)
+  if (!existsSync(zip)) {
+    console.log(`  · 시그널링 서버 받기: PixelStreamingInfrastructure ${PS}`)
+    run('curl', ['-fSL', '--create-dirs', '-o', zip, `https://github.com/EpicGamesExt/PixelStreamingInfrastructure/releases/download/${PS}/${PS}.zip`])
+  }
+  rmSync(psDir, { recursive: true, force: true })
+  mkdirSync(psDir, { recursive: true })
+  run('C:/Windows/System32/tar.exe', ['-xf', zip, '-C', psDir, '--strip-components=1'])
+  const ws = ['Common', 'Signalling', 'SignallingWebServer', 'Frontend/library', 'Frontend/ui-library', 'Frontend/implementations/typescript']
+  run('npm', ['install', '--no-audit', '--no-fund', ...ws.flatMap(w => ['-w', w])], true, psDir)
+  // 의존 순서대로. 웹 플레이어는 SignallingWebServer/www로 나온다
+  for (const [w, script] of [['Common', 'build:cjs'], ['Common', 'build:esm'], ['Signalling', 'build:cjs'], ['SignallingWebServer', 'build'], ['Frontend/library', 'build:esm'], ['Frontend/ui-library', 'build:esm'], ['Frontend/implementations/typescript', 'build']]) {
+    run('npm', ['run', script!, '-w', w!], true, psDir)
+  }
+}
+
+/**
+ * 실시간 보기: 시그널링 서버(웹 플레이어 포함) + 언리얼 대화형 모드. 언리얼 화면을 영상(WebRTC)으로 브라우저에 보내고 입력을 돌려받는다.
+ * 플러그인은 이때만 명령줄로 켠다 → 스크린샷 렌더링은 그대로. 둘 중 하나가 끝나면 다른 하나도 끝낸다
+ * ponytail: 같은 PC·내부망용 (STUN/TURN 없음). 밖에서 보려면 시그널링 서버 --peer_options에 TURN, 사이트가 HTTPS면 플레이어도 HTTPS
+ */
+async function stream(target: string) {
+  const [cat, fmt, recipeId] = target.split('/')
+  const spec = (await loadFormats()).find(f => !f.closed && f.category === cat && f.id === fmt)
+  const recipe = spec?.recipes.find(r => (!recipeId || r.id === recipeId) && engineOutput(r))
+  if (!spec || !recipe) throw new Error(`엔진으로 볼 레시피(3D Tiles·지형 결과) 없음: ${target}`)
+  if (!converted(spec, recipe)) throw new Error(`변환 기록 없음 → npm run pipeline -- ${streamId(spec, recipe)}`)
+  if (!streamReady()) buildStreamServer()
+
+  const id = streamId(spec, recipe)
+  const server = spawn(process.execPath, ['dist/index.js', '--no_config', '--serve', `--player_port=${engine.streamPort}`, `--streamer_port=${STREAMER_PORT}`, '--console_messages=basic'], { cwd: psServer, stdio: 'inherit' })
+  const ue = spawn(editor, [...sceneArgs(spec, recipe).args, '-EnablePlugins=PixelStreaming2', `-PixelStreamingConnectionURL=ws://127.0.0.1:${STREAMER_PORT}`, `-PixelStreamingID=${id}`], { stdio: 'ignore' })
+  console.log(`■ 실시간 보기 ${id}\n  · 사이트: 시각화·렌더링 → Cesium for Unreal → 실시간 보기\n  · 바로: http://localhost:${engine.streamPort}/?StreamerId=${encodeURIComponent(id)}\n  · 첫 실행은 셰이더 컴파일로 수 분. Ctrl+C로 종료`)
+  const stop = () => { server.kill(); ue.kill() }
+  server.on('exit', stop)
+  ue.on('exit', code => { console.log(`  · 언리얼 종료 (${code ?? '중지'}). 로그: pipeline/unreal/GeoRender/Saved/Logs/GeoRender.log`); stop() })
+  process.on('SIGINT', stop)
+}
+
 async function main() {
   const [target = '', ...flags] = process.argv.slice(2)
   if (target === 'setup') return setup()
-  if (!target) throw new Error('사용법: node scripts/unreal.ts setup | <유형>/<확장자>[/<레시피>] | <유형> | all')
+  if (!target) throw new Error('사용법: node scripts/unreal.ts setup | <유형>/<확장자>[/<레시피>] | <유형> | all | stream <유형>/<확장자>[/<레시피>]')
   const s = unrealState()
   if (!s.engine || !s.plugin || !s.built) throw new Error('언리얼 준비 안 됨 → node scripts/unreal.ts setup')
+  if (target === 'stream') return stream(flags[0] ?? '')
   const [cat, fmt, recipeId] = target.split('/')
   const specs = (await loadFormats()).filter(f => !f.closed && (cat === 'all' || (f.category === cat && (!fmt || f.id === fmt))))
   for (const spec of specs) {
     for (const recipe of spec.recipes.filter(r => (!recipeId || r.id === recipeId) && engineOutput(r))) {
-      // 변환이 성공한 결과만 그린다 (없으면 엔진도 읽을 게 없다)
-      const rep = join(root, 'public/data', spec.category, spec.id, recipe.id, 'report.json')
-      const ok = existsSync(rep) && (JSON.parse(readFileSync(rep, 'utf8')) as Report).steps.every(st => st.code === 0)
-      if (!ok) { console.log(`  · ${spec.category}/${spec.id}/${recipe.id}: 변환 기록 없음, 건너뜀`); continue }
+      if (!converted(spec, recipe)) { console.log(`  · ${spec.category}/${spec.id}/${recipe.id}: 변환 기록 없음, 건너뜀`); continue }
       const prev = join(root, 'public/data', spec.category, spec.id, recipe.id, 'unreal.json')
       if (flags.includes('--missing') && existsSync(prev) && (JSON.parse(readFileSync(prev, 'utf8')) as EngineReport).ok) continue
       process.stdout.write(`■ ${spec.category}/${spec.id}/${recipe.id} … `)

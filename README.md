@@ -43,7 +43,7 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 | `shared/viewers.ts` | 웹 렌더러 4종, 엔진(`engine`: Cesium for Unreal)과 엔진이 읽는 결과물 |
 | `scripts/setup.ts`, `setup.ps1` | 처음 설치·준비 (위 참고) |
 | `scripts/pipeline.ts` | 수집·전처리·변환 실행기. spec의 `run` 명령을 도구 이미지 안에서 그대로 실행하고 기록(report.json) 작성 |
-| `scripts/unreal.ts`, `pipeline/unreal/GeoRender/` | 엔진 렌더러: 3D Tiles·지형 결과를 Cesium for Unreal로 그려 `unreal.png`·`unreal.json` |
+| `scripts/unreal.ts`, `pipeline/unreal/GeoRender/` | 엔진 렌더러: 3D Tiles·지형 결과를 Cesium for Unreal로 그려 `unreal.png`·`unreal.json`, 실시간 보기(`stream`) |
 | `scripts/check.ts` | 카탈로그·기록 검사 |
 | `pipeline/Dockerfile`, `pipeline/scripts/` | 로컬 도구 이미지(geo-web/tools), 단계용 보조 스크립트 |
 | `pipeline/raw/` | 받은 원본 (git 제외, `npm run setup`으로 생성) |
@@ -60,6 +60,7 @@ npm run pipeline -- all                       # 전부 (하나 실패하면 멈�
 npm run pipeline -- --status                  # status.json만 다시 쓰기
 npm run unreal -- setup                       # 엔진: 플러그인 받기 + 빌드
 npm run unreal -- <유형>/<확장자>[/<레시피>] | all [--missing]   # 엔진 렌더링 (--missing: 성공 기록은 건너뜀)
+npm run unreal -- stream <유형>/<확장자>[/<레시피>]   # 엔진 실시간 보기 (Pixel Streaming, Ctrl+C로 종료)
 npm run check                                 # 검사
 npm run services                              # 서버 띄우기 (서비스 레시피 실행 시 pipeline이 자동으로도 띄움)
 ```
@@ -75,7 +76,11 @@ npm run services                              # 서버 띄우기 (서비스 레�
 
 ## 엔진 렌더러 (Cesium for Unreal)
 
-- 실시간 보기 없이 파이프라인의 렌더러로만 사용. 3D Tiles·quantized-mesh 지형 결과가 있는 레시피마다 언리얼을 `-game`(에디터 실행 파일, 패키징 없음)으로 띄워 `file:///` 주소로 결과를 읽고, 타일 로드 100% + 셰이더 컴파일 끝 → 스크린샷 → 기록 → 종료.
+- 스크린샷: 3D Tiles·quantized-mesh 지형 결과가 있는 레시피마다 언리얼을 `-game`(에디터 실행 파일, 패키징 없음)으로 띄워 `file:///` 주소로 결과를 읽고, 타일 로드 100% + 셰이더 컴파일 끝 → 스크린샷 → 기록 → 종료.
+- 실시간 보기(`npm run unreal -- stream <유형>/<확장자>`): Pixel Streaming 2. 언리얼을 창 없이 대화형(`-Shot` 없음 → 조작 폰, 마우스 시점·WASD·QE 이동)으로 띄우고, 화면을 영상(WebRTC)으로 브라우저에 보냄. 플러그인은 이때만 명령줄(`-EnablePlugins=PixelStreaming2`)로 켬 → 스크린샷 렌더링은 그대로.
+  - 시그널링 서버·웹 플레이어: Epic `PixelStreamingInfrastructure` 릴리스(`UE5.8-0.1.0`)를 `pipeline/unreal/PixelStreaming`에 받아 빌드 (`setup` 또는 첫 `stream` 때, git 제외). 웹 `http://localhost:8700`, 언리얼 연결 `127.0.0.1:8888`.
+  - 사이트: 시각화·렌더링 → Cesium for Unreal 카드 → 서버가 떠 있으면 "실시간 보기" (뷰어 자리에 플레이어 iframe, 스트리머 ID = `<유형>/<확장자>/<레시피>`). 업로드 결과는 대상 아님.
+  - 같은 PC·내부망용 (STUN/TURN 없음). 보는 동안 언리얼이 계속 GPU를 씀. 사이트가 HTTPS면 HTTP 플레이어 iframe은 막힘.
 - 프로젝트(`pipeline/unreal/GeoRender`)는 텍스트 파일만: `.uproject`, 설정, C++ 게임 모드(`GeoRenderGameMode`). 지도 에셋 없이 엔진 기본 빈 지도로 시작해 Cesium 원점·타일셋·조명·카메라를 코드로 배치. 카메라는 웹 시점(중심·줌·기울기·방위)에서 계산.
 - 플러그인은 GitHub 릴리스의 엔진 버전별 빌드본(`CesiumForUnreal-<버전>-v2.30.0.zip`)을 `Plugins/`에 풀어 씀. 빌드 결과·플러그인·캐시는 git 제외 → `npm run unreal -- setup`으로 다시 만든다.
 - 첫 렌더링은 Cesium 재질 셰이더 컴파일로 수 분 걸림(이후 캐시). 저사양 GPU 기준으로 Lumen·가상 그림자 맵 끔(`Config/DefaultEngine.ini`).

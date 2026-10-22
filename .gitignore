@@ -17,3 +17,4 @@ pipeline/unreal/GeoRender/Saved
 pipeline/unreal/GeoRender/DerivedDataCache
 pipeline/unreal/GeoRender/Plugins
 pipeline/unreal/GeoRender/cesium-request-cache.sqlite*
+pipeline/unreal/PixelStreaming

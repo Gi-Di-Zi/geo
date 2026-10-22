@@ -25,7 +25,7 @@ useHead({ title: '뷰어와 변환 도구 | 공간 데이터 웹 처리' })
           </li>
           <li class="viewer engine">
             <p><strong>{{ engine.name }}</strong> <span class="chip">{{ engine.dims }} · 수동 확인</span></p>
-            <p class="muted small">{{ engine.summary }} 파이프라인이 언리얼로 렌더링해 스크린샷을 남김(npm run unreal).</p>
+            <p class="muted small">{{ engine.summary }} 파이프라인이 언리얼로 렌더링해 스크린샷을 남김(npm run unreal). 실시간 보기는 Pixel Streaming(npm run unreal -- stream).</p>
             <p class="kinds small"><span v-for="k in engine.kinds" :key="k">{{ kindLabels[k] }}</span></p>
           </li>
         </ul>

@@ -12,7 +12,9 @@
 #include "Engine/SkyLight.h"
 #include "Components/SkyAtmosphereComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/FloatingPawnMovement.h"
 #include "GameFramework/PlayerController.h"
+#include "GlobeAwareDefaultPawn.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/EngineVersion.h"
 #include "Misc/FileHelper.h"
@@ -50,9 +52,9 @@ void AGeoRenderGameMode::StartPlay()
 	FParse::Value(Cmd, TEXT("Timeout="), Timeout);
 	FString Basemap;
 	FParse::Value(Cmd, TEXT("Basemap="), Basemap);
-	if (Url.IsEmpty() || ShotPath.IsEmpty() || ReportPath.IsEmpty())
+	if (Url.IsEmpty() || ShotPath.IsEmpty() != ReportPath.IsEmpty())
 	{
-		FailMessage = TEXT("-Tileset, -Shot, -Report 필요");
+		FailMessage = TEXT("-Tileset 필요, -Shot·-Report는 함께 (둘 다 없으면 대화형)");
 		return;
 	}
 
@@ -93,12 +95,24 @@ void AGeoRenderGameMode::StartPlay()
 	}
 	OnCesium3DTilesetLoadFailure.AddLambda([this](const FCesium3DTilesetLoadFailureDetails& Details) {
 		FailMessage = FString::Printf(TEXT("로드 실패 (HTTP %lld): %s"), Details.HttpStatusCode, *Details.Message);
+		UE_LOG(LogTemp, Warning, TEXT("GeoRender: %s"), *FailMessage);
 	});
 
 	// 카메라: 원점에서 방위 반대쪽으로 물러나 기울기만큼 위에서 내려다본다. Cesium 원점 기준 +X 동, +Y 남, +Z 위 (cm)
 	const double P = FMath::DegreesToRadians(Pitch), B = FMath::DegreesToRadians(Bearing);
 	const double Across = Dist * FMath::Sin(P);
 	const FVector Pos(-Across * FMath::Sin(B) * 100, Across * FMath::Cos(B) * 100, Dist * FMath::Cos(P) * 100);
+	if (ShotPath.IsEmpty())
+	{
+		// 대화형: 같은 자리에서 조작 폰으로 시작 (기본 조작: 마우스 시점, WASD·QE 이동). 시점은 컨트롤러 회전을 따른다
+		Pawn = World->SpawnActor<AGlobeAwareDefaultPawn>(Pos, (-Pos).Rotation());
+		if (APlayerController* PC = World->GetFirstPlayerController())
+		{
+			PC->Possess(Pawn);
+			PC->SetControlRotation((-Pos).Rotation());
+		}
+		return;
+	}
 	Camera = World->SpawnActor<ACameraActor>(Pos, (-Pos).Rotation());
 	Camera->GetCameraComponent()->SetFieldOfView(60);
 }
@@ -106,6 +120,16 @@ void AGeoRenderGameMode::StartPlay()
 void AGeoRenderGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	if (Pawn)
+	{
+		// 대화형: 속도 = 원점 높이 위 고도의 절반/초 (지면 가까이 느리게, 멀리 빠르게). 최소 10m/s
+		// ponytail: 고도 비례 한 줄. 조작감이 어색하면 Cesium DynamicPawn(고도별 속도 곡선)으로
+		UFloatingPawnMovement* Move = Cast<UFloatingPawnMovement>(Pawn->GetMovementComponent());
+		Move->MaxSpeed = FMath::Max(Pawn->GetActorLocation().Z * 0.5, 1000.0);
+		Move->Acceleration = Move->MaxSpeed * 4;
+		Move->Deceleration = Move->MaxSpeed * 8;
+		return;
+	}
 	if (ExitIn >= 0)
 	{
 		if (ExitIn-- == 0) FGenericPlatformMisc::RequestExit(false);
