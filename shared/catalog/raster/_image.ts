@@ -1,6 +1,6 @@
 // PNG·JPG·WebP는 "좌표 없는 그림 + 월드파일"이라 처리 흐름이 같다. 포맷별 샘플과 좌표계만 받아 spec을 만든다.
 import type { FormatSpec, Step } from '../../types.ts'
-import { geoserverRaster } from '../_server.ts'
+import { geoserverRaster, uploadRaster, writeBounds } from '../_server.ts'
 
 type Bounds = [number, number, number, number]
 
@@ -33,6 +33,12 @@ interface ImageFormat {
 export function imageSpec(f: ImageFormat): FormatSpec {
   const raw = `/raw/${f.base}${f.ext}`
   const input = f.palette ? '/work/rgb.vrt' : raw
+  const expand: Step[] = f.palette ? [{
+    title: '색상표 → RGB 펼치기',
+    why: '-expand rgb: 색 번호(0~255) → R·G·B 세 밴드. 번호끼리 보간하면 엉뚱한 색. -of VRT: 새 파일 없이 가상 래스터.',
+    tool: 'gdal',
+    run: `gdal_translate -of VRT -expand rgb ${raw} /work/rgb.vrt`,
+  }] : []
   const inspect: Step = {
     title: '무결성 확인 (월드파일)',
     why: `1줄: 픽셀 가로 크기(m), 2·3줄: 회전, 4줄: 픽셀 세로 크기(음수), 5·6줄: 왼쪽 위 픽셀 좌표. 단위 m → 원래 좌표계(${f.srs.label}) 필요.`,
@@ -40,6 +46,21 @@ export function imageSpec(f: ImageFormat): FormatSpec {
     run: `cat /raw/${f.base}${f.worldExt}`,
   }
   const served = `/serve/raster/${f.id}/image_${f.id}.tif`
+  // 올린 그림: 좌표·밴드를 맞춰 웹 메르카토르 GeoTIFF(/work/web_3857.tif)로 → 한 장·XYZ 타일·GeoServer가 같이 쓴다
+  const uploadPreprocess: Step[] = [
+    {
+      title: '좌표 지정·8비트 RGB 변환',
+      why: '좌표: 월드파일, 없으면 서울시청 앞 임시 좌표. 좌표계: .prj (월드파일에 없음) 또는 판별 화면에서 고른 값. 밴드: 8비트 RGB로 통일.',
+      tool: 'gdal',
+      run: 'python3 /scripts/to_rgb.py $INPUT /work/rgb.vrt',
+    },
+    {
+      title: '웹 메르카토르 재투영',
+      why: '-t_srs EPSG:3857: 웹 지도 격자. -dstalpha: 기울어진 바깥 투명.',
+      tool: 'gdal',
+      run: 'gdalwarp -t_srs EPSG:3857 -r bilinear -dstalpha /work/rgb.vrt /work/web_3857.tif',
+    },
+  ]
   return {
     id: f.id,
     category: 'raster',
@@ -60,12 +81,7 @@ export function imageSpec(f: ImageFormat): FormatSpec {
         title: 'GDAL',
         preprocess: [
           inspect,
-          ...(f.palette ? [{
-            title: '색상표 → RGB 펼치기',
-            why: '-expand rgb: 색 번호(0~255) → R·G·B 세 밴드. 번호끼리 보간하면 엉뚱한 색. -of VRT: 새 파일 없이 가상 래스터.',
-            tool: 'gdal',
-            run: `gdal_translate -of VRT -expand rgb ${raw} /work/rgb.vrt`,
-          }] : []),
+          ...expand,
           {
             title: '좌표계 지정·웹 메르카토르 재투영',
             why: `-s_srs ${f.srs.epsg}: 월드파일에 없는 좌표계 지정. -t_srs EPSG:3857: 웹 지도 격자. -te … -te_srs EPSG:4326: 위경도 사각형 범위 → 네 모서리 좌표로 배치. -ts ${f.width} 0: 가로 ${f.width}px로 축소.`,
@@ -97,6 +113,37 @@ export function imageSpec(f: ImageFormat): FormatSpec {
           cesium: { output: 'image' },
         },
       },
+      {
+        id: 'tiles',
+        title: 'GDAL (XYZ 타일)',
+        preprocess: [
+          inspect,
+          ...expand,
+          {
+            title: '좌표계 지정·웹 메르카토르 재투영 (원본 해상도)',
+            why: `-s_srs ${f.srs.epsg}: 월드파일에 없는 좌표계 지정. -t_srs EPSG:3857: 웹 지도 격자. -te … -te_srs EPSG:4326: 한 장 레시피와 같은 범위. 축소(-ts) 없음 → 원본 해상도 유지.`,
+            tool: 'gdal',
+            run: `gdalwarp -s_srs ${f.srs.epsg} -t_srs EPSG:3857 -te ${f.bounds.join(' ')} -te_srs EPSG:4326 -r bilinear ${input} /work/web_3857.tif`,
+          },
+        ],
+        convert: [
+          {
+            title: 'XYZ 타일 굽기',
+            why: `큰 그림: 한 장 대신 줌별 256px 조각. --min-zoom: 그림 전체가 타일 두세 장에 걸치는 줌(tile_grid.py 계산). 최대 줌: GDAL이 원본 해상도로 결정. -f WEBP: 투명 가장자리 유지, 작은 용량${f.palette ? ' (지도 PNG 타일 대비 약 1/4, 글자·선 번짐 없음)' : ''}.`,
+            tool: 'gdal',
+            run: 'gdal raster tile --min-zoom $(python3 /scripts/tile_grid.py /work/web_3857.tif | cut -d" " -f1) -f WEBP --co QUALITY=80 --webviewer none /work/web_3857.tif /out/tiles',
+          },
+        ],
+        outputs: [
+          { id: 'tiles', kind: 'xyz-raster', path: 'tiles/{z}/{x}/{y}.webp', bounds: f.bounds, label: 'XYZ 타일', why: `원본 해상도 그대로 줌별 조각. 화면 범위·줌의 타일만 요청 → 큰 ${f.name}도 첫 화면 가벼움.` },
+        ],
+        viewers: {
+          ol: { output: 'tiles' },
+          maplibre: { output: 'tiles' },
+          deck: { output: 'tiles' },
+          cesium: { output: 'tiles' },
+        },
+      },
       geoserverRaster({
         name: `image_${f.id}`,
         preprocess: [inspect],
@@ -113,29 +160,14 @@ export function imageSpec(f: ImageFormat): FormatSpec {
         maxzoom: 18,
       }),
     ],
-    alternatives: [
-      { tool: 'gdal', cmd: `gdal raster tile --min-zoom 12 --max-zoom 18 web_3857.tif tiles`, note: '큰 그림: 한 장 대신 XYZ 타일 분할 (COG 페이지 참고).' },
-    ],
+    alternatives: [],
     upload: {
       accept: [f.ext, '.zip'],
       note: `그림만: 좌표 없음 → 서울시청 앞, 1픽셀 = 1m 배치. 제자리 배치: 그림 + 월드파일(${f.worldExt}) + 좌표계(.prj) zip 하나.`,
-      recipe: {
-        id: 'upload',
-        title: '내 파일',
-        preprocess: [
-          {
-            title: '좌표 지정·8비트 RGB 변환',
-            why: '좌표: 월드파일, 없으면 서울시청 앞 임시 좌표. 좌표계: .prj (월드파일에 없음). 밴드: 8비트 RGB로 통일.',
-            tool: 'gdal',
-            run: 'python3 /scripts/to_rgb.py $INPUT /work/rgb.vrt',
-          },
-          {
-            title: '웹 메르카토르 재투영',
-            why: '-t_srs EPSG:3857: 웹 지도 격자. -dstalpha: 기울어진 바깥 투명.',
-            tool: 'gdal',
-            run: 'gdalwarp -t_srs EPSG:3857 -r bilinear -dstalpha /work/rgb.vrt /work/web_3857.tif',
-          },
-        ],
+      recipes: [{
+        id: 'gdal',
+        title: 'GDAL',
+        preprocess: uploadPreprocess,
         convert: [
           {
             title: `${f.name} 한 장 내보내기`,
@@ -147,7 +179,7 @@ export function imageSpec(f: ImageFormat): FormatSpec {
             title: '네 모서리 위경도 기록',
             why: '그림 파일에 위치 없음 → 뷰어용 범위를 bounds.json에 따로 기록.',
             tool: 'gdal',
-            run: `gdalinfo -json /work/web_3857.tif | python3 -c "import json, sys; c = json.load(sys.stdin)['wgs84Extent']['coordinates'][0]; x = [p[0] for p in c]; y = [p[1] for p in c]; print(json.dumps([min(x), min(y), max(x), max(y)]))" > /out/bounds.json && cat /out/bounds.json`,
+            run: writeBounds('/work/web_3857.tif'),
           },
         ],
         outputs: [
@@ -159,7 +191,32 @@ export function imageSpec(f: ImageFormat): FormatSpec {
           deck: { output: 'image' },
           cesium: { output: 'image' },
         },
-      },
+      }, {
+        id: 'tiles',
+        title: 'GDAL (XYZ 타일)',
+        preprocess: uploadPreprocess,
+        convert: [
+          {
+            title: 'XYZ 타일 굽기',
+            why: '큰 그림: 한 장 대신 줌별 256px 조각 → 뷰어 텍스처 크기 한도(보통 8192·16384px)와 무관. --min-zoom: 그림 전체가 타일 두세 장에 걸치는 줌(tile_grid.py 계산). 최대 줌: GDAL이 원본 해상도로 결정. -f WEBP: 투명 가장자리 유지, 작은 용량.',
+            tool: 'gdal',
+            run: 'gdal raster tile --min-zoom $(python3 /scripts/tile_grid.py /work/web_3857.tif | cut -d" " -f1) -f WEBP --co QUALITY=80 --webviewer none /work/web_3857.tif /out/tiles',
+          },
+        ],
+        outputs: [
+          { id: 'tiles', kind: 'xyz-raster', path: 'tiles/{z}/{x}/{y}.webp', label: 'XYZ 타일', why: '원본 해상도 그대로 줌별 조각. 화면 범위·줌의 타일만 요청 → 큰 그림도 첫 화면 가벼움.' },
+        ],
+        viewers: {
+          ol: { output: 'tiles' },
+          maplibre: { output: 'tiles' },
+          deck: { output: 'tiles' },
+          cesium: { output: 'tiles' },
+        },
+      }, uploadRaster({
+        preprocess: uploadPreprocess,
+        source: '/work/web_3857.tif',
+        why: '웹 메르카토르로 맞춘 그림(투명 가장자리 포함). GeoServer 그림+월드파일 저장소(WorldImage)는 WebP 미지원 → GeoTIFF로.',
+      })],
     },
     view: f.view,
     ...(f.noDomestic && { noDomestic: f.noDomestic }),

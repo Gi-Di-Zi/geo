@@ -1,7 +1,15 @@
-import type { FormatSpec } from '../../types.ts'
+import type { FormatSpec, Step } from '../../types.ts'
 
 // 서울시청 앞. 원본의 위치(뉴질랜드 UTM 60S) 대신 이 자리에 세운다
 const ANCHOR: [number, number, number] = [126.97830, 37.56590, 0]
+
+/** 올린 IFC 공통 확인: 버전·요소별 개수 */
+const uploadInspect: Step = {
+  title: '무결성 확인',
+  why: 'FILE_SCHEMA: IFC 버전. 텍스트 포맷 → grep만으로 요소별 개수 집계.',
+  tool: 'shell',
+  run: "grep -m1 -oE 'FILE_SCHEMA[^;]*' $INPUT; grep -oE 'IFC(BUILDINGSTOREY|WALL|SLAB|DOOR|WINDOW|ROOF|COLUMN|BEAM|STAIR|RAILING|COVERING|SPACE)[A-Z]*\\(' $INPUT | sort | uniq -c | sort -rn",
+}
 const RAW = '/raw/Building-Architecture-IFC4.ifc'
 const RAW_2X3 = '/raw/Building-Architecture-IFC2x3.ifc'
 const SAMPLES = 'https://raw.githubusercontent.com/buildingSMART/Certification-datasets/main'
@@ -116,23 +124,14 @@ export default {
       },
     },
   ],
-  alternatives: [
-    { tool: 'ifcopenshell', cmd: "ifcopenshell.open('model.ifc').by_type('IfcBuildingStorey')", note: '층·요소 속성 Python 추출용.' },
-  ],
+  alternatives: [],
   upload: {
     accept: ['.ifc'],
     note: 'IFC2x3·IFC4 모두 지원. 원래 위치와 무관하게 서울시청 앞 배치.',
-    recipe: {
-      id: 'upload',
-      title: '내 파일',
-      preprocess: [
-        {
-          title: '무결성 확인',
-          why: 'FILE_SCHEMA: IFC 버전. 텍스트 포맷 → grep만으로 요소별 개수 집계.',
-          tool: 'shell',
-          run: "grep -m1 -oE 'FILE_SCHEMA[^;]*' $INPUT; grep -oE 'IFC(BUILDINGSTOREY|WALL|SLAB|DOOR|WINDOW|ROOF|COLUMN|BEAM|STAIR|RAILING|COVERING|SPACE)[A-Z]*\\(' $INPUT | sort | uniq -c | sort -rn",
-        },
-      ],
+    recipes: [{
+      id: 'ifcconvert',
+      title: 'IfcConvert + 3d-tiles-tools',
+      preprocess: [uploadInspect],
       convert: [
         {
           title: '형상만 glb 추출',
@@ -163,7 +162,36 @@ export default {
         deck: { output: 'glb' },
         cesium: { output: 'tiles' },
       },
-    },
+    }, {
+      id: 'mago',
+      title: 'mago 3DTiler',
+      preprocess: [
+        uploadInspect,
+        {
+          title: 'IFC 버전 확인 (mago는 IFC2x3만)',
+          why: 'mago 내부 Assimp는 IFC2x3만 읽음 → IFC4면 여기서 중단(IfcConvert 방식은 IFC4도 가능).',
+          tool: 'shell',
+          run: "grep -m1 FILE_SCHEMA $INPUT | grep -qi IFC2X3 || { echo 'IFC2x3 아님 → mago 불가. IfcConvert 방식으로 다시'; exit 1; }",
+        },
+      ],
+      convert: [
+        {
+          title: '위치 지정 3D Tiles 생성',
+          why: '샘플 mago 레시피와 동일. -lon·-lat: 서울시청 앞, 단순화 단계(LOD)별 b3dm 타일. IFC 원점 기준 → 대지 안 건물 배치 거리만큼 기준점에서 떨어질 수 있음. -q 없음: 진행 로그를 실시간 출력으로.',
+          tool: 'mago-3d-tiler',
+          run: `mkdir -p /work/in && cp $INPUT /work/in/model.ifc && mago-3d-tiler -i /work/in -o /out/tiles -it ifc -lon ${ANCHOR[0]} -lat ${ANCHOR[1]} -tv 1.0`,
+        },
+      ],
+      outputs: [
+        { id: 'tiles', kind: '3dtiles', path: 'tiles/tileset.json', label: '3D Tiles (b3dm, LOD)', why: 'IFC 직접 변환 타일. Deck.gl·Cesium용.' },
+      ],
+      viewers: {
+        ol: { unsupported: '2D 지도 — 3D 건물 모델 미지원.' },
+        maplibre: { unsupported: 'glTF·3D Tiles 기본 레이어 없음.' },
+        deck: { output: 'tiles' },
+        cesium: { output: 'tiles' },
+      },
+    }],
   },
   view: { center: [126.9783, 37.5659], zoom: 19.3, pitch: 60, bearing: 35 },
   noDomestic: '국내 IFC 공개 원본 없음. 공공데이터포털 BIM 자료는 지침·CSV.',

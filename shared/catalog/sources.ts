@@ -11,7 +11,8 @@ export const sources: Source[] = [
   {
     id: 'datagokr', name: '공공데이터포털', url: 'https://www.data.go.kr', scope: 'domestic',
     provides: '전국 기관의 파일·API. 포털 직접 게시 CSV·SHP는 로그인 없이 다운로드. 외부 링크형(VWorld, 국토정보플랫폼)은 해당 사이트 로그인 필요.',
-    access: 'key', license: '데이터셋별 (공공누리, 이용허락범위 제한 없음 등)', redistribute: 'conditional',
+    // 이 사이트가 쓰는 건 파일데이터(로그인 없이) → auto. API만 인증키
+    access: 'auto', license: '데이터셋별 (공공누리, 이용허락범위 제한 없음 등)', redistribute: 'conditional',
     note: 'API는 활용신청 후 인증키 필요.',
   },
   {

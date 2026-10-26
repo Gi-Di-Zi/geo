@@ -6,7 +6,7 @@
 import json
 import sys
 
-HEIGHT = ['height', 'building:height', 'bld_hgt', 'hgt', 'build_height', '높이']
+HEIGHT = ['height', 'hgt_median_m', 'building:height', 'bld_hgt', 'hgt', 'build_height', '높이']
 FLOORS = ['num_floors', 'building:levels', 'levels', 'floors', 'grnd_flr', 'gro_flo_co', '지상층수']
 
 

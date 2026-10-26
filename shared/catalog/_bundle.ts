@@ -1,13 +1,14 @@
 // 이미 웹 형태인 타일셋(3D Tiles, quantized-mesh)은 타일 한 장으로는 위치·구조를 알 수 없어서 묶음(zip)으로 받아 그대로 올린다
 import type { Recipe, Upload } from '../types.ts'
 
-export function bundleUpload(u: { marker: string; dest: string; note: string; outputs: Recipe['outputs']; viewers: Recipe['viewers'] }): Upload {
+/** id = 같은 일을 하는 샘플 레시피 id (그대로 올리기: 'tiles'·'cesium') → 방식·도구 고르기 설명 공유 */
+export function bundleUpload(u: { id: string; marker: string; dest: string; note: string; outputs: Recipe['outputs']; viewers: Recipe['viewers'] }): Upload {
   return {
     accept: ['.zip'],
     note: u.note,
-    recipe: {
-      id: 'upload',
-      title: '내 파일',
+    recipes: [{
+      id: u.id,
+      title: '그대로 올리기',
       preprocess: [
         {
           title: '무결성 확인',
@@ -26,6 +27,6 @@ export function bundleUpload(u: { marker: string; dest: string; note: string; ou
       ],
       outputs: u.outputs,
       viewers: u.viewers,
-    },
+    }],
   }
 }

@@ -4,6 +4,9 @@ import type { EngineReport, FormatSpec, Output, Recipe, ViewerId } from '#shared
 
 /** base: 결과 폴더 URL. 없으면 미리 변환해 둔 샘플(public/data) */
 const props = defineProps<{ spec: FormatSpec; recipe: Recipe; color: string; base?: string }>()
+/** select = 다른 변환 도구(레시피) 선택. 올린 파일(base 있음)은 레시피가 하나라 메뉴 없음 */
+const emit = defineEmits<{ select: [id: string] }>()
+const groups = computed(() => recipeGroups(props.spec))
 const { camera, sync, reset, move } = useCamera()
 const { basemap, hasKey } = useBasemap()
 const dir = computed(() => props.base ?? `${useRuntimeConfig().app.baseURL}data/${props.spec.category}/${props.spec.id}/${props.recipe.id}/`)
@@ -103,8 +106,19 @@ watch([showEngine, dir], async ([open]) => {
       <iframe v-if="live" class="live" :src="liveUrl" :title="`${engine.name} 실시간 화면`" allow="autoplay; fullscreen" />
     </div>
 
-    <!-- 지도 위에 뜨는 도구: 왼쪽 위 = 뷰어·배경지도 (누르면 펼침, 다시 누르면 닫힘), 오른쪽 = 지도 조작 -->
+    <!-- 지도 위에 뜨는 도구: 왼쪽 위 = 변환 도구·뷰어·배경지도 (누르면 펼침, 다시 누르면 닫힘), 오른쪽 = 지도 조작 -->
     <div class="float top">
+      <details v-if="!base && spec.recipes.length > 1" name="stage-pop" class="pop">
+        <summary class="panel" title="변환 도구 전환">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5.5h12M4 10h12M4 14.5h12" /></svg>{{ recipe.title }}
+        </summary>
+        <div class="panel menu" role="group" aria-label="변환 도구 전환">
+          <template v-for="g in groups" :key="g.id">
+            <p v-if="groups.length > 1" class="menu-head small">{{ g.name }}</p>
+            <button v-for="r in g.recipes" :key="r.id" type="button" :aria-pressed="r.id === recipe.id" @click="emit('select', r.id)">{{ r.title }}</button>
+          </template>
+        </div>
+      </details>
       <details name="stage-pop" class="pop">
         <summary class="panel" title="뷰어 전환">
           <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2" /><path d="M3 8h14" /></svg>{{ live ? `${engine.name} · 실시간` : cur.meta.name }}
@@ -242,6 +256,7 @@ watch([showEngine, dir], async ([open]) => {
 .menu button:disabled { opacity: 0.4; cursor: not-allowed; }
 .menu p { padding: 0 10px 4px; }
 .menu-head { margin-top: 2px; padding: 6px 10px 0 !important; border-top: 1px solid var(--rule); color: var(--ink-2); }
+.menu-head:first-child { margin-top: 0; padding-top: 2px !important; border-top: 0; }
 
 /* 엔진 안내 카드: 지도 위 왼쪽 아래 */
 .engine { left: 12px; bottom: 12px; width: min(28rem, calc(100% - 24px)); padding: 14px 16px; display: grid; gap: 8px; }

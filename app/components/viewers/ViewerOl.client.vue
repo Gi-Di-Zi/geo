@@ -39,23 +39,25 @@ function dataLayer() {
   const o = props.output
   const url = props.url
   const mvt = () => new MVT({ layers: o.layer ? [o.layer] : undefined })
+  // 타일·WMS: 범위 밖은 요청하지 않는다 (빈 타일을 안 쓰는 타일 폴더 → 범위 밖 요청 = 404)
+  const extent = o.bounds && transformExtent(o.bounds, 'EPSG:4326', 'EPSG:3857')
   switch (o.kind) {
     case 'geojson':
       return new VectorLayer({ source: new VectorSource({ url, format: new GeoJSON() }), style })
     case 'mvt':
-      return new VectorTileLayer({ source: new VectorTileSource({ url, format: mvt(), minZoom: o.minzoom, maxZoom: o.maxzoom }), style })
+      return new VectorTileLayer({ extent, source: new VectorTileSource({ url, format: mvt(), minZoom: o.minzoom, maxZoom: o.maxzoom }), style })
     case 'pmtiles':
       return new VectorTileLayer({ source: new PMTilesVectorSource({ url, format: mvt() } as any), style })
     case 'cog':
       return new WebGLTileLayer({ source: new GeoTIFF({ sources: [{ url }] }) })
     case 'xyz-raster':
-      return new TileLayer({ source: new XYZ({ url, minZoom: o.minzoom, maxZoom: o.maxzoom, crossOrigin: 'anonymous' }) })
+      return new TileLayer({ extent, source: new XYZ({ url, minZoom: o.minzoom, maxZoom: o.maxzoom, crossOrigin: 'anonymous' }) })
     case 'image':
       return new ImageLayer({ source: new ImageStatic({ url, imageExtent: transformExtent(o.bounds!, 'EPSG:4326', 'EPSG:3857') }) })
     case 'wms':
       // 지도를 움직일 때마다 화면 범위 그림 한 장을 서버에 요청한다
       return new ImageLayer({
-        extent: o.bounds && transformExtent(o.bounds, 'EPSG:4326', 'EPSG:3857'),
+        extent,
         source: new ImageWMS({ url, params: { LAYERS: o.layer, TRANSPARENT: true }, crossOrigin: 'anonymous' }),
       })
     default:

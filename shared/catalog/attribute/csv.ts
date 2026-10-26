@@ -1,8 +1,10 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { vectorRecipe, vectorUpload } from '../vector-2d/_vector.ts'
+import { geopandasRecipe, vectorRecipe, vectorUpload } from '../vector-2d/_vector.ts'
 
 const RAW = '/raw/molit_bus_stops.csv'
+/** 업로드 CSV의 좌표 열 이름. GDAL CSV X/Y_POSSIBLE_NAMES 규칙(대소문자 무시, 앞뒤 * 와일드카드). 업로드 판별(shared/sniff.ts)도 같은 목록 */
+export const XY_NAMES = { x: ['경도', 'lon*', 'lng', 'x', 'x좌표', '*_x'], y: ['위도', 'lat*', 'y', 'y좌표', '*_y'] }
 // 위도·경도 열이 텍스트라 빈 칸·뒤바뀐 값이 섞여 있다. 한국 범위(위도 33~39, 경도 124~132) 밖은 버린다
 const IN_KOREA = 'CAST(위도 AS REAL) BETWEEN 33 AND 39 AND CAST(경도 AS REAL) BETWEEN 124 AND 132'
 
@@ -86,16 +88,29 @@ export default {
       maxzoom: 14,
       key: 'id',
       preprocess,
+      bounds: [126.434, 37.184, 127.188, 37.830],
+    }),
+    geopandasRecipe({
+      layer: 'stops',
+      check: {
+        why: "encoding='cp949': 원본 인코딩 그대로 읽기(iconv 변환 불필요). dtype=str: 값을 텍스트 그대로. to_numeric(errors='coerce'): 빈 칸·문자 → NaN. 한국 범위 밖·빈 좌표 행을 도시별로 집계(GDAL 레시피와 같은 대전 5·세종 6·제주 1).",
+        code: `import pandas as pd\ndf = pd.read_csv('${RAW}', encoding='cp949', dtype=str)\nprint(len(df), '행 ·', list(df.columns))\nlat, lon = pd.to_numeric(df['위도'], errors='coerce'), pd.to_numeric(df['경도'], errors='coerce')\nprint(df[~(lat.between(33, 39) & lon.between(124, 132))].groupby('도시명').size().to_string())`,
+      },
+      tidy: {
+        title: '서울BIS 정류장 점 만들기',
+        why: "관리도시명 서울BIS: 경기BIS 중복 등록 제외. between: 한국 범위 밖·빈 좌표 행 제외. points_from_xy(경도, 위도) + crs=4326: 텍스트 좌표 → 위경도 점. set_axis: 한글 열 → id·name·ars.",
+        code: `import pandas as pd\ndf = pd.read_csv('${RAW}', encoding='cp949', dtype=str)\ndf['lat'], df['lon'] = pd.to_numeric(df['위도'], errors='coerce'), pd.to_numeric(df['경도'], errors='coerce')\ndf = df[(df['관리도시명'] == '서울BIS') & df['lat'].between(33, 39) & df['lon'].between(124, 132)]\ndf = gpd.GeoDataFrame(df[['정류장번호', '정류장명', '모바일단축번호']].set_axis(['id', 'name', 'ars'], axis=1), geometry=gpd.points_from_xy(df['lon'], df['lat']), crs=4326)`,
+      },
     }),
     ...serverRecipes({ category: 'attribute', layer: 'stops', preprocess, work: '/work/stops.gpkg', geom: 'point', bounds: [126.43, 37.18, 127.19, 37.83] }),
   ],
   alternatives: [
-    { tool: 'geopandas', cmd: "df = pd.read_csv('molit_bus_stops.csv', encoding='cp949'); gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['경도'], df['위도']), crs=4326)", note: 'pandas 표 → 점 GeoDataFrame.' },
     { tool: 'mapshaper', cmd: 'mapshaper -i molit_bus_stops.csv encoding=cp949 -points x=경도 y=위도 -o format=geojson stops.geojson', note: '인코딩 지정 + 좌표 열 → 점, 명령 한 줄.' },
   ],
   upload: vectorUpload({
+    category: 'attribute',
     accept: ['.csv'],
-    note: '위경도 열(경도·위도, lon·lat, x·y, …_x·…_y 등)이 있는 CSV. UTF-8 또는 CP949. 빈 좌표·위경도 범위 밖 행(위도·경도 뒤바뀜 등)은 제외. TM 등 미터 좌표는 미지원.',
+    note: '좌표 열(경도·위도, lon·lat, x·y, X좌표·Y좌표, …_x·…_y 등)이 있는 CSV. UTF-8 또는 CP949. 평면 좌표(TM 등 미터 값)면 판별 화면에서 좌표계 선택. 빈 좌표·위경도 범위 밖 행(위도·경도 뒤바뀜 등)은 제외.',
     open: '/work/data.csv',
     prepare: [
       {
@@ -106,12 +121,12 @@ export default {
       },
       {
         title: '좌표계 지정',
-        why: 'CSV에는 좌표계 정보 없음 → 같은 이름의 .prj에 위경도(WGS84) 기록. GDAL CSV 드라이버가 .prj를 함께 읽음.',
+        why: 'CSV에는 좌표계 정보 없음 → 같은 이름의 .prj에 위경도(WGS84) 기록. GDAL CSV 드라이버가 .prj를 함께 읽음. 판별 화면에서 좌표계를 고르면 다음 단계의 -s_srs가 이 값을 덮어씀.',
         tool: 'gdal',
         run: 'gdalsrsinfo -o wkt_esri EPSG:4326 > /work/data.prj',
       },
     ],
-    opts: "-oo 'X_POSSIBLE_NAMES=경도,lon*,lng,x,x좌표,*_x' -oo 'Y_POSSIBLE_NAMES=위도,lat*,y,y좌표,*_y' -oo KEEP_GEOM_COLUMNS=NO -spat -180 -90 180 90",
+    opts: `-oo 'X_POSSIBLE_NAMES=${XY_NAMES.x.join(',')}' -oo 'Y_POSSIBLE_NAMES=${XY_NAMES.y.join(',')}' -oo KEEP_GEOM_COLUMNS=NO`,
   }),
   view: { center: [126.98, 37.55], zoom: 11 },
 } satisfies FormatSpec

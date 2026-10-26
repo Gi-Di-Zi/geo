@@ -1,6 +1,6 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { shpEncoding, tileCount, vectorUpload } from './_vector.ts'
+import { SHP_OPEN, shpUnpack, tileCount, tippecanoeRecipe, vectorUpload } from './_vector.ts'
 
 // 레시피 GDAL·tippecanoe가 같이 쓰는 전처리
 const gdalPreprocess: Step[] = [
@@ -109,7 +109,7 @@ export default {
       ],
       outputs: [
         { id: 'features', kind: 'geojson', path: 'ogc/collections/trdar/items.json', label: 'GeoJSON', why: '상권 전체 한 파일. 소규모 데이터에 가장 단순.' },
-        { id: 'tiles', kind: 'mvt', path: 'tiles/{z}/{x}/{y}.pbf', minzoom: 11, maxzoom: 16, layer: 'trdar', label: 'MVT 벡터타일', why: '보이는 영역 타일만 요청. 대용량에 유리.' },
+        { id: 'tiles', kind: 'mvt', path: 'tiles/{z}/{x}/{y}.pbf', minzoom: 11, maxzoom: 16, layer: 'trdar', bounds: BOUNDS, label: 'MVT 벡터타일', why: '보이는 영역 타일만 요청. 대용량에 유리.' },
       ],
       viewers: {
         ol: { output: 'tiles' },
@@ -118,35 +118,7 @@ export default {
         cesium: { output: 'features', note: 'MVT 미지원 → GeoJSON 사용.' },
       },
     },
-    {
-      id: 'tippecanoe',
-      title: 'tippecanoe',
-      preprocess: gdalPreprocess,
-      convert: [
-        {
-          title: 'GeoJSON 추출',
-          why: 'tippecanoe 입력 형식: GeoJSON(또는 FlatGeobuf).',
-          tool: 'gdal',
-          run: 'ogr2ogr -f GeoJSON /work/trdar.geojson /work/trdar.gpkg -lco RFC7946=YES',
-        },
-        {
-          title: 'PMTiles 생성',
-          why: '-Z11·-z16: 줌 범위. -l trdar: 레이어 이름. --drop-densest-as-needed: 줌별 과밀 피처 제거. 결과: PMTiles 한 파일.',
-          tool: 'tippecanoe',
-          run: 'tippecanoe -o /out/trdar.pmtiles -l trdar -Z11 -z16 --drop-densest-as-needed --force /work/trdar.geojson',
-        },
-        tileCount({ ...TILE_COUNT, work: '/work/trdar.gpkg', tiles: '-oo ZOOM_LEVEL=$z /out/trdar.pmtiles' }),
-      ],
-      outputs: [
-        { id: 'pmtiles', kind: 'pmtiles', path: 'trdar.pmtiles', minzoom: 11, maxzoom: 16, layer: 'trdar', label: 'PMTiles', why: '타일 전체 단일 파일. 정적 호스팅에 적합.' },
-      ],
-      viewers: {
-        ol: { output: 'pmtiles' },
-        maplibre: { output: 'pmtiles' },
-        deck: { output: 'pmtiles', note: 'MVTLayer 타일 요청 → PMTiles 읽기로 교체.' },
-        cesium: { unsupported: '벡터타일(PMTiles 포함) 미지원 → GeoJSON 별도 필요.' },
-      },
-    },
+    tippecanoeRecipe({ ...TILE_COUNT, work: '/work/trdar.gpkg', preprocess: gdalPreprocess }),
     {
       id: 'postgis',
       title: 'PostGIS + Python',
@@ -181,7 +153,7 @@ export default {
       ],
       outputs: [
         { id: 'features', kind: 'geojson', path: 'ogc/collections/trdar/items.json', label: 'GeoJSON', why: 'SQL 결과 그대로 GeoJSON.' },
-        { id: 'tiles', kind: 'mvt', path: 'tiles/{z}/{x}/{y}.pbf', minzoom: 11, maxzoom: 16, layer: 'trdar', label: 'MVT 벡터타일', why: 'ST_AsMVT 생성 타일. 실서버는 요청마다 같은 SQL 실행.' },
+        { id: 'tiles', kind: 'mvt', path: 'tiles/{z}/{x}/{y}.pbf', minzoom: 11, maxzoom: 16, layer: 'trdar', bounds: BOUNDS, label: 'MVT 벡터타일', why: 'ST_AsMVT 생성 타일. 실서버는 요청마다 같은 SQL 실행.' },
       ],
       viewers: {
         ol: { output: 'tiles' },
@@ -193,14 +165,13 @@ export default {
     ...serverRecipes({ category: 'vector-2d', layer: 'trdar', preprocess: gdalPreprocess.slice(0, 2), load: serverLoad, geom: 'polygon', bounds: BOUNDS }),
   ],
   alternatives: [
-    { tool: 'geopandas', cmd: "gpd.read_file('seoul_trdar.zip', encoding='cp949').to_crs(4326).to_file('trdar.geojson')", note: 'Python 스크립트로 같은 처리.' },
     { tool: 'mapshaper', cmd: 'mapshaper seoul_trdar.shp -proj wgs84 -simplify 10% -o format=geojson trdar.geojson', note: '도형 단순화 → 용량 축소.' },
   ],
   upload: vectorUpload({
     accept: ['.zip'],
-    note: '.shp, .shx, .dbf, .prj(, .cpg)를 zip 하나로. .shp 단독은 속성·좌표계 없음.',
-    open: '/vsizip/$INPUT',
-    prepare: [shpEncoding],
+    note: '.shp, .shx, .dbf, .prj(, .cpg)를 zip 하나로 (폴더째 압축 OK, 여러 벌이면 가장 큰 1벌). .prj 없으면 판별 화면에서 좌표계 선택, .cpg 없으면 인코딩 자동 판별. .shp 단독은 속성·좌표계 없음.',
+    open: SHP_OPEN,
+    prepare: [shpUnpack],
     opts: '$(cat /work/open_options)',
   }),
   view: { center: [126.979, 37.565], zoom: 14 },

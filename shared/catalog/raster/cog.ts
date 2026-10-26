@@ -1,5 +1,5 @@
 import type { FormatSpec, Recipe, Step, Upload } from '../../types.ts'
-import { geoserverRaster } from '../_server.ts'
+import { geoserverRaster, uploadRaster } from '../_server.ts'
 
 export const TCI = 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/52/S/CG/2026/5/S2B_52SCG_20260531_0_L2A/TCI.tif'
 
@@ -28,27 +28,29 @@ export const webViewers: Recipe['viewers'] = {
 }
 
 
-/** 올린 영상(GeoTIFF·COG): 8비트 RGB로 맞춘 뒤 샘플과 같은 COG + XYZ 타일. 줌 범위는 해상도에서 자동으로 정한다 */
+const uploadPreprocess: Step[] = [
+  {
+    title: '무결성 확인',
+    why: '크기·좌표계·밴드 자료형·블록 구조·축소본 유무.',
+    tool: 'gdal',
+    run: "gdalinfo $INPUT | grep -E 'Size is|PROJCRS|GEOGCRS|LAYOUT|COMPRESSION|Block=|Overviews'",
+  },
+  {
+    title: '8비트 RGB 변환',
+    why: '웹 이미지(WebP·PNG): 0~255 3밴드(+투명도)만. 1밴드 → 회색 복제. 16비트 → 최솟값~최댓값을 0~255로 스트레치. 좌표 없음 → 서울시청 앞 배치.',
+    tool: 'gdal',
+    run: 'python3 /scripts/to_rgb.py $INPUT /work/rgb.vrt',
+  },
+]
+
+/** 올린 영상(GeoTIFF·COG): 8비트 RGB로 맞춘 뒤 GDAL(샘플과 같은 COG + XYZ 타일, 줌은 해상도에서) 또는 GeoServer */
 export const rasterUpload: Upload = {
   accept: ['.tif', '.tiff'],
   note: '좌표 있는 영상. 16비트·다중 밴드: 앞 3밴드를 0~255로 변환. 높이 데이터(DEM)는 지형 페이지.',
-  recipe: {
-    id: 'upload',
-    title: '내 파일',
-    preprocess: [
-      {
-        title: '무결성 확인',
-        why: '크기·좌표계·밴드 자료형·블록 구조·축소본 유무.',
-        tool: 'gdal',
-        run: "gdalinfo $INPUT | grep -E 'Size is|PROJCRS|GEOGCRS|LAYOUT|COMPRESSION|Block=|Overviews'",
-      },
-      {
-        title: '8비트 RGB 변환',
-        why: '웹 이미지(WebP·PNG): 0~255 3밴드(+투명도)만. 1밴드 → 회색 복제. 16비트 → 최솟값~최댓값을 0~255로 스트레치. 좌표 없음 → 서울시청 앞 배치.',
-        tool: 'gdal',
-        run: 'python3 /scripts/to_rgb.py $INPUT /work/rgb.vrt',
-      },
-    ],
+  recipes: [{
+    id: 'gdal',
+    title: 'GDAL',
+    preprocess: uploadPreprocess,
     convert: [
       { ...toCog, run: toCog.run.replace('/raw/seoul_s2_tci.tif /out/seoul_3857.tif', '/work/rgb.vrt /out/web_3857.tif') },
       {
@@ -62,7 +64,11 @@ export const rasterUpload: Upload = {
       { id: 'tiles', kind: 'xyz-raster', path: 'tiles/{z}/{x}/{y}.webp', label: 'XYZ 타일', why: '미리 자른 이미지 타일. 모든 지도 라이브러리 지원.' },
     ],
     viewers: webViewers,
-  },
+  }, uploadRaster({
+    preprocess: uploadPreprocess,
+    source: '/work/rgb.vrt',
+    why: '8비트 RGB로 맞춘 영상(원래 좌표계 그대로) → 웹 메르카토르 변환은 서버가 요청마다.',
+  })],
 }
 
 const inspect: Step = {
@@ -134,7 +140,6 @@ export default {
     }),
   ],
   alternatives: [
-    { tool: 'rio-cogeo', cmd: 'rio cogeo validate seoul_s2_tci.tif', note: 'Python COG 규칙 검사.' },
     { tool: 'titiler', note: '타일 미리 굽기 없이 COG에서 요청마다 생성.' },
   ],
   upload: { ...rasterUpload, accept: ['.tif'] },

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<title>공간 데이터 웹 처리</title>
+<!--
+  MCP App (server/routes/mcp.ts의 ui://geo/app.html). Claude 대화 안에서:
+  업로드(인자 없는 geo_identify) → 형식·방식·도구 고르기(geo_identify 결과) → 변환 진행(geo_convert → geo_status) → 결과 지도·주소.
+  __ORIGIN__ = 이 사이트 주소 (서버가 채움). 파일은 /api/stage로 바로, 막히면 geo_stage_chunk 도구로 조각조각.
+  첫 script = MCP Apps SDK(app-with-deps.js)를 서버가 통째로 넣는 자리 → 외부 스크립트 없이 뜬다 (사내망·CDN 장애)
+-->
+<style>
+  :root {
+    --ink: #16202A; --ink-2: #52606E; --rule: #D7DFE6; --surface: #FFFFFF; --soft: #F4F7F9;
+    --link: #1D5BD6; --c: #1D5BD6; --bad: #B42318; --warn: #8A5300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #E6EDF3; --ink-2: #9AA7B4; --rule: #334150; --surface: #1B2430; --soft: #141C25; --link: #7AA7FF; --bad: #F97066; --warn: #F2C14E; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.6 system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: var(--ink); background: transparent; }
+  main { padding: 14px 16px; display: grid; gap: 10px; }
+  h2 { font-size: 15px; margin: 0; }
+  h3 { font-size: 13px; margin: 6px 0 0; color: var(--ink-2); }
+  p, ul { margin: 0; }
+  .muted { color: var(--ink-2); }
+  .small { font-size: 12.5px; }
+  .err { color: var(--bad); }
+  .warn { color: var(--warn); }
+  .drop { display: grid; justify-items: center; gap: 2px; padding: 22px 12px; text-align: center; cursor: pointer; border: 1.5px dashed var(--rule); border-radius: 12px; background: var(--surface); }
+  .drop:hover, .drop.over { border-color: var(--link); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+  .card { display: grid; gap: 3px; align-content: start; text-align: left; font: inherit; color: inherit; padding: 9px 11px; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+  button.card, .card > button { cursor: pointer; }
+  .card > button { all: unset; display: grid; gap: 3px; cursor: pointer; }
+  .card.on, .card[aria-checked='true'] { border-color: var(--c); box-shadow: inset 0 0 0 1px var(--c); }
+  .card.on strong::after, .card[aria-checked='true'] strong::after { content: ' ✓'; color: var(--c); }
+  .tag { font-size: 11.5px; color: var(--ink-2); }
+  .best { color: var(--c); font-weight: 700; }
+  .pills { display: flex; flex-wrap: wrap; gap: 3px; }
+  .pills span { font-size: 11.5px; padding: 0 7px; border-radius: 99px; border: 1px solid var(--rule); }
+  details summary { cursor: pointer; font-size: 12px; color: var(--ink-2); }
+  details ul { padding-left: 1.1em; }
+  .btn { font: inherit; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); padding: 5px 12px; cursor: pointer; }
+  .btn.go { background: var(--c); border-color: var(--c); color: #fff; font-weight: 600; padding: 7px 18px; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .bar { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--c); transition: width 0.4s; }
+  .now::before { content: '● '; color: var(--c); animation: blink 1s infinite; }
+  input[type='text'] { font: 12.5px ui-monospace, monospace; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); color: var(--ink); width: 13rem; }
+  iframe { width: 100%; height: 440px; border: 1px solid var(--rule); border-radius: 10px; background: var(--soft); }
+  a { color: var(--link); word-break: break-all; }
+  .out { display: grid; gap: 5px; padding: 9px 11px; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+  .out code { flex: 1 1 14rem; min-width: 0; font: 12px ui-monospace, monospace; color: var(--ink-2); word-break: break-all; }
+  .btn.sm { font-size: 12.5px; padding: 3px 10px; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+<main id="root"><p class="muted small">불러오는 중…</p></main>
+<script type="module">__MCP_APPS_SDK__</script>
+<script type="module">
+  // SDK는 바로 위 스크립트(서버가 넣음)가 globalThis.McpApps로 내놓는다. 모듈 스크립트는 문서 순서대로 돈다
+  const { App } = globalThis.McpApps
+
+  const ORIGIN = '__ORIGIN__'
+  const SRS_LIST = [
+    ['EPSG:5186', '중부원점 (GRS80, 원점 북 600km) — 2010년 이후 국가 표준'],
+    ['EPSG:5185', '서부원점 (GRS80)'], ['EPSG:5187', '동부원점 (GRS80)'], ['EPSG:5188', '동해원점 (GRS80)'],
+    ['EPSG:5181', '중부원점 (GRS80, 원점 북 500km) — 카카오 지도 등'],
+    ['EPSG:5179', 'UTM-K (GRS80) — 도로명주소·네이버 지도 등'],
+    ['EPSG:5174', '보정 중부원점 (Bessel) — 옛 지적·인허가 자료'],
+    ['EPSG:2097', '중부원점 (Bessel) — 옛 자료'], ['EPSG:4326', '위경도 (WGS84)'],
+  ]
+  const root = document.getElementById('root')
+  const app = new App({ name: 'geo-web', version: '1.0.0' })
+
+  /** 화면 상태: 판별 결과, 고른 형식·방식·좌표계 */
+  let found = null, fmt = null, method = null, srs = '', timer = null
+
+  // 작은 DOM 도우미 (파일 이름 등은 textContent로만 넣는다)
+  function h(tag, props = {}, ...kids) {
+    const el = document.createElement(tag)
+    for (const [k, v] of Object.entries(props)) {
+      if (k.startsWith('on')) el.addEventListener(k.slice(2), v)
+      else if (v === true) el.setAttribute(k, '')
+      else if (v !== false && v != null) el.setAttribute(k, v)
+    }
+    el.append(...kids.flat(Infinity).filter(x => x != null && x !== false))
+    return el
+  }
+  const render = (...els) => { clearTimeout(timer); root.replaceChildren(...els.flat().filter(Boolean)) }
+  const mb = n => (n < 1048576 ? Math.round(n / 1024) + 'KB' : (n / 1048576).toFixed(1) + 'MB')
+  /** 버튼 글자를 잠깐 바꿔 결과 알리기 */
+  function flash(btn, text, ms = 1500) {
+    btn.dataset.label ??= btn.textContent
+    btn.textContent = text
+    clearTimeout(btn.flashTimer)
+    btn.flashTimer = setTimeout(() => { btn.textContent = btn.dataset.label }, ms)
+  }
+  /** 주소 복사. 호스트가 클립보드 권한을 안 주면 예전 방식(execCommand)으로 */
+  async function copy(text) {
+    if (await (navigator.clipboard?.writeText(text).then(() => true, () => false) ?? false)) return true
+    const t = h('textarea', {}, text)
+    document.body.append(t); t.select()
+    const ok = document.execCommand('copy')
+    t.remove()
+    return ok
+  }
+  const copyBtn = (text, url) => h('button', { class: 'btn sm', type: 'button', onclick: async e => { const b = e.currentTarget; flash(b, (await copy(url)) ? '복사됨 ✓' : '복사 막힘 — 주소를 직접 선택') } }, text)
+  /** 링크 열기. 호스트가 막으면(Claude는 https 주소만 연다) 주소를 복사해 두고 알린다 */
+  async function open(url, btn) {
+    const r = await app.openLink({ url }).catch(() => ({ isError: true }))
+    if (r?.isError) flash(btn, (await copy(url)) ? '열기 막힘 → 주소 복사됨, 브라우저에 붙여넣기' : '열기 막힘 — 주소를 직접 복사', 4000)
+  }
+  const linkBtn = (text, url) => h('button', { class: 'btn', type: 'button', onclick: e => open(url, e.currentTarget) }, text)
+
+  // ponytail: 화면이 받아 호스트에 통째로 넘기는 크기 상한. 넘으면 호스트가 직접 받게(resource_link) 맡긴다
+  const INLINE_MAX = 100 * 1024 ** 2
+  /** 받아서 base64. 상한을 넘으면 null */
+  async function fetchB64(url) {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`내려받기 실패 (${res.status})`)
+    const reader = res.body.getReader(), parts = []
+    for (let n = 0; ;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if ((n += value.length) > INLINE_MAX) { reader.cancel(); return null }
+      parts.push(value)
+    }
+    return b64(new Uint8Array(await new Blob(parts).arrayBuffer()))
+  }
+  /** 내려받기. 대화 화면은 직접 저장이 막혀 있어 호스트에 넘긴다(downloadFile). 못 하면 링크 열기 → 그것도 막히면 주소 복사 */
+  async function download(o, btn) {
+    if (app.getHostCapabilities()?.downloadFile) {
+      flash(btn, '받는 중…', 600000)
+      const mimeType = o.zip ? 'application/zip' : 'application/octet-stream'
+      const r = await fetchB64(o.download)
+        .then(blob => app.downloadFile({ contents: [blob ? { type: 'resource', resource: { uri: `file:///${o.file}`, mimeType, blob } } : { type: 'resource_link', uri: o.download, name: o.file, mimeType }] }))
+        .catch(() => ({ isError: true }))
+      if (!r?.isError) return flash(btn, '저장 창으로 넘김 ✓', 3000)
+    }
+    return open(o.download, btn)
+  }
+  /** 모델에게 알리기 (다음 대화 턴에 전달됨, 응답을 바로 만들지는 않음) */
+  const tell = text => app.updateModelContext({ content: [{ type: 'text', text }] }).catch(() => {})
+  async function tool(name, args) {
+    const r = await app.callServerTool({ name, arguments: args })
+    if (r.isError) throw new Error(r.content?.[0]?.text ?? '도구 오류')
+    return r.structuredContent
+  }
+
+  // ① 업로드
+  function uploadView(msg) {
+    const input = h('input', { type: 'file', hidden: true, onchange: e => upload(e.target.files[0]) })
+    const zone = h('label', { class: 'drop' }, input,
+      h('strong', {}, '파일 끌어 놓기 또는 고르기'),
+      h('span', { class: 'small muted' }, 'SHP는 zip으로(폴더째 가능), 타일셋은 zip 하나로. 최대 200MB, 24시간 뒤 삭제'))
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over') })
+    zone.addEventListener('dragleave', () => zone.classList.remove('over'))
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('over'); upload(e.dataTransfer.files[0]) })
+    render(h('h2', {}, '공간 데이터 올리기'), zone, msg && h('p', { class: 'small err' }, msg))
+  }
+
+  async function upload(file) {
+    if (!file) return
+    const bar = h('span', { style: 'width:0%' })
+    const note = h('p', { class: 'small muted' }, `${file.name} · ${mb(file.size)} 올리는 중…`)
+    render(h('h2', {}, '공간 데이터 올리기'), note, h('div', { class: 'bar' }, bar))
+    const progress = p => { bar.style.width = `${Math.round(p * 100)}%` }
+    try {
+      let r
+      try { r = await direct(file, progress) } catch (e) {
+        if (e.final) throw e
+        // 대화 화면이 서버에 바로 못 보냄(브라우저 보안·네트워크) → 도구 호출로 조각조각
+        note.textContent = `${file.name} · 직접 올리기 막힘 → 조각으로 올리는 중…`
+        r = await chunks(file, progress)
+      }
+      chooseView(r)
+      tell(`사용자가 업로드 화면에 ${r.name}을(를) 올림. 판별: ${r.formats[0] ? `${r.formats[0].id} (${r.formats[0].name})` : `받을 수 없음 — ${r.note}`}. stage=${r.stage}`)
+    } catch (e) { uploadView(e.message) }
+  }
+
+  /** 서버(/api/stage)로 바로. 네트워크·보안으로 막히면 일반 오류, 서버가 거절하면 final(조각으로 다시 보내지 않음) */
+  const direct = (file, progress) => new Promise((ok, fail) => {
+    const x = new XMLHttpRequest()
+    x.open('POST', `${ORIGIN}/api/stage`)
+    x.upload.onprogress = e => { if (e.lengthComputable) progress(e.loaded / e.total) }
+    x.onload = () => {
+      let j = {}
+      try { j = JSON.parse(x.responseText) } catch {}
+      if (x.status === 200) return ok(j)
+      fail(Object.assign(new Error(j.statusMessage ?? j.message ?? `업로드 실패 (${x.status})`), { final: true }))
+    }
+    x.onerror = () => fail(new Error('network'))
+    const body = new FormData()
+    body.append('file', file)
+    x.send(body)
+  })
+
+  const b64 = bytes => {
+    let s = ''
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+    return btoa(s)
+  }
+  /** geo_stage_chunk 도구로 512KB씩 순서대로 */
+  async function chunks(file, progress) {
+    const size = 512 * 1024
+    let upload
+    for (let at = 0; ; at += size) {
+      const last = at + size >= file.size
+      const data = b64(new Uint8Array(await file.slice(at, at + size).arrayBuffer()))
+      const r = await tool('geo_stage_chunk', { ...(upload && { upload }), name: file.name, data, last })
+      upload = r.upload
+      progress(Math.min(1, (at + size) / file.size))
+      if (last) return r
+    }
+  }
+
+  // ② 형식·방식·도구 고르기
+  function chooseView(r, prevSrs) {
+    found = r
+    fmt = r.formats[0] ?? null
+    method = fmt?.methods[0]?.id ?? null
+    srs = prevSrs ?? r.srs?.guess ?? ''
+    drawChoose()
+  }
+  /** 같은 파일로 형식·방식 다시 고르기 (geo_identify에 작업 id → 그 작업의 원본). 좌표계는 지난번 값 */
+  const againBtn = s => h('button', { class: 'btn', type: 'button', onclick: async e => {
+    const b = e.currentTarget
+    b.disabled = true
+    try { chooseView(await tool('geo_identify', { stage: s.job }), s.srs) } catch (err) { b.disabled = false; flash(b, err.message, 4000) }
+  } }, '다른 방식으로 다시')
+  const newFileBtn = () => h('button', { class: 'btn', type: 'button', onclick: () => uploadView() }, '다른 파일 올리기')
+
+  function drawChoose() {
+    const r = found
+    const head = [h('h2', {}, `${r.name} · ${mb(r.bytes)}`), h('p', { class: 'small muted' }, r.facts.join(' · ')), r.warns.map(w => h('p', { class: 'small warn' }, w))]
+    if (!fmt) return render(...head, h('p', { class: 'err' }, r.note ?? '받을 수 없는 파일'), h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => uploadView() }, '다른 파일 올리기')))
+    document.documentElement.style.setProperty('--c', fmt.color ?? '#1D5BD6')
+    const ready = () => !!(fmt && method && (!r.srs || /^EPSG:\d{4,6}$/.test(srs)))
+    const start = h('button', { class: 'btn go', type: 'button', disabled: !ready(), onclick: () => convert(start, error) }, '변환 시작')
+    const error = h('p', { class: 'small err' })
+
+    const formats = h('div', { class: 'cards', role: 'radiogroup', 'aria-label': '형식' }, r.formats.map(f =>
+      h('button', { class: 'card', type: 'button', role: 'radio', 'aria-checked': String(f === fmt), onclick: () => { fmt = f; method = f.methods[0]?.id; drawChoose() } },
+        h('span', { class: 'tag' }, `${f.category} · ${f.extensions[0]}`, f.best && r.formats.length > 1 ? h('span', { class: 'best' }, ' · 판별 결과') : null),
+        h('strong', {}, f.name),
+        h('span', { class: 'small muted' }, f.summary))))
+
+    const ways = [['file', '파일 방식 — 결과를 파일로 구워 정적 호스팅'], ['server', '서버 방식 — GeoServer·martin에 발행, 서비스 주소']].map(([w, title]) => {
+      const list = fmt.methods.filter(m => m.way === w)
+      return list.length ? [h('h3', {}, title), h('div', { class: 'cards' }, list.map(m =>
+        h('div', { class: `card${m.id === method ? ' on' : ''}` },
+          h('button', { type: 'button', onclick: () => { method = m.id; drawChoose() } },
+            h('strong', {}, m.title),
+            h('span', { class: 'pills' }, m.outputs.map(o => h('span', {}, o))),
+            m.when && h('span', { class: 'small muted' }, m.when)),
+          (m.pros.length || m.cons.length) && h('details', {}, h('summary', {}, '장단점'),
+            h('ul', { class: 'small' }, m.pros.map(t => h('li', {}, `+ ${t}`)), m.cons.map(t => h('li', {}, `− ${t}`)))))))] : null
+    })
+
+    const srsBox = r.srs && h('div', { class: 'small' },
+      h('strong', {}, '좌표계 선택 '), h('span', { class: 'muted' }, `— ${r.srs.why}`), h('br'),
+      h('input', { type: 'text', list: 'srs-list', value: srs, placeholder: 'EPSG:5186', oninput: e => { srs = e.target.value.trim(); start.disabled = !ready() } }),
+      h('datalist', { id: 'srs-list' }, SRS_LIST.map(([v, t]) => h('option', { value: v }, t))),
+      h('span', { class: 'muted' }, ' 틀리면 엉뚱한 곳에 그려짐'))
+
+    render(...head,
+      h('h3', {}, r.formats.length > 1 ? `형식 — 후보 ${r.formats.length}개, 판별 결과가 맞는지 확인` : '형식'), formats,
+      ...ways,
+      srsBox,
+      h('div', { class: 'row' }, start, h('button', { class: 'btn', type: 'button', onclick: () => uploadView() }, '다른 파일')),
+      error)
+  }
+
+  async function convert(button, error) {
+    button.disabled = true
+    error.textContent = ''
+    try {
+      const s = await tool('geo_convert', { stage: found.stage, format: fmt.id, method, ...(found.srs && { srs }) })
+      tell(`사용자가 화면에서 변환 시작: ${s.format} · ${s.method?.title} (작업 ${s.job}). 진행·결과는 geo_status로 확인 가능.`)
+      progressView(s)
+    } catch (e) { error.textContent = e.message; button.disabled = false }
+  }
+
+  // ③ 진행 (1.5초마다 geo_status) ④ 결과
+  function progressView(s) {
+    if (s.state === 'done') return doneView(s)
+    const { done, total, current } = s.progress
+    const way = s.method?.way === 'server' ? '서버 방식' : '파일 방식'
+    render(
+      h('h2', {}, `${s.name} — ${s.state === 'failed' ? '변환 실패' : '변환 중'}`),
+      h('p', { class: 'small muted' }, `${s.format} · ${way} · ${s.method?.title ?? ''}`),
+      h('div', { class: 'bar' }, h('span', { style: `width:${total ? Math.round(((done + (s.state === 'running' ? 0.4 : 0)) / total) * 100) : 0}%` })),
+      s.state === 'failed'
+        ? [h('p', { class: 'small err' }, s.error), h('div', { class: 'row' }, linkBtn('단계 로그 보기', s.view.replace('/view?', '/convert?')), againBtn(s), newFileBtn())]
+        : h('p', { class: 'small now' }, `${done}/${total} 단계 — ${current ?? '준비 중'}`),
+      s.state === 'running' && h('div', {}, linkBtn('진행 화면 크게 보기', s.view)))
+    if (s.state === 'failed') tell(`변환 실패 (작업 ${s.job}): ${s.error}`)
+    if (s.state === 'running') timer = setTimeout(() => tool('geo_status', { job: s.job }).then(progressView, e => render(h('p', { class: 'err' }, e.message))), 1500)
+  }
+
+  function doneView(s) {
+    render(
+      h('h2', {}, `${s.name} — 완료`),
+      h('p', { class: 'small muted' }, `${s.format} · ${s.method?.title ?? ''} · ${Math.round(s.progress.ms / 1000)}초`),
+      expiry(s),
+      h('iframe', { src: `${s.view}&embed=1`, title: '결과 지도', allow: 'fullscreen' }),
+      h('div', { class: 'row' }, linkBtn('지도 크게 보기', s.view), copyBtn('지도 주소 복사', s.view)),
+      // 파일 방식: 내려받기(여러 파일이면 zip) + 주소 복사. 서버 방식: 서비스 주소 복사
+      s.outputs.map(o => h('div', { class: 'out' },
+        h('div', { class: 'row' }, h('strong', {}, o.label), h('span', { class: 'tag' }, o.kind)),
+        o.download && h('div', { class: 'row' },
+          h('button', { class: 'btn go sm', type: 'button', onclick: e => download(o, e.currentTarget) }, o.zip ? '내려받기 (zip)' : '내려받기'),
+          copyBtn('내려받기 주소 복사', o.download)),
+        h('div', { class: 'row' }, h('code', {}, o.url), copyBtn(o.download ? '지도용 주소 복사' : '서비스 주소 복사', o.url)))),
+      s.engine && engineCard(s.job),
+      h('div', { class: 'row' }, againBtn(s), newFileBtn()))
+    tell(`변환 완료 (작업 ${s.job}). 지도 화면: ${s.view}\n${s.outputs.map(o => `${o.label}: ${o.url}${o.download ? ` (내려받기: ${o.download})` : ''}`).join('\n')}\n${expiry(s).textContent}`)
+  }
+
+  // ⑤ 엔진(Unreal) 실시간 보기 (geo_engine): 이 PC의 언리얼로 띄우고 Pixel Streaming 플레이어 주소. 준비되는 동안 5초마다 상태
+  function engineCard(job, first) {
+    const box = h('div', { class: 'out' })
+    const head = h('div', { class: 'row' }, h('strong', {}, '언리얼 실시간 보기'), h('span', { class: 'tag' }, 'Cesium for Unreal · Pixel Streaming'))
+    const call = args => tool('geo_engine', { job, ...args }).then(draw, e => draw({ state: 'off', log: e.message }))
+    function draw(e) {
+      if (!e || e.state === 'off') {
+        first = null
+        const go = h('button', { class: 'btn go sm', type: 'button', onclick: () => { go.disabled = true; go.textContent = '띄우는 중…'; call({}) } }, '언리얼로 띄우기')
+        return box.replaceChildren(head,
+          h('p', { class: 'small muted' }, '이 PC의 언리얼 엔진이 결과를 그리고, 그 화면을 영상으로 브라우저에 보냄. 이 PC·사내망에서만, 한 번에 하나, 보는 사람이 없으면 저절로 꺼짐.'),
+          e?.log ? h('p', { class: 'small muted' }, `마지막 기록: ${e.log}`) : '',
+          h('div', { class: 'row' }, go))
+      }
+      if (!first) tell(`사용자가 언리얼 실시간 보기를 띄움 (작업 ${job}). 플레이어: ${e.player}`)
+      first = e
+      box.replaceChildren(head,
+        h('p', { class: e.state === 'ready' ? 'small' : 'small now' }, e.state === 'ready'
+          ? `준비됨 · 보는 사람 ${e.viewers}명 · ${e.idleMin}분 동안 아무도 안 보면 꺼짐`
+          : '언리얼이 장면을 불러오는 중 — 첫 실행은 셰이더 컴파일로 수 분. 플레이어를 먼저 열어 두어도 됨'),
+        h('div', { class: 'row' }, h('code', {}, e.player), linkBtn('플레이어 열기', e.player), copyBtn('주소 복사', e.player)),
+        h('div', { class: 'row' }, h('button', { class: 'btn sm', type: 'button', onclick: () => call({ stop: true }) }, '끄기')))
+      if (e.state === 'starting') setTimeout(() => { if (box.isConnected && first === e) call({}) }, 5000)
+    }
+    draw(first)
+    return box
+  }
+
+  /** 보관 기한: 서버 방식은 서비스(레이어·DB 표)가 내려가 주소가 끊기고, 파일 방식은 결과 파일이 지워진다 */
+  function expiry(s) {
+    const until = new Date(s.expiresAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    return s.method?.way === 'server'
+      ? h('p', { class: 'small warn' }, `서비스는 24시간만 유지: ${until} 이후 GeoServer·martin 레이어와 DB 표가 지워지고 아래 서비스 주소가 끊김. 계속 쓰려면 파일 방식으로 변환해 받아 두기.`)
+      : h('p', { class: 'small muted' }, `결과 파일은 24시간 보관: ${until} 이후 지워짐. 필요하면 내려받아 두기.`)
+  }
+
+  // 호스트가 지도 화면(frame)을 막으면(Claude는 https 공개 주소만 허용) 빈 상자 대신 안내
+  document.addEventListener('securitypolicyviolation', e => {
+    if (!e.violatedDirective.startsWith('frame-src')) return
+    document.querySelector('iframe')?.replaceWith(h('p', { class: 'small warn' },
+      `이 대화 화면은 https 공개 주소의 지도만 띄울 수 있어 여기에는 지도를 못 보여 줌 (지금 주소 ${ORIGIN}). "지도 크게 보기" 또는 "지도 주소 복사"로 브라우저에서 보기.`))
+  })
+
+  function show(sc) {
+    if (!sc) return
+    if (sc.mode === 'upload') uploadView()
+    else if (sc.mode === 'choose') chooseView(sc)
+    else if (sc.mode === 'engine') render(h('h2', {}, '언리얼 실시간 보기'), engineCard(sc.job, sc))
+    else if (sc.job) progressView(sc)
+  }
+
+  // 핸들러는 connect 전에 (첫 알림을 놓치지 않게)
+  app.ontoolinput = () => render(h('p', { class: 'muted small' }, '처리 중…'))
+  app.ontoolresult = r => (r.isError ? render(h('p', { class: 'err' }, r.content?.[0]?.text ?? '도구 오류')) : show(r.structuredContent))
+  await app.connect()
+</script>
+</body>
+</html>

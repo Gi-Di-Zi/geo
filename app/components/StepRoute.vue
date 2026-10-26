@@ -11,6 +11,7 @@ const source = computed(() => sourceOf(props.spec.collect.source))
 const origin = computed(() => origins[props.spec.id])
 const kind = computed(() => sampleOf(props.spec))
 const where = computed(() => sourcesByScope(props.spec))
+const free = computed(() => props.spec.otherSources.filter(o => accessOf(o) === 'auto').length)
 const total = computed(() => props.collected?.files.reduce((a, f) => a + f.bytes, 0) ?? 0)
 const records = (stage: 'preprocess' | 'convert') => props.report?.steps.filter(s => s.stage === stage)
 const statOf = (id: string) => props.report?.outputs.find(o => o.id === id)
@@ -106,26 +107,31 @@ const perViewer = computed(() => viewers.map(v => {
             </template>
             <p v-else-if="collected" class="small muted">용량·재배포 조건상 출처에서 직접 받기.</p>
           </section>
-          <section class="card">
-            <h3>데이터 받는 곳</h3>
+          <!-- 다른 수급처는 많으면 20곳 넘음 → 접어 두고 샘플 원본을 먼저 보이게 -->
+          <details class="card where-box">
+            <summary>
+              <h3>데이터 받는 곳</h3>
+              <span class="small muted">{{ spec.otherSources.length ? `같은 형식 ${spec.otherSources.length}곳 · 로그인 없이 ${free}곳` : '없음' }}</span>
+            </summary>
+            <!-- 줄마다: 받는 조건 | 데이터셋 / 수급처 · 메모. 묶음 안은 받기 쉬운 순 -->
             <template v-for="g in where" :key="g.scope">
-              <h4 class="scope small">{{ scopeLabels[g.scope] }}</h4>
+              <h4 class="scope small">{{ scopeLabels[g.scope] }} <span class="muted">{{ g.list.length }}</span></h4>
               <ul class="where">
                 <li v-for="o in g.list" :key="o.source + o.dataset">
-                  <a :href="sourceOf(o.source)!.url" target="_blank" rel="noopener">{{ sourceOf(o.source)!.name }}</a>
-                  <span>{{ o.dataset }}</span>
-                  <span class="muted small"> · {{ accessLabels[sourceOf(o.source)!.access] }}</span>
-                  <p class="small muted">{{ o.note }}</p>
+                  <span class="acc small" :class="accessOf(o)">{{ accessLabels[accessOf(o)] }}</span>
+                  <span class="ds">{{ o.dataset }}</span>
+                  <span class="small muted src"><a :href="sourceOf(o.source)!.url" target="_blank" rel="noopener">{{ sourceOf(o.source)!.name }}</a> · {{ o.note }}</span>
                 </li>
               </ul>
             </template>
             <p v-if="!where.length" class="small muted">같은 형식의 다른 공개 데이터 없음.</p>
             <p class="small more"><NuxtLink to="/sources">사이트 모음 전체 →</NuxtLink></p>
-          </section>
+          </details>
         </template>
-        <section class="card">
+        <section class="card mine">
           <h3>내 파일로 해 보기</h3>
-          <UploadBox :spec />
+          <p class="small muted">{{ 'note' in spec.upload ? `이 확장자: ${spec.upload.note}` : spec.upload.unsupported }}</p>
+          <NuxtLink to="/upload" class="btn mine-go">파일 올리러 가기 →</NuxtLink>
         </section>
       </div>
     </div>
@@ -200,16 +206,6 @@ const perViewer = computed(() => viewers.map(v => {
           직접 처리: 원본과 같은 형식을 그대로 읽음. 변환 후 처리: 바꾼 결과물을 읽음. 일부 기능만: 그리지만 빠지는 기능 있음(카드의 주의). 미검증: 성공한 실행 기록 없음.
         </p>
       </section>
-
-      <section v-if="spec.alternatives.length" aria-labelledby="alt-title">
-        <h2 id="alt-title">다른 도구</h2>
-        <ul class="alts small">
-          <li v-for="a in spec.alternatives" :key="a.tool">
-            <ToolChip :id="a.tool" /> <span class="muted">{{ a.note }}</span>
-            <pre v-if="a.cmd"><code>{{ a.cmd }}</code></pre>
-          </li>
-        </ul>
-      </section>
     </template>
   </div>
 </template>
@@ -220,6 +216,9 @@ const perViewer = computed(() => viewers.map(v => {
 .cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px 48px; align-items: start; }
 .card { display: block; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); padding: 16px 18px; }
 .side { display: grid; gap: 16px; }
+.mine p { margin-bottom: 10px; }
+.mine-go { text-decoration: none; background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; padding: 6px 14px; }
+.mine-go:hover { background: #2A3540; }
 .side h3 { margin-bottom: 8px; }
 .side .card > p { margin-bottom: 10px; }
 
@@ -245,10 +244,20 @@ const perViewer = computed(() => viewers.map(v => {
 .dl span { font-weight: 400; opacity: 0.75; }
 .dl:hover { background: color-mix(in srgb, var(--ink) 85%, var(--c)); }
 .sample-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.scope { margin: 12px 0 6px; color: var(--ink-2); font-weight: 600; }
+.where-box > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; color: var(--ink); font-size: inherit; }
+.where-box > summary::before { align-self: center; }
+.where-box > summary h3 { margin: 0; }
+.where-box[open] > summary { margin-bottom: 12px; }
+.scope { margin: 14px 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); color: var(--ink-2); font-weight: 600; }
 .scope:first-of-type { margin-top: 0; }
-.where { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.where li > a { font-weight: 600; margin-right: 6px; }
+/* 한 줄 = 받는 조건 칸 + 내용 칸 (데이터셋 / 수급처 · 메모) */
+.where { list-style: none; padding: 0; margin: 0; display: grid; }
+.where li { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0 10px; padding: 7px 0; }
+.where li + li { border-top: 1px dashed var(--rule); }
+.acc { grid-row: span 2; align-self: start; justify-self: start; padding: 0 7px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+.acc.auto { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.ds { font-weight: 600; overflow-wrap: anywhere; }
+.src { overflow-wrap: anywhere; }
 .more { margin-top: 12px; }
 .narrow { max-width: 56rem; }
 
@@ -270,8 +279,6 @@ const perViewer = computed(() => viewers.map(v => {
 .viewers .facts { margin: 0; }
 .code { max-height: 240px; overflow: auto; font-size: 0.75rem; white-space: pre; }
 .caution { color: #8A5300; }
-.alts { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.alts pre { margin-top: 6px; }
 @media (max-width: 900px) {
   .cols, .viewers { grid-template-columns: minmax(0, 1fr); }
 }

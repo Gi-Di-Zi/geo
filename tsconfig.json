@@ -1,0 +1,10 @@
+{
+  // Nuxt 4 기본 구성: 실제 설정은 nuxt prepare가 .nuxt/에 만든다
+  "files": [],
+  "references": [
+    { "path": "./.nuxt/tsconfig.app.json" },
+    { "path": "./.nuxt/tsconfig.server.json" },
+    { "path": "./.nuxt/tsconfig.shared.json" },
+    { "path": "./.nuxt/tsconfig.node.json" }
+  ]
+}

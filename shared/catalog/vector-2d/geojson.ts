@@ -1,6 +1,6 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { vectorRecipe, vectorUpload } from './_vector.ts'
+import { tippecanoeRecipe, vectorRecipe, vectorUpload } from './_vector.ts'
 
 const ZIP = '/raw/semas_dining_areas.zip'
 const NAME = '소상공인시장진흥공단_소상공인365_회식상권_AI친화고가치'
@@ -73,13 +73,13 @@ export default {
       key: 'name || label',
       sameWhy: '원본도 GeoJSON — 전국→서울 추림, 한글 키→영문, 좌표 7자리, OGC API Features 경로(/collections/{id}/items)로 재배치.',
       preprocess,
+      bounds: [126.809, 37.451, 127.157, 37.660],
     }),
+    tippecanoeRecipe({ work: '/work/areas.gpkg', layer: 'areas', minzoom: 10, maxzoom: 15, key: 'name || label', preprocess }),
     ...serverRecipes({ category: 'vector-2d', layer: 'areas', preprocess, work: '/work/areas.gpkg', geom: 'polygon', bounds: [126.81, 37.45, 127.16, 37.66] }),
   ],
   alternatives: [
-    { tool: 'mapshaper', cmd: 'mapshaper areas.geojson -simplify 10% -o areas_small.geojson', note: '경계 꼭짓점 축소 → 용량 절감.' },
-    { tool: 'tippecanoe', cmd: 'tippecanoe -o areas.pmtiles -zg areas.geojson', note: '도형이 많을 때 줌별 솎아내기 + 타일화.' },
-  ],
+    { tool: 'mapshaper', cmd: 'mapshaper areas.geojson -simplify 10% -o areas_small.geojson', note: '경계 꼭짓점 축소 → 용량 절감.' },  ],
   upload: vectorUpload({ accept: ['.geojson', '.json'], note: 'FeatureCollection GeoJSON. 좌표계 표기 없으면 위경도로 간주.' }),
   view: { center: [126.985, 37.545], zoom: 11 },
 } satisfies FormatSpec

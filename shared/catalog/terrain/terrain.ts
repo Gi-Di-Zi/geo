@@ -68,12 +68,9 @@ export default {
       },
     },
   ],
-  alternatives: [
-    { tool: 'ctb', cmd: 'ctb-tile -f Mesh -C -N -o terrain dem.tif', note: '구형 생성기. 결과 gzip.' },
-    { tool: 'ctod', note: 'COG DEM → 요청마다 quantized-mesh 생성 서버.' },
-    { tool: 'quantized-mesh-encoder', note: 'Python 메시 직접 생성.' },
-  ],
+  alternatives: [],
   upload: bundleUpload({
+    id: 'cesium',
     marker: 'layer.json',
     dest: 'terrain',
     note: 'layer.json + {z}/{x}/{y}.terrain 타일 zip 하나. 타일 한 장만으로는 위치 불명.',

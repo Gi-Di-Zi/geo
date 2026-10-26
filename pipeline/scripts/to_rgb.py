@@ -3,10 +3,11 @@
 사용: python3 to_rgb.py <입력(.tif/.png/.jpg/.webp 또는 그림+월드파일 .zip)> <출력.vrt>
 - 밴드: 팔레트는 RGB로 펼치고, 회색 1밴드는 3밴드로 복제하고, 4밴드 이상은 앞 3밴드(+알파)만 쓴다
 - 비트 수: 8비트가 아니면 최소·최대값으로 0~255에 맞춘다
-- 좌표: 월드파일만 있고 좌표계가 없으면 값이 위경도 범위일 때만 EPSG:4326으로 본다.
+- 좌표: 위치만 있고 좌표계가 없으면 zip 안 .prj → 판별 화면에서 고른 좌표계(SRS 환경 변수) → 값이 위경도 범위일 때만 EPSG:4326 순으로 본다.
   좌표가 아예 없으면 서울시청 앞에 1픽셀 = 1m로 놓는다
 """
 import math
+import os
 import sys
 import zipfile
 from osgeo import gdal, osr
@@ -44,11 +45,14 @@ elif srs is None:
         s.SetFromUserInput(zipfile.ZipFile(src).read(prj).decode('utf-8', 'replace'))
         opts['outputSRS'] = s.ExportToWkt()
         print(f'좌표계는 {prj}에서 읽었어요.')
+    elif os.environ.get('SRS'):
+        opts['outputSRS'] = os.environ['SRS']
+        print(f"좌표계는 판별 화면에서 고른 {os.environ['SRS']}.")
     elif -180 <= gt[0] <= 180 and -90 <= gt[3] <= 90 and abs(gt[1]) < 1:
         opts['outputSRS'] = 'EPSG:4326'
         print('좌표계 정보가 없지만 값이 위경도 범위라 EPSG:4326으로 봤어요.')
     else:
-        sys.exit('월드파일 좌표가 어느 좌표계인지 알 수 없어요. .prj 파일을 함께 zip으로 묶어 올려 주세요.')
+        sys.exit('좌표가 어느 좌표계인지 알 수 없음 → .prj를 함께 zip으로 묶거나 판별 화면에서 좌표계 선택.')
 
 b1 = ds.GetRasterBand(1)
 if b1.GetColorTable() is not None:

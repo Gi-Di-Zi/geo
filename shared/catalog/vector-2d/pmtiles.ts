@@ -73,16 +73,13 @@ export default {
       },
     },
   ],
-  alternatives: [
-    { tool: 'tippecanoe', cmd: 'tippecanoe -o roads.pmtiles -zg roads.geojson', note: '내 데이터 → PMTiles 생성의 대표 도구.' },
-    { tool: 'planetiler', note: 'OSM 원본 → 국가 단위 PMTiles 배경지도 생성.' },
-  ],
+  alternatives: [],
   upload: {
     accept: ['.pmtiles'],
     note: '벡터 PMTiles. 레이어가 여러 개면 모두 표시.',
-    recipe: {
-      id: 'upload',
-      title: '내 파일',
+    recipes: [{
+      id: 'gdal',
+      title: 'go-pmtiles + GDAL',
       preprocess: [
         { title: '무결성 확인', why: '줌 범위·영역·레이어 확인.', tool: 'go-pmtiles', run: 'pmtiles show $INPUT' },
       ],
@@ -105,7 +102,7 @@ export default {
         deck: { output: 'pmtiles' },
         cesium: { output: 'features', note: '벡터타일 미지원 → GeoJSON 사용.' },
       },
-    },
+    }],
   },
   view: { center: [126.979, 37.5635], zoom: 15 },
   noDomestic: '국내 기관 PMTiles 배포처 없음. OSM 서울 추출본(Protomaps)은 해외 플랫폼.',

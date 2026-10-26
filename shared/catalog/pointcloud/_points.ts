@@ -104,20 +104,7 @@ export function pointSpec(f: PointFormat): FormatSpec {
         id: 'py3dtiles',
         title: 'PDAL + py3dtiles',
         preprocess,
-        convert: [
-          {
-            title: '3D Tiles(pnts) 분할',
-            why: '옥트리 분할 → 가까울수록 촘촘한 타일. --srs_in 3857 → --srs_out 4978: 지구 중심 좌표계(ECEF).',
-            tool: 'py3dtiles',
-            run: 'py3dtiles convert /work/clean.las --out /out/tiles --srs_in 3857 --srs_out 4978 --overwrite --disable-processpool',
-          },
-          {
-            title: 'refine 값 수정',
-            why: '노드별 점 비중복 → 부모 + 자식(ADD)이 맞는 방식. 루트 노드만 REPLACE로 출력 → Deck.gl: 하위 타일 미요청, Cesium: 최하위에서 루트 점 숨김. 이 값만 ADD로 수정.',
-            tool: 'python',
-            run: 'python /scripts/fix_refine.py /out/tiles/tileset.json',
-          },
-        ],
+        convert: py3dConvert,
         outputs: [tilesOutput],
         viewers: {
           ol: noOl,
@@ -127,43 +114,66 @@ export function pointSpec(f: PointFormat): FormatSpec {
         },
       },
     ],
-    alternatives: [
-      { tool: 'untwine', cmd: `untwine -i sample${f.ext} -o sample.copc.laz`, note: '단일 파일 클라우드 최적화 점군(COPC). 이 사이트 뷰어는 COPC 미지원.' },
-      { tool: 'potreeconverter', note: 'Potree 뷰어 전용 포맷.' },
-    ],
+    alternatives: [],
     upload: {
       accept: [f.ext],
-      note: `좌표계 포함 ${f.ext} 파일. 점이 많으면 수 분 소요.`,
-      recipe: {
-        id: 'upload',
-        title: '내 파일',
-        preprocess: [
-          {
-            title: '무결성 확인',
-            why: '점 수·범위·좌표계. 좌표계 없으면 지도 배치 불가.',
-            tool: 'pdal',
-            run: `pdal info --summary $INPUT | grep -E '"num_points"|"min[xyz]"|"max[xyz]"|"dimensions"|"horizontal"' | cut -c1-200`,
-          },
-          {
-            title: '웹 메르카토르 변환 + 높이별 색',
-            why: 'reprojection: EPSG:3857. range: 노이즈 분류 7·18 제외. colorinterp: 높이(Z)별 색, 원본 RGB도 덮어씀 → 샘플과 같은 표현. assign: 0~255 → 16비트(0~65535).',
-            tool: 'pdal',
-            run: 'pdal translate $INPUT /work/reproj.las reprojection range colorinterp assign --filters.reprojection.out_srs=EPSG:3857 --filters.range.limits="Classification![7:7],Classification![18:18]" --filters.colorinterp.dimension=Z --filters.colorinterp.ramp=pestel_shades --filters.assign.value="Red = Red * 256" --filters.assign.value="Green = Green * 256" --filters.assign.value="Blue = Blue * 256"',
-          },
-          lower,
-        ],
+      note: `좌표계 포함 ${f.ext} 파일. 점이 많으면 수 분 소요 (py3dtiles가 mago보다 빠름).`,
+      recipes: [{
+        id: 'mago',
+        title: 'PDAL + mago 3DTiler',
+        preprocess: uploadPreprocess,
         convert: [
           {
             title: '3D Tiles(pnts) 분할',
-            why: '샘플 mago 레시피와 동일. -c 3857: 앞 단계에서 맞춘 좌표계.',
+            why: '샘플 mago 레시피와 동일. -c 3857: 앞 단계에서 맞춘 좌표계. -q 없음: 진행 로그를 실시간 출력으로 (점이 많으면 수 분).',
             tool: 'mago-3d-tiler',
-            run: 'mkdir -p /work/in && cp /work/clean.las /work/in/ && mago-3d-tiler -i /work/in -o /out/tiles -it las -c 3857 -tv 1.0 -q',
+            run: 'mkdir -p /work/in && cp /work/clean.las /work/in/ && mago-3d-tiler -i /work/in -o /out/tiles -it las -c 3857 -tv 1.0',
           },
         ],
         outputs: [tilesOutput],
         viewers: { ol: noOl, maplibre: noMaplibre, deck: { output: 'tiles' }, cesium: { output: 'tiles' } },
-      },
+      }, {
+        id: 'py3dtiles',
+        title: 'PDAL + py3dtiles',
+        preprocess: uploadPreprocess,
+        convert: py3dConvert,
+        outputs: [tilesOutput],
+        viewers: { ol: noOl, maplibre: noMaplibre, deck: { output: 'tiles' }, cesium: { output: 'tiles' } },
+      }],
     },
     view: f.view,
   }
 }
+
+/** 올린 점군: 좌표계 확인 → 웹 메르카토르 + 높이별 색 → 높이 0 정렬(/work/clean.las). mago·py3dtiles가 같이 쓴다 */
+const uploadPreprocess: Step[] = [
+  {
+    title: '무결성 확인',
+    why: '점 수·범위·좌표계. 좌표계 없음(LOCAL_CS·빈 값)이면 여기서 중단: 지도 배치 불가, PDAL 재투영은 실패해도 종료 코드 0 + 빈 파일.',
+    tool: 'pdal',
+    run: `pdal info --summary $INPUT > /work/info.json && grep -E '"num_points"|"min[xyz]"|"max[xyz]"|"dimensions"|"horizontal"' /work/info.json | cut -c1-200 && grep -qE '"horizontal": "(PROJCS|GEOGCS|PROJCRS|GEOGCRS)' /work/info.json || { echo '좌표계 없음 → 지도 위치 불명. 좌표계를 넣은 파일로 다시'; exit 1; }`,
+  },
+  {
+    title: '웹 메르카토르 변환 + 높이별 색',
+    why: 'reprojection: EPSG:3857. range: 노이즈 분류 7·18 제외. colorinterp: 높이(Z)별 색, 원본 RGB도 덮어씀 → 샘플과 같은 표현. assign: 0~255 → 16비트(0~65535).',
+    tool: 'pdal',
+    run: 'pdal translate $INPUT /work/reproj.las reprojection range colorinterp assign --filters.reprojection.out_srs=EPSG:3857 --filters.range.limits="Classification![7:7],Classification![18:18]" --filters.colorinterp.dimension=Z --filters.colorinterp.ramp=pestel_shades --filters.assign.value="Red = Red * 256" --filters.assign.value="Green = Green * 256" --filters.assign.value="Blue = Blue * 256"',
+  },
+  lower,
+]
+
+/** py3dtiles 변환: 샘플·업로드 공통 (/work/clean.las → /out/tiles) */
+const py3dConvert: Step[] = [
+  {
+    title: '3D Tiles(pnts) 분할',
+    why: '옥트리 분할 → 가까울수록 촘촘한 타일. --srs_in 3857 → --srs_out 4978: 지구 중심 좌표계(ECEF).',
+    tool: 'py3dtiles',
+    run: 'py3dtiles convert /work/clean.las --out /out/tiles --srs_in 3857 --srs_out 4978 --overwrite --disable-processpool',
+  },
+  {
+    title: 'refine 값 수정',
+    why: '노드별 점 비중복 → 부모 + 자식(ADD)이 맞는 방식. 루트 노드만 REPLACE로 출력 → Deck.gl: 하위 타일 미요청, Cesium: 최하위에서 루트 점 숨김. 이 값만 ADD로 수정.',
+    tool: 'python',
+    run: 'python /scripts/fix_refine.py /out/tiles/tileset.json',
+  },
+]

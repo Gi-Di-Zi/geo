@@ -1,6 +1,13 @@
 // DEM은 원본 포맷(GeoTIFF, ERDAS IMG …)만 다르고 Terrain-RGB·quantized-mesh로 바꾸는 과정은 같다
 import type { FormatSpec, Step } from '../../types.ts'
-import { geoserverRaster } from '../_server.ts'
+import { geoserverRaster, uploadRaster } from '../_server.ts'
+
+const uploadInspect: Step = {
+  title: '무결성 확인',
+  why: '-mm: 최저·최고 높이. 좌표계, 격자 크기, 빈칸(NoData) 값.',
+  tool: 'gdal',
+  run: "gdalinfo -mm $INPUT | grep -E 'Size is|PROJCRS|GEOGCRS|Pixel Size|NoData|Computed Min/Max'",
+}
 
 /** 타일로 구울 범위: 줌 10 타일 경계에 맞춘 EPSG:3857 범위와 픽셀 크기, 데이터 범위(위경도), 처음 시점 */
 interface DemArea {
@@ -131,16 +138,11 @@ export function demSpec(f: DemFormat): FormatSpec {
   upload: {
     accept: f.accept,
     note: '높이 1밴드 DEM. 범위·줌은 파일에서 결정. 높이 기준: 해수면(지오이드).',
-    recipe: {
-      id: 'upload',
-      title: '내 파일',
+    recipes: [{
+      id: 'gdal-mago',
+      title: 'GDAL + mago 3DTerrainer',
       preprocess: [
-        {
-          title: '무결성 확인',
-          why: '-mm: 최저·최고 높이. 좌표계, 격자 크기, 빈칸(NoData) 값.',
-          tool: 'gdal',
-          run: "gdalinfo -mm $INPUT | grep -E 'Size is|PROJCRS|GEOGCRS|Pixel Size|NoData|Computed Min/Max'",
-        },
+        uploadInspect,
         {
           title: '웹 타일 격자 재투영',
           why: 'tile_grid.py: 타일 두세 장에 걸치는 기준 줌·타일 경계 범위 계산. -t_srs EPSG:3857 -te: 그 경계까지 확장. -ot Float32: 정수 높이도 실수로, 인코딩 계산 넘침 방지. -dstnodata 0: 넓힌 곳·빈칸 → 높이 0, 가장자리 -10000m 절벽 방지.',
@@ -189,7 +191,15 @@ export function demSpec(f: DemFormat): FormatSpec {
         deck: { output: 'rgb' },
         cesium: { output: 'mesh' },
       },
-    },
+    }, uploadRaster({
+      preprocess: [uploadInspect],
+      source: '$INPUT',
+      why: '높이 값(m)·좌표계 그대로 → 음영은 서버 스타일, 웹 메르카토르 변환은 요청마다.',
+      // 높이 범위를 모르니 고도 색(ColorMap) 없이 음영만
+      symbolizer: '      <ShadedRelief><BrightnessOnly>true</BrightnessOnly><ReliefFactor>5</ReliefFactor></ShadedRelief>',
+      styleWhy: 'ShadedRelief: 경사·방향으로 음영 → 산세 표현. BrightnessOnly true: 회색 음영만(올린 파일의 높이 범위를 몰라 고도 색 구간 미지정). NoData는 서버가 투명 처리.',
+      maxzoom: 15,
+    })],
   },
   view: f.area.view,
 }

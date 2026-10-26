@@ -1,4 +1,5 @@
 import { categories } from '#shared/catalog/categories'
+import { ways } from '#shared/catalog/delivery'
 import { originLabels, origins } from '#shared/catalog/origins'
 import { sources } from '#shared/catalog/sources'
 import { tools, toolTypes } from '#shared/catalog/tools'
@@ -62,11 +63,24 @@ export const viewerApi: Record<ViewerId, Partial<Record<OutputKind, string>>> = 
 /** 서비스 레시피: 떠 있는 서버(GeoServer·martin 등)에 발행하고 서버 주소를 결과물로 쓴다 */
 export const isService = (r?: Recipe) => !!r?.convert.some(s => toolOf(s.tool)?.type === 'server')
 
-/** 레시피 두 방식. 상단 선택 막대와 변환 방식 표가 같이 쓴다 */
+/** 레시피 두 방식 (파일·서버). 시각화 단계의 도구 메뉴가 묶음으로 쓴다 */
 export const recipeGroups = (f: FormatSpec) => [
-  { name: '파일 방식', text: '결과를 파일로 구워 정적 호스팅. 브라우저가 파일을 직접 읽음.', recipes: f.recipes.filter(r => !isService(r)) },
-  { name: '서버 방식', text: '떠 있는 서버에 발행. 요청마다 서버가 응답 생성.', recipes: f.recipes.filter(r => isService(r)) },
+  { ...ways[0]!, recipes: f.recipes.filter(r => !isService(r)) },
+  { ...ways[1]!, recipes: f.recipes.filter(r => isService(r)) },
 ].filter(g => g.recipes.length)
+
+/**
+ * 전처리 도구별 레시피 묶음. 이름 = 전처리 단계가 쓰는 도구 (셸·curl 같은 기본 도구 제외). 둘 이상이면 전처리 단계에서 고른다.
+ * 기본 도구만 쓰는 전처리(검사만)는 고를 거리가 아니라 빠진다
+ */
+export function preprocessGroups(f: FormatSpec) {
+  const groups = new Map<string, Recipe[]>()
+  for (const r of f.recipes) {
+    const label = [...new Set(r.preprocess.map(s => s.tool))].filter(id => toolOf(id)?.type !== 'basic').map(id => toolOf(id)?.name ?? id).join(' + ')
+    if (label) groups.set(label, [...(groups.get(label) ?? []), r])
+  }
+  return [...groups].map(([label, recipes]) => ({ label, recipes }))
+}
 
 /** 결과물 주소. 서버 출력(/svc/…)은 그대로, 파일 출력은 결과 폴더 기준 */
 export const outPath = (dir: string, o: Output) => (o.path.startsWith('/') ? o.path : dir + o.path)
@@ -86,9 +100,15 @@ export const formatOf = (categoryId: string, id: string) => formats.find(f => f.
 export const scopeLabels: Record<Source['scope'], string> = { domestic: '국내', abroad: '해외', personal: '개인·커뮤니티' }
 export const accessLabels: Record<Source['access'], string> = { auto: '로그인 없이', key: '인증키', login: '로그인', approval: '승인' }
 export const redistLabels: Record<Source['redistribute'], string> = { yes: '재배포 가능', conditional: '조건부 (출처표시 등)', no: '재배포 불가' }
-/** 확장자의 다른 수급처를 국내·해외·개인 순으로 묶는다 */
+/** 다른 수급처 하나의 받는 조건. 데이터셋에 따로 적었으면 그것, 아니면 수급처 기본값 */
+export const accessOf = (o: FormatSpec['otherSources'][number]) => o.access ?? sourceOf(o.source)!.access
+/** 확장자의 다른 수급처를 국내·해외·개인 순으로 묶고, 묶음 안은 받기 쉬운 순(로그인 없이 → 인증키 → 로그인 → 승인) */
 export const sourcesByScope = (f: FormatSpec) => (Object.keys(scopeLabels) as Source['scope'][])
-  .map(scope => ({ scope, list: f.otherSources.filter(o => sourceOf(o.source)?.scope === scope) }))
+  .map(scope => ({
+    scope,
+    list: f.otherSources.filter(o => sourceOf(o.source)?.scope === scope)
+      .sort((a, b) => Object.keys(accessLabels).indexOf(accessOf(a)) - Object.keys(accessLabels).indexOf(accessOf(b))),
+  }))
   .filter(g => g.list.length)
 
 /** 샘플 분류. 기타 = 다른 형식에서 바꾼 샘플이거나 개인·커뮤니티 자료 */

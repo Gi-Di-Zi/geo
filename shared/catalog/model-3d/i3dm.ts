@@ -106,11 +106,9 @@ export default {
       },
     },
   ],
-  alternatives: [
-    { tool: 'mago-3d-tiler', cmd: 'mago-3d-tiler -i ./trees -o ./tiles -it geojson -ot i3dm -if tree.glb', note: '나무 점(GeoJSON) + 모델 1개 → i3dm 직접 생성.' },
-    { tool: 'i3dm-export', note: 'PostGIS 표(위치·방향·크기·모델) → i3dm 타일.' },
-  ],
+  alternatives: [],
   upload: bundleUpload({
+    id: 'tiles',
     marker: 'tileset.json',
     dest: 'tiles',
     note: 'tileset.json + .i3dm 타일 + 참조 모델 파일을 zip 하나로.',

@@ -1,6 +1,6 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { shpEncoding } from '../vector-2d/_vector.ts'
+import { SHP_OPEN, shpUnpack } from '../vector-2d/_vector.ts'
 import { buildingRecipes, buildingUpload } from './_buildings.ts'
 
 const ZIP = '/raw/gwacheon_buildings.zip'
@@ -61,14 +61,12 @@ export default {
     ...buildingRecipes(preprocess),
     ...serverRecipes({ category: 'vector-25d', layer: 'buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [126.964, 37.402, 127.037, 37.466], height: 'height' }),
   ],
-  alternatives: [
-    { tool: 'geopandas', cmd: "gpd.read_file('gwacheon_buildings.zip', encoding='cp949').set_crs(5186).to_crs(4326)", note: 'Python으로 같은 정리.' },
-  ],
+  alternatives: [],
   upload: buildingUpload({
     accept: ['.zip'],
-    note: '.shp, .shx, .dbf, .prj(, .cpg)를 zip 하나로. 높이 열(HEIGHT …) 또는 층수 열(GRND_FLR, 지상층수 …) 사용, 없으면 9m.',
-    open: '/vsizip/$INPUT',
-    prepare: shpEncoding,
+    note: '.shp, .shx, .dbf, .prj(, .cpg)를 zip 하나로 (폴더째 압축 OK, 여러 벌이면 가장 큰 1벌). .prj 없으면 판별 화면에서 좌표계 선택. 높이 열(HEIGHT …) 또는 층수 열(GRND_FLR, 지상층수 …) 사용, 없으면 9m.',
+    open: SHP_OPEN,
+    prepare: shpUnpack,
   }),
   view: { center: [126.9935, 37.4305], zoom: 15.6, pitch: 55, bearing: -20 },
 } satisfies FormatSpec

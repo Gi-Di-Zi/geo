@@ -117,6 +117,13 @@ a.chip:hover { border-color: var(--ink-2); }
 }
 .btn:hover { border-color: var(--ink-2); }
 
+/* ? 버튼: 올리거나 포커스하면 설명 말풍선 (확장자 선택 창, 방식·도구 고르기) */
+.help {
+  flex: none; width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface);
+  color: var(--ink-2); font: inherit; font-size: 0.75rem; font-weight: 700; line-height: 1; cursor: help;
+}
+.help:hover, .help:focus-visible { border-color: var(--ink); color: var(--ink); }
+
 details > summary { cursor: pointer; color: var(--ink-2); font-size: var(--fs-0); list-style: none; }
 details > summary::-webkit-details-marker { display: none; }
 details > summary::before { content: '▸ '; }

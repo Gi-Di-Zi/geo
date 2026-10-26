@@ -9,7 +9,7 @@ export default {
   name: '3D Tiles Point Cloud',
   extensions: ['.pnts'],
   summary: '3D Tiles 1.0의 점군 타일. tileset.json이 .pnts 파일 수십~수천 개를 엮는다.',
-  description: '.pnts 1개 = 점 묶음 1개. 위치·로딩 시점은 tileset.json이 결정. 가까울수록 촘촘한 타일(LOD) → 수억 개 점도 웹 표시 가능. 3D Tiles 1.1부터 점군도 glb 권장.',
+  description: '.pnts 1개 = 점 묶음 1개. 위치·로딩 시점은 tileset.json이 결정. 가까울수록 촘촘한 타일(LOD) → 수억 개 점도 웹 표시 가능. 3D Tiles 1.1부터 점군도 glb 권장. 이 샘플은 1.1 변환 불가: 배치 테이블 GpsTime이 DOUBLE(64비트) → glTF 접근자 미지원 (3d-tiles-tools upgrade 타일마다 실패).',
   anatomy: [
     { name: 'tileset.json', role: '타일 나무 구조, 경계 상자, 기하 오차(geometricError), refine(ADD/REPLACE)' },
     { name: '.pnts 헤더', role: '28바이트: 종류, 버전, 길이, 피처·배치 테이블 크기' },
@@ -74,11 +74,9 @@ export default {
       },
     },
   ],
-  alternatives: [
-    { tool: '3d-tiles-tools', cmd: 'npx 3d-tiles-tools upgrade -i tileset.json -o tileset_1_1 --targetVersion 1.1', note: '3D Tiles 1.1(glb 기반)로 업그레이드.' },
-    { tool: 'mago-3d-tiler', cmd: 'mago-3d-tiler -i ./las -o ./tiles -it las', note: '다른 도구로 만든 pnts 타일셋(LAS 페이지 비교 참고).' },
-  ],
+  alternatives: [],
   upload: bundleUpload({
+    id: 'tiles',
     marker: 'tileset.json',
     dest: 'tiles',
     note: 'tileset.json + .pnts 타일을 zip 하나로. .pnts 단독으로는 위치·구조 불명.',

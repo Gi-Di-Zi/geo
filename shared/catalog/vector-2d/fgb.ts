@@ -1,6 +1,6 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { vectorRecipe, vectorUpload } from './_vector.ts'
+import { tippecanoeRecipe, vectorRecipe, vectorUpload } from './_vector.ts'
 
 const RAW = '/raw/countries.fgb'
 
@@ -59,12 +59,18 @@ export default {
       maxzoom: 5,
       preprocess,
     }),
+    tippecanoeRecipe({
+      work: RAW,
+      layer: 'countries',
+      key: 'name',
+      minzoom: 0,
+      maxzoom: 5,
+      preprocess: preprocess.slice(0, 1),
+      input: { path: RAW, why: 'FlatGeobuf 직접 입력: GeoJSON 추출·도형 수정 없이 원본 그대로 (GeoJSON보다 읽기 빠름).' },
+    }),
     ...serverRecipes({ category: 'vector-2d', layer: 'countries', preprocess, work: '/work/countries.gpkg', geom: 'polygon', bounds: [-180, -85, 180, 85] }),
   ],
-  alternatives: [
-    { tool: 'gdal', cmd: 'ogrinfo /vsicurl/https://flatgeobuf.org/test/data/countries.fgb -spat 124 33 132 39', note: '원격 FGB에서 범위 내 피처만 Range 요청. 브라우저는 flatgeobuf 라이브러리로 동일.' },
-    { tool: 'tippecanoe', cmd: 'tippecanoe -o countries.pmtiles -zg countries.fgb', note: 'FGB 입력이 GeoJSON보다 빠름.' },
-  ],
+  alternatives: [],
   upload: vectorUpload({ accept: ['.fgb'], note: 'FlatGeobuf 파일 하나.' }),
   view: { center: [127, 30], zoom: 1.6, basemap: 'osm' },
   noDomestic: '국내 FlatGeobuf 배포처 없음.',

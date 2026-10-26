@@ -19,8 +19,10 @@ const recipeId = computed({
   set: tool => router.replace({ query: tool === spec.recipes[0]!.id ? {} : { tool } }),
 })
 const recipe = computed(() => spec.recipes.find(r => r.id === recipeId.value) ?? spec.recipes[0]!)
-// 레시피 선택 막대: 파일 방식과 서버 방식을 나눠 보여 준다
-const groups = recipeGroups(spec)
+// 전처리 도구 고르기: 지금 레시피가 이미 그 전처리를 쓰면 그대로, 아니면 그 전처리를 쓰는 첫 레시피로
+const preGroups = preprocessGroups(spec)
+const preGroup = computed(() => preGroups.find(g => g.recipes.includes(recipe.value)))
+const pickPre = (g: (typeof preGroups)[number]) => { if (!g.recipes.includes(recipe.value)) recipeId.value = g.recipes[0]!.id }
 
 // 실측 기록은 public/ 정적 파일이라 브라우저에서 받는다 (SSR 내부 요청은 public/을 못 본다)
 const dir = `${useRuntimeConfig().app.baseURL}data/${spec.category}/${spec.id}`
@@ -31,16 +33,28 @@ const { data: collected } = useFetch<CollectReport>(`${dir}/collect.json`, { ser
 const mounted = ref(false)
 const jobId = computed(() => (mounted.value && typeof route.query.job === 'string' ? route.query.job : ''))
 const mine = computed(() => !!jobId.value)
-const job = ref<{ job: Job; report: Report | null } | null>(null)
+// ?embed=1: 다른 화면 안에 넣어 보일 때(MCP App 결과 지도) 위쪽 단계 막대를 숨긴다
+const embed = computed(() => mounted.value && route.query.embed === '1')
+type JobState = { job: Job; report: Report | null; live: string; now: number }
+const job = ref<JobState | null>(null)
 const jobError = ref('')
+/** 지도로 바꿔도 되는지. 도는 걸 보던 중 끝나면 완료 표시를 잠깐 보인 뒤 */
+const mapReady = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
 async function poll() {
   clearTimeout(timer)
   if (!jobId.value) { job.value = null; return }
   try {
-    job.value = await $fetch<{ job: Job; report: Report | null }>(`/api/jobs/${jobId.value}`)
+    const next = await $fetch<JobState>(`/api/jobs/${jobId.value}`)
+    const prev = job.value?.job.id === next.job.id ? job.value : null
+    // 기록 파일을 쓰는 순간 읽으면 null → 앞서 받은 기록 유지
+    if (!next.report && prev) next.report = prev.report
+    if (next.job.state !== 'done') mapReady.value = false
+    else if (prev?.job.state === 'running') setTimeout(() => { mapReady.value = true }, 1500)
+    else mapReady.value = true
+    job.value = next
     jobError.value = ''
-    if (job.value.job.state === 'running') timer = setTimeout(poll, 2000)
+    if (next.job.state === 'running') timer = setTimeout(poll, 1000)
   } catch (e: any) {
     job.value = null
     jobError.value = e?.data?.statusMessage ?? '작업 없음. 업로드는 서버 실행 중에만 가능.'
@@ -49,10 +63,11 @@ async function poll() {
 onMounted(() => { mounted.value = true; watch(jobId, poll, { immediate: true }) })
 onBeforeUnmount(() => clearTimeout(timer))
 
-const uploadRecipe = 'recipe' in spec.upload ? spec.upload.recipe : undefined
-const shown = computed<Recipe>(() => (mine.value && uploadRecipe ? job.value?.job.recipe ?? uploadRecipe : recipe.value))
+// 내 파일: 업로드 때 고른 방식·도구(레시피). 끝나면 범위·시점을 채운 작업의 레시피
+const uploadRecipes = 'recipes' in spec.upload ? spec.upload.recipes : []
+const uploadRecipe = computed(() => uploadRecipes.find(r => r.id === job.value?.job.method) ?? uploadRecipes[0])
+const shown = computed<Recipe>(() => (mine.value && uploadRecipe.value ? job.value?.job.recipe ?? uploadRecipe.value : recipe.value))
 const shownReport = computed(() => (mine.value ? job.value?.report : report.value) ?? null)
-const steps = computed(() => `${job.value?.report?.steps.length ?? 0}/${uploadRecipe ? uploadRecipe.preprocess.length + uploadRecipe.convert.length : 0}`)
 const stepLink = (id: FlowStep) => ({ path: stepPath(spec, id), query: route.query })
 
 useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!.name} | 공간 데이터 웹 처리` }))
@@ -60,15 +75,9 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 
 <template>
   <div class="format-page" :class="{ 'map-step': step === 'view' }" :style="{ '--c': cat.color }">
-    <FlowSteps :spec="spec.closed ? undefined : spec" :step>
-      <!-- 변환 단계는 본문 카드로 고른다 -->
-      <div v-if="(spec.recipes.length > 1 || mine) && step !== 'convert'" class="seg" role="group" aria-label="변환 방식 선택">
-        <template v-for="g in groups" :key="g.name">
-          <span v-if="groups.length > 1" class="sep">{{ g.name }}</span>
-          <button v-for="r in g.recipes" :key="r.id" type="button" :aria-pressed="!mine && r.id === recipe.id" @click="recipeId = r.id">{{ r.title }}</button>
-        </template>
-        <button v-if="mine" type="button" aria-pressed="true">내 파일</button>
-      </div>
+    <!-- 도구(레시피)는 전처리·변환 단계 본문 카드, 시각화 단계 지도 위 도구 메뉴에서 고른다 -->
+    <FlowSteps v-if="!embed" :spec="spec.closed ? undefined : spec" :step>
+      <span v-if="mine" class="chip">내 파일</span>
       <NuxtLink v-if="step === 'view'" to="/" class="btn back">← 다른 데이터 보기</NuxtLink>
     </FlowSteps>
 
@@ -79,16 +88,15 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
     </div>
     <template v-else-if="step === 'view'">
       <CompareStage
-        v-if="!mine || job?.job.state === 'done'"
+        v-if="!mine || mapReady"
         :spec :recipe="shown" :color="cat.color" :base="mine ? `/api/jobs/${jobId}/files/` : undefined"
+        @select="recipeId = $event"
       />
-      <section v-else class="pending" aria-live="polite">
-        <div class="prose">
-          <p v-if="jobError">{{ jobError }}</p>
-          <p v-else-if="job?.job.state === 'failed'"><strong>변환 실패.</strong> {{ job.job.error }} 로그: <NuxtLink :to="stepLink('convert')">변환 단계</NuxtLink></p>
-          <p v-else>{{ job?.job.name }} 변환 중 — {{ steps }} 단계 완료. 끝나면 지도 표시.</p>
-          <p class="small"><NuxtLink :to="{ query: {} }">샘플 보기</NuxtLink></p>
-        </div>
+      <section v-else class="pending">
+        <JobProgress v-if="job" :spec :job="job.job" :report="job.report" :live="job.live" :now="job.now" />
+        <p v-else-if="jobError" class="prose">{{ jobError }}</p>
+        <p v-else class="small muted">작업 불러오는 중…</p>
+        <p class="small"><NuxtLink to="/upload">다른 파일 올리기</NuxtLink> · <NuxtLink :to="{ query: {} }">샘플 보기</NuxtLink></p>
       </section>
     </template>
 
@@ -98,7 +106,15 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
         <h1>{{ flow[at]!.name }}</h1>
         <p class="lead">{{ flow[at]!.text }}</p>
       </header>
-      <RecipePicker v-if="step === 'convert' && !mine && spec.recipes.length > 1" :spec :current="recipe.id" @select="recipeId = $event" />
+      <DeliveryGuide v-if="step === 'convert' && !mine" :spec :current="recipe.id" @select="recipeId = $event" />
+      <DeliveryGuide v-else-if="step === 'convert'" :spec :recipes="uploadRecipes" :current="uploadRecipe?.id" readonly />
+      <section v-if="step === 'preprocess' && !mine && preGroups.length > 1" class="pre-pick" aria-labelledby="pre-pick-title">
+        <h2 id="pre-pick-title">전처리 도구</h2>
+        <div class="seg" role="group" aria-label="전처리 도구">
+          <button v-for="g in preGroups" :key="g.label" type="button" :aria-pressed="g === preGroup" @click="pickPre(g)">{{ g.label }}</button>
+        </div>
+        <p v-if="preGroup" class="small muted">이 전처리 뒤 변환 도구: {{ preGroup.recipes.map(r => r.title).join(' · ') }}</p>
+      </section>
       <StepRoute :step :spec :recipe="shown" :report="shownReport" :collected="collected ?? null" :upload="mine ? job?.job : undefined" />
       <nav class="pager" aria-label="단계 이동">
         <NuxtLink v-if="prev" :to="stepLink(prev.id)" class="btn">← {{ prev.name }}</NuxtLink>
@@ -120,5 +136,7 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 .pager .btn { text-decoration: none; padding: 8px 16px; }
 .pager .next { margin-left: auto; background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
 .back { text-decoration: none; white-space: nowrap; }
-.pending { flex: 1; display: grid; place-items: center; padding: 24px var(--gutter); background: var(--stage); }
+.pre-pick { display: grid; gap: 8px; justify-items: start; margin-bottom: 28px; }
+.pre-pick h2 { font-size: var(--fs-2); }
+.pending { flex: 1; min-height: 0; overflow: auto; display: grid; justify-items: center; align-content: start; gap: 12px; padding: 32px var(--gutter); background: var(--stage); }
 </style>

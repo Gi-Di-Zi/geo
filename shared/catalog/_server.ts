@@ -5,14 +5,22 @@ import type { Output, Recipe, Step } from '../types.ts'
 
 type Bounds = [number, number, number, number]
 
+/** 업로드 서버 레시피의 레이어 이름 자리. 작업마다 up_<작업 id 앞 8자>로 바꿔 돌린다 (scripts/pipeline.ts runJob) → 작업끼리 DB 표·레이어가 겹치지 않음 */
+export const UPLOAD_LAYER = 'up_job'
+
+/** 래스터의 네 모서리 위경도 → /out/bounds.json (그림 한 장의 배치 범위, 업로드 서버 결과의 확인 요청·시점) */
+export const writeBounds = (file: string) =>
+  `gdalinfo -json ${file} | python3 -c "import json, sys; c = json.load(sys.stdin)['wgs84Extent']['coordinates'][0]; x = [p[0] for p in c]; y = [p[1] for p in c]; print(json.dumps([min(x), min(y), max(x), max(y)]))" > /out/bounds.json && cat /out/bounds.json`
+
 const gs = (...lines: string[]) => ['set -e', 'GS=http://geoserver:8080/geoserver/rest', 'AUTH="-u admin:$GEOSERVER_ADMIN_PASSWORD"', ...lines].join('\n')
 const send = (method: string, body: string, url: string) => `curl -sf $AUTH -X${method} -H 'Content-Type: text/xml' -d '${body}' ${url}`
 const workspace = `curl -sf $AUTH $GS/workspaces/geo -o /dev/null || ${send('POST', '<workspace><name>geo</name></workspace>', '$GS/workspaces')}`
 const defaultStyle = (name: string) => send('PUT', `<layer><defaultStyle><name>${name}</name><workspace>geo</workspace></defaultStyle></layer>`, `$GS/layers/geo:${name}`)
 
-/** SLD 규칙(심볼라이저)을 스타일로 등록. 있으면 교체(PUT), 없으면 생성(POST) */
-function style(name: string, rules: string, why: string): Step {
-  const sld = `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld">\n  <NamedLayer><Name>${name}</Name><UserStyle><FeatureTypeStyle><Rule>\n${rules}\n  </Rule></FeatureTypeStyle></UserStyle></NamedLayer>\n</StyledLayerDescriptor>`
+/** SLD 규칙(심볼라이저)을 스타일로 등록. 있으면 교체(PUT), 없으면 생성(POST). 배열 = 규칙 여러 개 (ogc:Filter를 쓰면 이름공간 추가) */
+function style(name: string, rules: string | string[], why: string): Step {
+  const body = Array.isArray(rules) ? rules.join('\n  </Rule><Rule>\n') : rules
+  const sld = `<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld"${body.includes('ogc:') ? ' xmlns:ogc="http://www.opengis.net/ogc"' : ''}>\n  <NamedLayer><Name>${name}</Name><UserStyle><FeatureTypeStyle><Rule>\n${body}\n  </Rule></FeatureTypeStyle></UserStyle></NamedLayer>\n</StyledLayerDescriptor>`
   return {
     title: '스타일(SLD) 등록',
     why: `${why} PUT: 있으면 교체, 없으면 POST로 생성.`,
@@ -21,11 +29,11 @@ function style(name: string, rules: string, why: string): Step {
   }
 }
 
-const wms = (name: string, bounds: Bounds): Output => ({
+const wms = (name: string, bounds?: Bounds): Output => ({
   id: 'wms', kind: 'wms', path: '/svc/geoserver/wms', layer: name, bounds, label: 'WMS',
   why: 'GetMap 요청마다 화면 범위 그림 생성(서버 렌더링, SLD 스타일). 국내 공공 지도 서비스의 기본 방식.',
 })
-const wmts = (name: string, bounds: Bounds, maxzoom: number): Output => ({
+const wmts = (name: string, bounds: Bounds | undefined, maxzoom: number): Output => ({
   id: 'wmts', kind: 'xyz-raster', maxzoom, bounds, label: 'WMTS 타일 (GeoWebCache)',
   path: `/svc/geoserver/gwc/service/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${name}&STYLE=&TILEMATRIXSET=EPSG:900913&TILEMATRIX=EPSG:900913:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png`,
   why: '256px 고정 격자 그림 타일. 처음 요청 때 그리고 저장, 다음부터 캐시 응답. EPSG:900913 격자의 TILEROW·TILECOL = XYZ 타일 번호.',
@@ -39,8 +47,10 @@ interface ServerVector {
   /** 전처리 결과 파일. load를 주지 않으면 이 파일을 그대로 적재 */
   work?: string
   load?: Step
-  geom: 'polygon' | 'point'
-  bounds: Bounds
+  /** any: 업로드처럼 도형 종류를 모를 때. 점·선·면 규칙을 dimension(geom)으로 나눈다 */
+  geom: 'polygon' | 'point' | 'any'
+  /** 없으면(업로드) 실행 뒤 /out/bounds.json으로 채운다 */
+  bounds?: Bounds
   /** 높이 속성. 있으면 WFS·MVT 결과를 뷰어가 돌출 */
   height?: string
 }
@@ -52,9 +62,17 @@ const vectorLoad = (v: ServerVector): Step => ({
   run: `ogr2ogr -f PostgreSQL PG:dbname=gis ${v.work} -nln ${v.layer} -overwrite${v.geom === 'polygon' ? ' -nlt PROMOTE_TO_MULTI' : ''} -lco GEOMETRY_NAME=geom`,
 })
 
-function vectorRules(v: ServerVector) {
+function vectorRules(v: ServerVector): string | string[] {
   const c = categories.find(x => x.id === v.category)!.color
   const css = (name: string, value: string | number) => `<CssParameter name="${name}">${value}</CssParameter>`
+  if (v.geom === 'any') {
+    const only = (d: number) => `    <ogc:Filter><ogc:PropertyIsEqualTo><ogc:Function name="dimension"><ogc:PropertyName>geom</ogc:PropertyName></ogc:Function><ogc:Literal>${d}</ogc:Literal></ogc:PropertyIsEqualTo></ogc:Filter>`
+    return [
+      `${only(0)}\n    <PointSymbolizer><Graphic><Mark><WellKnownName>circle</WellKnownName>\n      <Fill>${css('fill', c)}</Fill>\n    </Mark><Size>8</Size></Graphic></PointSymbolizer>`,
+      `${only(1)}\n    <LineSymbolizer><Stroke>${css('stroke', c)}${css('stroke-width', 2)}</Stroke></LineSymbolizer>`,
+      `${only(2)}\n    <PolygonSymbolizer>\n      <Fill>${css('fill', c)}${css('fill-opacity', 0.12)}</Fill>\n      <Stroke>${css('stroke', c)}${css('stroke-width', 2)}</Stroke>\n    </PolygonSymbolizer>`,
+    ]
+  }
   if (v.geom === 'point') return `    <PointSymbolizer><Graphic><Mark><WellKnownName>circle</WellKnownName>\n      <Fill>${css('fill', c)}</Fill>\n    </Mark><Size>8</Size></Graphic></PointSymbolizer>`
   return `    <PolygonSymbolizer>\n      <Fill>${css('fill', c)}${css('fill-opacity', v.height ? 0.5 : 0.12)}</Fill>\n      <Stroke>${css('stroke', c)}${css('stroke-width', v.height ? 0.5 : 2)}</Stroke>\n    </PolygonSymbolizer>`
 }
@@ -73,7 +91,9 @@ function geoserverVector(v: ServerVector): Recipe {
         tool: 'geoserver',
         run: gs(workspace, `curl -sf $AUTH $GS/workspaces/geo/datastores/gis -o /dev/null || curl -sf $AUTH -XPOST -H 'Content-Type: text/xml' -d "<dataStore><name>gis</name><connectionParameters><dbtype>postgis</dbtype><host>$PGHOST</host><port>5432</port><database>$PGDATABASE</database><user>$PGUSER</user><passwd>$PGPASSWORD</passwd></connectionParameters></dataStore>" $GS/workspaces/geo/datastores`),
       },
-      style(v.layer, vectorRules(v), `WMS·WMTS 그림은 서버가 그림 → 색·${v.geom === 'point' ? '점 크기' : '선 굵기'}를 서버 스타일(SLD)로 지정. 다른 레시피의 화면 스타일과 같게${v.height ? '(돌출 대신 바닥면만)' : ''}.`),
+      style(v.layer, vectorRules(v), v.geom === 'any'
+        ? 'WMS·WMTS 그림은 서버가 그림 → 색·굵기를 서버 스타일(SLD)로 지정. 도형 종류를 모르니 dimension(geom)으로 점(0)·선(1)·면(2) 규칙을 나눔.'
+        : `WMS·WMTS 그림은 서버가 그림 → 색·${v.geom === 'point' ? '점 크기' : '선 굵기'}를 서버 스타일(SLD)로 지정. 다른 레시피의 화면 스타일과 같게${v.height ? '(돌출 대신 바닥면만)' : ''}.`),
       {
         title: '레이어 발행',
         why: 'featureType: 표 → 레이어. 범위·좌표계는 GeoServer가 표에서 계산. numDecimals 7: WFS 좌표 소수 7자리(기본 4자리 ≈ 10 m). 발행과 함께 GeoWebCache 타일 레이어 자동 생성 → WMTS. 다시 실행 시 지우고 새로 발행(속성 목록·타일 캐시 갱신).',
@@ -154,7 +174,8 @@ interface ServerRaster {
   /** SLD RasterSymbolizer 안쪽 (ColorMap 등) */
   symbolizer: string
   styleWhy: string
-  bounds: Bounds
+  /** 없으면(업로드) 실행 뒤 /out/bounds.json으로 채운다 */
+  bounds?: Bounds
   maxzoom: number
   view?: Recipe['view']
 }
@@ -194,4 +215,26 @@ export function geoserverRaster(r: ServerRaster): Recipe {
     },
     ...(r.view && { view: r.view }),
   }
+}
+
+/**
+ * 업로드 영상·DEM의 서버 레시피 (GeoServer). source(정리된 영상 또는 원본 DEM)를 공유 폴더 /serve/upload에 COG로 두고 발행.
+ * 범위는 실행 뒤 bounds.json에서. 작업을 지울 때 파일·레이어도 지운다 (pipeline.ts --drop)
+ */
+export function uploadRaster(r: { preprocess: Step[]; source: string; why: string; symbolizer?: string; styleWhy?: string; maxzoom?: number }): Recipe {
+  const file = `/serve/upload/${UPLOAD_LAYER}.tif`
+  return geoserverRaster({
+    name: UPLOAD_LAYER,
+    preprocess: r.preprocess,
+    file,
+    prepare: {
+      title: '서버용 COG 만들기 + 범위 기록',
+      why: `${r.why} -of COG: 내부 블록 + 축소본 → 서버가 화면 범위·축척 블록만 읽음. 공유 폴더 /serve: GeoServer도 같은 폴더를 읽음. bounds.json: 네 모서리 위경도(확인 요청·처음 시점).`,
+      tool: 'gdal',
+      run: `mkdir -p /serve/upload && gdal_translate -of COG -co COMPRESS=DEFLATE ${r.source} ${file} && ${writeBounds(file)}`,
+    },
+    symbolizer: r.symbolizer ?? '      <Opacity>1.0</Opacity>',
+    styleWhy: r.styleWhy ?? '그림 색 그대로. 서버는 요청 범위만 잘라 웹 메르카토르로 재투영.',
+    maxzoom: r.maxzoom ?? 18,
+  })
 }

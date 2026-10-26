@@ -119,7 +119,8 @@ export interface FormatSpec {
    * license·attribution: 수급처 안에서도 데이터셋마다 다를 때 덮어쓴다
    */
   collect: { source: string; dataset: string; url: string; how: string; steps: Step[]; derived?: string; converted?: string; license?: string; attribution?: string }
-  otherSources: { source: string; dataset: string; note: string }[]
+  /** access: 수급처 기본값(Source.access)과 이 데이터셋의 받는 조건이 다를 때 (예: 회원 전용 데이터) */
+  otherSources: { source: string; dataset: string; note: string; access?: Source['access'] }[]
   recipes: Recipe[]
   alternatives: { tool: string; cmd?: string; note: string }[]
   /** height: 시점이 바라보는 지점의 높이(m). 산지 지형이나 높은 곳의 3D Tiles처럼 데이터가 해발 0m보다 한참 위에 있을 때 */
@@ -134,9 +135,11 @@ export interface FormatSpec {
 
 /**
  * accept = 받는 확장자 (spec.extensions 중 일부이거나 묶음 .zip),
- * recipe = 내용(필드 이름, 범위)을 가정하지 않는 일반 레시피. 출력의 범위·줌은 실행 뒤 결과에서 채운다
+ * recipes = 내용(필드 이름, 범위)을 가정하지 않는 일반 레시피. 고를 수 있는 방식·도구마다 하나, 첫 번째가 기본값.
+ * id는 같은 일을 하는 샘플 레시피 id와 같게 → 방식·도구 고르기 설명(delivery.ts toolNotes)을 같이 쓴다.
+ * 서버 레시피는 레이어 이름 자리에 UPLOAD_LAYER(_server.ts)를 쓴다 → 작업마다 up_<작업 id 앞 8자>. 출력의 범위·줌은 실행 뒤 결과에서 채운다
  */
-export type Upload = { accept: string[]; note: string; recipe: Recipe } | { unsupported: string }
+export type Upload = { accept: string[]; note: string; recipes: Recipe[] } | { unsupported: string }
 
 /** 업로드 작업 상태 (.data/jobs/<id>/job.json) */
 export interface Job {
@@ -147,6 +150,12 @@ export interface Job {
   state: 'running' | 'done' | 'failed'
   createdAt: string
   error?: string
+  /** 파일에 좌표계가 없을 때 판별 화면에서 고른 원본 좌표계 (EPSG:xxxx). 단계 컨테이너에 SRS 환경 변수로 넘어간다 */
+  srs?: string
+  /** 고른 업로드 레시피(방식·도구) id. 없으면 첫 번째 */
+  method?: string
+  /** 서버 방식: 이 작업이 만든 DB 표·GeoServer 레이어 이름. 작업을 지울 때 같이 지운다 */
+  layer?: string
   /** 실행 뒤 출력 범위·줌과 시점을 채운 레시피 */
   recipe?: Recipe
 }

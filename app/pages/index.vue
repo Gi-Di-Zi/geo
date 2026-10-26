@@ -13,6 +13,7 @@ const picked = computed({
 
 // GeoTIFF와 COG처럼 확장자가 같은 포맷은 한 번만
 const extsOf = (id: string) => [...new Set(formatsOf(id).filter(f => !f.closed).map(f => f.extensions[0]))]
+const openCount = formats.filter(f => !f.closed).length
 
 // 유형마다 데이터 모양을 범례 기호처럼 그린 작은 그림 (viewBox 40×40)
 const glyphs: Record<string, string> = {
@@ -31,7 +32,21 @@ const glyphs: Record<string, string> = {
   <div>
     <FlowSteps />
     <section class="wrap hero">
-      <h1 class="sr-only">공간 데이터 웹 처리</h1>
+      <div class="top">
+        <div>
+          <h1>공간 데이터 웹 처리</h1>
+          <p class="lead">
+            공간 데이터를 웹에서 그리기까지의 과정 정리. {{ categories.length }}개 유형·{{ openCount }}개 확장자마다 실제 공개 원본으로 수집 → 전처리 → 웹 형태 변환 → 시각화·렌더링.
+            단계별 명령·로그·측정값은 Docker 실제 실행 기록.
+          </p>
+        </div>
+        <section class="mine" aria-labelledby="mine-title">
+          <h2 id="mine-title">내 파일로 해 보기</h2>
+          <p class="small muted">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도.</p>
+          <NuxtLink to="/upload" class="btn mine-go">파일 올리러 가기 →</NuxtLink>
+        </section>
+      </div>
+      <p class="small muted start">노선·유형 카드 클릭 → 확장자 선택</p>
       <RouteMap class="map" @pick="picked = $event" />
     </section>
     <section id="types" class="wrap" aria-label="데이터 유형">
@@ -54,8 +69,17 @@ const glyphs: Record<string, string> = {
 </template>
 
 <style scoped>
-.hero { padding-top: 24px; }
-.map { margin-top: 8px; }
+.hero { padding-top: 28px; }
+.hero h1 { font-size: var(--fs-4); }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem); gap: 20px 40px; align-items: start; }
+.mine { display: grid; gap: 8px; justify-items: start; padding: 16px 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); }
+.mine h2 { font-size: var(--fs-1); }
+.mine-go { text-decoration: none; background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; padding: 7px 16px; }
+.mine-go:hover { background: #2A3540; }
+@media (max-width: 900px) { .top { grid-template-columns: minmax(0, 1fr); } }
+.lead { max-width: 52rem; margin-top: 6px; color: var(--ink-2); line-height: 1.6; }
+.start { margin-top: 6px; }
+.map { margin-top: 20px; }
 #types { padding-top: 40px; }
 .cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr)); gap: 14px; }
 .card {

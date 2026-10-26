@@ -23,7 +23,7 @@ const openFormats = formats.filter(f => !f.closed)
 const openIds = new Set(openFormats.map(f => `${f.category}/${f.id}`))
 const recipes = computed(() => status.value.filter(s => openIds.has(s.format)).flatMap(s => s.recipes))
 const done = computed(() => recipes.value.filter(r => r.state === 'done').length)
-const uploadable = openFormats.filter(f => 'recipe' in f.upload).length
+const uploadable = openFormats.filter(f => 'recipes' in f.upload).length
 /** 샘플 분류별 확장자 수 */
 const kinds = (Object.keys(sampleLabels) as SampleKind[]).map(k => ({ k, n: formats.filter(f => sampleOf(f) === k).length })).filter(x => x.n)
 

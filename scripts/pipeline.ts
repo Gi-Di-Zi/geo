@@ -2,11 +2,13 @@
 // 사용: node scripts/pipeline.ts <category/format[/recipe]> | <category> | all [--recollect]
 //       node scripts/pipeline.ts --status                  (현황 status.json만 다시 쓰기)
 //       node scripts/pipeline.ts --job <.data/jobs/<id>>   (업로드 작업. 서버가 띄운다)
+//       node scripts/pipeline.ts --drop <up_xxxxxxxx>       (업로드 서버 방식의 표·레이어 지우기. 작업을 지울 때 서버가 부른다)
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { closeSync, cpSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { cpus, release } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { UPLOAD_LAYER } from '../shared/catalog/_server.ts'
 import { sources } from '../shared/catalog/sources.ts'
 import { tools } from '../shared/catalog/tools.ts'
 import type { CollectReport, EngineReport, FormatSpec, Job, Output, Recipe, Report, StatusEntry, Step } from '../shared/types.ts'
@@ -73,8 +75,8 @@ function imageOf(image: string) {
   return local.tag
 }
 
-/** 업로드 작업: 올린 파일 경로($INPUT)와 컨테이너 이름. 네트워크를 끊고 자원·시간을 제한해 돌린다 */
-interface JobRun { input: string; name: string }
+/** 업로드 작업: 올린 파일 경로($INPUT), 컨테이너 이름, 단계 출력을 바로 쓰는 파일(작업 화면이 도는 동안 읽음), 고른 원본 좌표계($SRS). 네트워크를 끊고 자원·시간을 제한해 돌린다 */
+interface JobRun { input: string; name: string; log: string; srs?: string }
 const JOB_STEP_TIMEOUT = 20 * 60_000
 
 function runStep(step: Step, mounts: Record<string, string>, net?: Net, job?: JobRun) {
@@ -87,17 +89,24 @@ function runStep(step: Step, mounts: Record<string, string>, net?: Net, job?: Jo
   // 업로드 작업은 원본·스크립트를 읽기 전용으로 붙인다
   for (const [to, from] of Object.entries(mounts)) args.push('-v', `${from}:${to}${job && (to === '/raw' || to === '/scripts') ? ':ro' : ''}`)
   // Java 도구(mago)는 기본으로 메모리 한도의 1/4만 힙으로 써서, 한도 안에서 75%까지 쓰게 한다
-  if (job) args.push('--name', job.name, '--hostname', 'localhost', '--network', 'none', '--memory', '4g', '--cpus', '2', '--pids-limit', '1024', '-e', 'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75', '-e', `INPUT=${job.input}`)
+  if (job) args.push('--name', job.name, '--hostname', 'localhost', '--memory', '4g', '--cpus', '2', '--pids-limit', '1024', '-e', 'JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75', '-e', 'PYTHONUNBUFFERED=1', '-e', `INPUT=${job.input}`, ...(job.srs ? ['-e', `SRS=${job.srs}`] : []))
   else for (const k of ['VWORLD_KEY', 'DATA_GO_KR_KEY']) if (process.env[k]) args.push('-e', k)
-  if (net) { args.push('--network', net.name); for (const [k, v] of Object.entries(net.env)) args.push('-e', `${k}=${v}`) }
+  // 업로드 작업은 네트워크를 끊는다. 서버 방식만 서버 네트워크(PostGIS·GeoServer·martin)에 붙는다
+  if (net || job) args.push('--network', net?.name ?? 'none')
+  if (net) for (const [k, v] of Object.entries(net.env)) args.push('-e', `${k}=${v}`)
   if (server) args.push('-e', `GEOSERVER_ADMIN_PASSWORD=${process.env.GEOSERVER_ADMIN_PASSWORD || 'geoserver'}`)
   args.push(imageOf(server ? tools.find(t => t.id === 'curl')!.image! : tool.image), '-c', (tool.prelude ?? '') + step.run)
   console.log(`  ▸ ${step.title}`)
   const t0 = Date.now()
-  const r = spawnSync('docker', args, { encoding: 'utf8', maxBuffer: 1 << 30, timeout: job && JOB_STEP_TIMEOUT })
+  // 업로드 작업은 출력을 파일로 바로 흘린다 (PYTHONUNBUFFERED: 파이썬도 줄마다 내보냄)
+  const fd = job ? openSync(job.log, 'w') : undefined
+  const r = spawnSync('docker', args, { encoding: 'utf8', maxBuffer: 1 << 30, timeout: job && JOB_STEP_TIMEOUT, ...(fd !== undefined && { stdio: ['ignore', fd, fd] }) })
+  if (fd !== undefined) closeSync(fd)
   if (job && r.error) spawnSync('docker', ['rm', '-f', job.name])
   const late = job && r.error ? `\n시간 제한(${JOB_STEP_TIMEOUT / 60_000}분) 초과로 중단.` : ''
-  const log = `${r.stdout ?? ''}${r.stderr ?? ''}${late}`.trimEnd().split('\n').slice(-40).join('\n')
+  const out = job ? readFileSync(job.log, 'utf8') : `${r.stdout ?? ''}${r.stderr ?? ''}`
+  // 진행 표시(\r로 덮어쓰는 줄)는 마지막 상태만 남긴다
+  const log = `${out}${late}`.trimEnd().split('\n').map(l => l.split('\r').filter(Boolean).at(-1) ?? '').slice(-40).join('\n')
   const result = { ms: Date.now() - t0, code: r.status ?? -1, log }
   if (result.code !== 0) console.error(log)
   return result
@@ -172,14 +181,14 @@ function envOf(): NonNullable<Report['env']> {
 }
 
 /** 서버 출력 확인: 시점 가운데 타일 하나(WMS는 범위 그림 하나, WFS는 전체)를 받아 크기·시간을 잰다. 같은 요청을 한 번 더 보내 캐시 적중 시간도 잰다 */
-async function probe(o: Output, spec: FormatSpec): Promise<Report['outputs'][number]> {
+async function probe(o: Output, view: Pick<FormatSpec['view'], 'center' | 'zoom'>): Promise<Report['outputs'][number]> {
   const id = o.path.split('/')[2]!
   const base = tools.find(t => t.id === id)?.endpoint
   if (!base) throw new Error(`주소(endpoint)가 없는 서버예요: ${id}`)
   let url = base + o.path.slice(`/svc/${id}`.length)
   if (url.includes('{z}')) {
-    const [lon, lat] = o.bounds ? [(o.bounds[0] + o.bounds[2]) / 2, (o.bounds[1] + o.bounds[3]) / 2] : spec.view.center
-    const z = Math.min(o.maxzoom ?? 14, Math.max(o.minzoom ?? 0, Math.round(spec.view.zoom)))
+    const [lon, lat] = o.bounds ? [(o.bounds[0] + o.bounds[2]) / 2, (o.bounds[1] + o.bounds[3]) / 2] : view.center
+    const z = Math.min(o.maxzoom ?? 14, Math.max(o.minzoom ?? 0, Math.round(view.zoom)))
     const n = 2 ** z, r = lat * Math.PI / 180
     const x = Math.floor((lon + 180) / 360 * n), y = Math.floor((1 - Math.asinh(Math.tan(r)) / Math.PI) / 2 * n)
     url = url.replace('{z}', String(z)).replace('{x}', String(x)).replace('{y}', String(y))
@@ -214,6 +223,8 @@ export async function runRecipe(spec: FormatSpec, recipe: Recipe, rawDir: string
   if (svc) mkdirSync(mounts['/serve'] = join(root, 'pipeline/serve'), { recursive: true })
   const report: Report = { recipe: recipe.id, ranAt: new Date().toISOString(), totalMs: 0, env: envOf(), steps: [], outputs: [] }
   const save = () => writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 2))
+  // 시작 시각(ranAt)을 바로 남긴다: 작업 화면이 지금 단계의 경과 시간을 ranAt + 끝난 단계 시간 합으로 센다
+  save()
 
   const db = !svc && usesDb(all)
   if (svc) compose('up', '-d', '--wait')
@@ -232,8 +243,11 @@ export async function runRecipe(spec: FormatSpec, recipe: Recipe, rawDir: string
     if (db) stopDb()
   }
 
+  // 업로드 서버 결과는 범위를 미리 모른다 → 전처리가 남긴 bounds.json으로 확인 요청 위치·줌을 정한다 (범위 전체가 타일 한두 장인 줌)
+  const area = boundsIn(out)
+  const view = area ? { center: [(area[0] + area[2]) / 2, (area[1] + area[3]) / 2] as [number, number], zoom: Math.floor(Math.log2(360 / Math.max(area[2] - area[0], area[3] - area[1], 1e-6))) } : spec.view
   for (const o of recipe.outputs) {
-    if (o.path.startsWith('/svc/')) { report.outputs.push(await probe(o, spec).catch(e => { save(); throw e })); continue }
+    if (o.path.startsWith('/svc/')) { report.outputs.push(await probe(area && !o.bounds ? { ...o, bounds: area } : o, view).catch(e => { save(); throw e })); continue }
     const i = o.path.indexOf('{')
     const target = join(out, i < 0 ? o.path : o.path.slice(0, i))
     // 3D Tiles는 tileset.json이 가리키는 폴더 전체가 결과물이다
@@ -264,6 +278,10 @@ export async function runRecipe(spec: FormatSpec, recipe: Recipe, rawDir: string
 
 type Bounds = [number, number, number, number]
 const deg = (r: number) => r * 180 / Math.PI
+/** 단계가 남긴 범위 (출력 폴더의 bounds.json: 그림 한 장의 배치 범위, 업로드 벡터·서버 결과의 범위) */
+const boundsIn = (out: string): Bounds | undefined => (existsSync(join(out, 'bounds.json')) ? JSON.parse(readFileSync(join(out, 'bounds.json'), 'utf8')) : undefined)
+/** 값이 undefined인 키 빼기: 펼쳐 합칠 때 앞 값을 덮지 않게 (MapLibre는 maxzoom: undefined 키도 기본값을 덮어 멈춘다) */
+const defined = <T extends object>(o: T): T => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T
 
 /** 타일 폴더(z/x/y.ext)에서 줌 범위와 가장 깊은 줌의 타일 범위를 읽는다 (XYZ 규칙) */
 function tileRange(dir: string): { minzoom: number; maxzoom: number; bounds: Bounds } | undefined {
@@ -314,7 +332,10 @@ function upToDate(recipe: Recipe, pubDir: string) {
 }
 
 export function fillView(recipe: Recipe, out: string): Recipe {
+  const svcArea = boundsIn(out)
   const outputs = recipe.outputs.map((o): Output => {
+    // 서버 결과(/svc/)는 파일이 없다 → 업로드 전처리가 남긴 범위
+    if (o.path.startsWith('/svc/')) return { ...(svcArea && { bounds: svcArea }), ...defined(o) }
     const file = join(out, o.path.split('{')[0]!)
     let found: Partial<Output> = {}
     if (o.kind === 'geojson') found.bounds = bboxOf(JSON.parse(readFileSync(file, 'utf8'))) as Bounds
@@ -326,7 +347,7 @@ export function fillView(recipe: Recipe, out: string): Recipe {
     else if (o.kind === '3dtiles') found.bounds = tilesetBounds(file)
     else if (o.kind === 'image') found.bounds = JSON.parse(readFileSync(join(out, 'bounds.json'), 'utf8'))
     else if (o.kind === 'glb' && o.anchor) found.bounds = [o.anchor[0] - 5e-4, o.anchor[1] - 4e-4, o.anchor[0] + 5e-4, o.anchor[1] + 4e-4]
-    return { ...found, ...o }
+    return { ...found, ...defined(o) }
   })
   // 뷰어가 쓰는 출력 중 가장 좁은 범위(타일 경계로 넓히기 전의 실제 데이터)로 시점을 잡는다.
   // 줌은 타일이 있는 가장 얕은 줌보다 얕지 않게 한다 (그보다 멀면 타일을 요청하지 않는다)
@@ -352,11 +373,18 @@ async function runJob(dir: string) {
   const work = join(dir, 'work')
   try {
     const spec = (await loadFormats()).find(s => `${s.category}/${s.id}` === job.format)
-    if (!spec || !('recipe' in spec.upload)) throw new Error(`업로드를 받지 않는 확장자예요: ${job.format}`)
+    if (!spec || !('recipes' in spec.upload)) throw new Error(`업로드를 받지 않는 확장자예요: ${job.format}`)
     const input = readdirSync(join(dir, 'raw'))[0]!
     if (!spec.upload.accept.some(e => input.endsWith(e))) throw new Error(`이 페이지는 ${spec.upload.accept.join(', ')} 파일만 가능.`)
-    await runRecipe(spec, spec.upload.recipe, join(dir, 'raw'), dir, { input: `/raw/${input}`, name: `geo-job-${job.id}`, work })
-    job.recipe = fillView(spec.upload.recipe, join(dir, spec.upload.recipe.id))
+    const chosen = spec.upload.recipes.find(r => r.id === job.method) ?? spec.upload.recipes[0]!
+    job.method = chosen.id
+    // 서버 방식: 이 작업의 표·레이어 이름(up_<id 앞 8자>)을 먼저 남긴다 → 도중에 멈춰도 작업을 지울 때 같이 지운다
+    const layer = `up_${job.id.slice(0, 8)}`
+    if (usesServer([...chosen.preprocess, ...chosen.convert])) { job.layer = layer; writeFileSync(file, JSON.stringify(job, null, 2)) }
+    // 결과 폴더는 고른 레시피와 상관없이 upload/ 하나 (결과 파일 API 경로)
+    const recipe: Recipe = JSON.parse(JSON.stringify({ ...chosen, id: 'upload' }).replaceAll(UPLOAD_LAYER, layer))
+    await runRecipe(spec, recipe, join(dir, 'raw'), dir, { input: `/raw/${input}`, name: `geo-job-${job.id}`, work, log: join(dir, 'live.log'), srs: job.srs })
+    job.recipe = fillView(recipe, join(dir, recipe.id))
     job.state = 'done'
   } catch (e) {
     job.state = 'failed'
@@ -398,12 +426,28 @@ export async function writeStatus() {
   writeFileSync(join(root, 'public/data/status.json'), JSON.stringify(status, null, 2))
 }
 
+/**
+ * 업로드 서버 방식이 만든 것 지우기: DB 표, GeoServer 레이어·저장소·스타일, 공유 폴더 래스터. 작업을 지울 때 서버가 부른다.
+ * 서버가 꺼져 있으면 그대로 남는다 (다음에 같은 이름은 안 쓰므로 충돌은 없음)
+ */
+function dropLayer(name: string) {
+  if (!/^up_[0-9a-f]{8}$/.test(name)) throw new Error(`업로드 레이어 이름 아님: ${name}`)
+  const exec = (...args: string[]) => spawnSync('docker', ['compose', '-f', join(root, 'compose.yaml'), 'exec', '-T', ...args], { stdio: 'ignore' })
+  exec('db', 'psql', '-U', 'postgres', '-d', 'gis', '-c', `DROP TABLE IF EXISTS ${name}`)
+  const auth = `admin:${process.env.GEOSERVER_ADMIN_PASSWORD || 'geoserver'}`
+  for (const path of [`datastores/gis/featuretypes/${name}?recurse=true`, `coveragestores/${name}?recurse=true`, `styles/${name}?purge=true`]) {
+    exec('geoserver', 'curl', '-s', '-o', '/dev/null', '-u', auth, '-XDELETE', `http://localhost:8080/geoserver/rest/workspaces/geo/${path}`)
+  }
+  rmSync(join(root, 'pipeline/serve/upload', `${name}.tif`), { force: true })
+}
+
 async function main() {
   const [target = '', ...flags] = process.argv.slice(2)
+  try { process.loadEnvFile(join(root, '.env')) } catch {}
   if (target === '--job') return runJob(resolve(flags[0]!))
+  if (target === '--drop') return dropLayer(flags[0] ?? '')
   if (target === '--status') return writeStatus()
   if (!target) throw new Error('사용법: node scripts/pipeline.ts <category/format[/recipe]> | <category> | all [--recollect] [--missing]')
-  try { process.loadEnvFile(join(root, '.env')) } catch {}
   const [cat, fmt, recipeId] = target.split('/')
   const specs = (await loadFormats()).filter(s => cat === 'all' || (s.category === cat && (!fmt || s.id === fmt)))
   if (!specs.length) throw new Error(`해당하는 확장자가 없어요: ${target}`)

@@ -50,7 +50,7 @@ export default {
   otherSources: [
     { source: 'vworld', dataset: 'WFS GetFeature (GML 응답)', note: '인증키 필요, 약관 확인 전.' },
     { source: 'nsdi', dataset: '국가공간정보포털 WFS (GML 응답)', note: '인증키 필요.' },
-    { source: 'gsi-japan', dataset: '基盤地図情報 기본항목 (JPGIS 2.0 GML)', note: '일본 전역. 회원 로그인 필요.' },
+    { source: 'gsi-japan', dataset: '基盤地図情報 기본항목 (JPGIS 2.0 GML)', note: '일본 전역. 회원 로그인 필요.', access: 'login' },
   ],
   recipes: [
     vectorRecipe({
@@ -60,12 +60,11 @@ export default {
       minzoom: 5,
       maxzoom: 10,
       preprocess,
+      bounds: [3.358, 50.750, 7.228, 53.555],
     }),
     ...serverRecipes({ category: 'vector-2d', layer: 'provinces', preprocess, work: '/work/provinces.gpkg', geom: 'polygon', bounds: [3.3, 50.7, 7.3, 53.6] }),
   ],
-  alternatives: [
-    { tool: 'geoserver', note: 'GeoServer 레시피의 WFS에서 outputFormat 생략 → GML 3.2 응답(원본과 같은 형식).' },
-  ],
+  alternatives: [],
   upload: vectorUpload({ accept: ['.gml'], note: 'GML 파일 하나. 스키마(.xsd) 없어도 GDAL이 구조 추측.' }),
   view: { center: [5.3, 52.2], zoom: 6.3, basemap: 'osm' },
   noDomestic: '국내 GML 파일 배포처 없음. WFS(VWorld·국가공간정보포털)는 인증키 필요·재배포 제한.',

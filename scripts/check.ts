@@ -1,11 +1,14 @@
 // catalog 일관성 + 수집·변환 기록 검사. 문제가 있으면 exit 1
 // 열린 확장자: 재배포 가능 원본, 수집 기록 = 원본 폴더, 원본 다운로드 가능, 레시피 기록이 지금 명령과 같고 성공·출력 있음
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, openAsBlob, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { categories } from '../shared/catalog/categories.ts'
+import { UPLOAD_LAYER } from '../shared/catalog/_server.ts'
+import { byCategory, downloadOf, noteOf } from '../shared/catalog/delivery.ts'
 import { origins } from '../shared/catalog/origins.ts'
 import { sources } from '../shared/catalog/sources.ts'
 import { tools } from '../shared/catalog/tools.ts'
+import { sniff } from '../shared/sniff.ts'
 import { engineOutput, viewerKinds } from '../shared/viewers.ts'
 import type { CollectReport, EngineReport, Recipe, Report, Step, ViewerId } from '../shared/types.ts'
 import { loadFormats, sameCommands } from './pipeline.ts'
@@ -38,7 +41,10 @@ for (const t of tools) if (t.endpoint && !composeFile.includes(`image: ${t.image
 // 서버 레이어(DB 표·GeoServer 레이어·martin 소스)는 서버 하나에 모이므로 확장자끼리 이름이 겹치면 서로 덮어쓴다
 const serverLayers = new Map<string, string>()
 
-for (const f of await loadFormats()) {
+for (const c of categories) if (!byCategory[c.id]) bad(`${c.id}: delivery.ts에 방식 고르기 안내 없음`)
+
+const formats = await loadFormats()
+for (const f of formats) {
   const at = `${f.category}/${f.id}`
   for (const r of f.closed ? [] : f.recipes) {
     for (const o of r.outputs) {
@@ -61,6 +67,10 @@ for (const f of await loadFormats()) {
   // 닫아 둔 확장자(샘플 없음)는 수집·변환 결과를 따지지 않는다
   const pub = join(root, 'public/data', f.category, f.id)
   if (!f.closed) {
+    // 방식(파일·서버)마다 도구 3개까지 (고르기 카드 한 줄). 도구마다 고르는 기준·장단점 (방식·도구 고르기 카드)
+    const server = (r: Recipe) => r.convert.some(s => tools.find(t => t.id === s.tool)?.type === 'server')
+    for (const [way, n] of [['파일', f.recipes.filter(r => !server(r)).length], ['서버', f.recipes.filter(server).length]] as const) if (n > 3) bad(`${at}: ${way} 방식 도구 ${n}개 — 3개까지`)
+    for (const r of f.recipes) if (!noteOf(f.category, f.id, r.id)) bad(`${at}/${r.id}: delivery.ts toolNotes에 고르는 기준·장단점 없음`)
     // 국내 공공 → 해외 → 기타 순. 국내에서 로그인 없이 받는 같은 형식이 있는데 해외·기타 샘플이면 이유(noDomestic)를 남긴다
     if (src && src.scope !== 'domestic' && !f.noDomestic && f.otherSources.some(o => sources.find(s => s.id === o.source)?.scope === 'domestic')) bad(`${at}: 국내 수급처가 있는데 해외·기타 샘플 — noDomestic에 이유`)
     // 수집 기록 = 원본 폴더, 사이트에서 받을 수 있는지
@@ -100,19 +110,48 @@ for (const f of await loadFormats()) {
     }
   }
 
-  // 업로드 레시피: 올린 파일($INPUT)만 읽고, 네트워크 없이 돈다
+  // 업로드 레시피(방식·도구마다 하나): 올린 파일($INPUT)만 읽는다. 파일 방식은 네트워크 없이, 서버 방식은 작업마다 다른 레이어 이름으로
   if (!f.upload) { bad(`${at}: upload 없음 (안 받으면 unsupported에 이유)`); continue }
-  if (!('recipe' in f.upload)) continue
-  const u = f.upload.recipe
-  const uat = `${at} 업로드`
-  for (const e of f.upload.accept) if (e !== '.zip' && !f.extensions.includes(e)) bad(`${uat}: 확장자 목록에 없는 '${e}' 허용`)
-  checkSteps(uat, [...u.preprocess, ...u.convert])
-  checkViewers(uat, u)
-  if (![...u.preprocess, ...u.convert].some(s => s.run.includes('$INPUT'))) bad(`${uat}: 올린 파일($INPUT) 읽는 단계 없음`)
-  for (const s of [...u.preprocess, ...u.convert]) {
-    if (/\/raw\/(?!input)/.test(s.run)) bad(`${uat}: 샘플 원본 경로 읽음 (${s.title})`)
-    const type = tools.find(t => t.id === s.tool)?.type
-    if (type === 'db' || type === 'server') bad(`${uat}: 업로드에 DB·서버 도구 사용 불가 (${s.title})`)
+  if (!('recipes' in f.upload)) continue
+  for (const e of f.upload.accept) if (e !== '.zip' && !f.extensions.includes(e)) bad(`${at} 업로드: 확장자 목록에 없는 '${e}' 허용`)
+  if (!f.upload.recipes.length) bad(`${at} 업로드: 레시피 없음`)
+  if (new Set(f.upload.recipes.map(r => r.id)).size !== f.upload.recipes.length) bad(`${at} 업로드: 레시피 id 겹침`)
+  for (const u of f.upload.recipes) {
+    const uat = `${at} 업로드 ${u.id}`
+    const all = [...u.preprocess, ...u.convert]
+    checkSteps(uat, all)
+    checkViewers(uat, u)
+    // 방식·도구 고르기 화면이 샘플 레시피와 같은 설명(고르는 경우·장단점)을 쓴다
+    if (!noteOf(f.category, f.id, u.id)) bad(`${uat}: delivery.ts toolNotes에 고르는 기준·장단점 없음`)
+    if (!all.some(s => s.run.includes('$INPUT'))) bad(`${uat}: 올린 파일($INPUT) 읽는 단계 없음`)
+    for (const s of all) {
+      if (/\/raw\/(?!input)/.test(s.run)) bad(`${uat}: 샘플 원본 경로 읽음 (${s.title})`)
+      // DB 도구는 임시 PostGIS 컨테이너 이름이 하나 → 작업끼리·샘플 실행과 충돌
+      if (tools.find(t => t.id === s.tool)?.type === 'db') bad(`${uat}: 업로드에 DB 도구 사용 불가 (${s.title})`)
+    }
+    for (const o of u.outputs) if (o.path.startsWith('/svc/') && !o.path.includes(UPLOAD_LAYER) && o.layer !== UPLOAD_LAYER) bad(`${uat}: 서버 출력 ${o.id}가 UPLOAD_LAYER 아닌 고정 레이어 이름 (작업끼리 덮어씀)`)
+  }
+}
+
+// 내려받기(downloadOf): 여러 파일 출력은 폴더째 zip (템플릿·파일 경로 아님), 파일 하나는 확장자 있는 이름
+for (const f of formats) {
+  for (const r of [...(f.closed ? [] : f.recipes), ...(f.upload && 'recipes' in f.upload ? f.upload.recipes : [])]) {
+    for (const o of r.outputs.filter(o => !o.path.startsWith('/svc/'))) {
+      const d = downloadOf(o, '원본.dat')
+      if (d.zip ? /\{|\.\w+$/.test(d.path) : !/\.\w+$/.test(d.name) || d.path.includes('{')) bad(`${f.category}/${f.id}/${r.id} 출력 ${o.id}: 내려받기 경로·이름 이상 (${d.path} → ${d.name}) — downloadOf에 이 출력 종류(${o.kind}) 처리 추가`)
+    }
+  }
+}
+
+// 업로드 형식 판별(shared/sniff.ts): 그대로 올릴 수 있는 원본 샘플(받는 확장자)은 자기 확장자로 판별돼야 한다
+for (const f of formats) {
+  const dir = join(root, 'pipeline/raw', f.category, f.id)
+  if (f.closed || !('accept' in f.upload) || !existsSync(dir)) continue
+  for (const n of readdirSync(dir, { recursive: true, encoding: 'utf8' })) {
+    const file = join(dir, n)
+    if (!f.upload.accept.some(a => n.toLowerCase().endsWith(a)) || !statSync(file).isFile()) continue
+    const top = (await sniff(await openAsBlob(file), n, formats)).picks[0]
+    if (top !== f) bad(`${f.category}/${f.id}: 원본 ${n} → 업로드 판별 ${top ? `${top.category}/${top.id}` : '실패'}`)
   }
 }
 

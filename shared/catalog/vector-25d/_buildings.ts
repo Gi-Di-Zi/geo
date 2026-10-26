@@ -1,6 +1,8 @@
 // 2.5D 건물: 높이를 채운 /work/buildings.geojson(name, height, height_source)을 받아 세 도구로 세운다.
 // 원본 형식(GeoJSON, SHP …)마다 다른 건 높이를 채우는 전처리뿐이다
 import type { Recipe, Step, Upload } from '../../types.ts'
+import { serverRecipes, UPLOAD_LAYER } from '../_server.ts'
+import { checkExtent, SRC_SRS } from '../vector-2d/_vector.ts'
 
 const no3dTiles = {
   ol: { unsupported: '2D 지도 — 건물 돌출 미지원.' },
@@ -81,53 +83,90 @@ export function buildingRecipes(preprocess: Step[], sameWhy?: string): Recipe[] 
   ]
 }
 
-/** 올린 건물 파일: 높이 열을 찾아 채운 뒤 GeoJSON으로 세운다 */
+/**
+ * 올린 건물 파일: 높이 열을 찾아 채운 /work/buildings.geojson을 만든 뒤 방식·도구별로
+ * GDAL(돌출용 GeoJSON) · mago(3D Tiles) · GeoServer · martin
+ */
 export function buildingUpload(u: { accept: string[]; note: string; open?: string; prepare?: Step }): Upload {
   const open = u.open ?? '$INPUT'
+  const preprocess: Step[] = [
+    ...(u.prepare ? [u.prepare] : []),
+    {
+      title: '무결성 확인',
+      why: '도형 종류·개수·속성 열 이름 확인. 높이·층수 열 유무.',
+      tool: 'gdal',
+      run: `ogrinfo -so -al ${open}${u.prepare ? ' $(cat /work/open_options)' : ''} | grep -vE '^(INFO|Metadata|  [A-Z_]+=)'`,
+    },
+    {
+      title: '위경도 정리',
+      why: '-s_srs $SRS: 파일에 좌표계가 없을 때 판별 화면에서 고른 좌표계. -t_srs EPSG:4326: 위경도 변환. -makevalid: 꼬인 도형 수정.',
+      tool: 'gdal',
+      run: `ogr2ogr -f GeoJSON /work/data.geojson ${open} -nln buildings ${SRC_SRS}-t_srs EPSG:4326 -makevalid${u.prepare ? ' $(cat /work/open_options)' : ''}`,
+    },
+    checkExtent('/work/data.geojson'),
+    {
+      title: '높이 열 탐색·채우기',
+      why: '파일마다 열 이름 상이 → 높이 열 → 층수 열×3m → 기본값 9m 순으로 height 채움. height_source: 사용 값 출처.',
+      tool: 'python',
+      run: 'python /scripts/fill_height.py /work/data.geojson /work/buildings.geojson',
+    },
+  ]
   return {
     accept: u.accept,
     note: u.note,
-    recipe: {
-      id: 'upload',
-      title: '내 파일',
-      preprocess: [
-        ...(u.prepare ? [u.prepare] : []),
-        {
-          title: '무결성 확인',
-          why: '도형 종류·개수·속성 열 이름 확인. 높이·층수 열 유무.',
-          tool: 'gdal',
-          run: `ogrinfo -so -al ${open}${u.prepare ? ' $(cat /work/open_options)' : ''} | grep -vE '^(INFO|Metadata|  [A-Z_]+=)'`,
+    recipes: [
+      {
+        id: 'gdal',
+        title: 'GDAL',
+        preprocess,
+        convert: [
+          {
+            title: 'GeoJSON 내보내기 (OGC API Features 경로)',
+            why: 'COORDINATE_PRECISION=7: 좌표 7자리. GeoJSON 원본도 위경도·도형 수정·height 채움 반영해 재생성.',
+            tool: 'gdal',
+            run: 'ogr2ogr -f GeoJSON /out/ogc/collections/buildings/items.json /work/buildings.geojson -lco RFC7946=YES -lco COORDINATE_PRECISION=7',
+          },
+        ],
+        outputs: [
+          { id: 'features', kind: 'geojson', path: 'ogc/collections/buildings/items.json', style: { height: 'height' }, label: 'GeoJSON (height 속성)', why: 'height 채운 GeoJSON. 뷰어가 height만큼 바닥면 돌출.' },
+        ],
+        viewers: {
+          ol: { unsupported: '2D 지도 — 건물 돌출 미지원.' },
+          maplibre: { output: 'features', note: 'fill-extrusion 레이어로 돌출.' },
+          deck: { output: 'features', note: 'GeoJsonLayer extruded 옵션으로 돌출.' },
+          cesium: { output: 'features', note: '다각형별 extrudedHeight로 돌출.' },
         },
-        {
-          title: '위경도 정리',
-          why: '-t_srs EPSG:4326: 위경도 변환. -makevalid: 꼬인 도형 수정.',
-          tool: 'gdal',
-          run: `ogr2ogr -f GeoJSON /work/data.geojson ${open} -nln buildings -t_srs EPSG:4326 -makevalid${u.prepare ? ' $(cat /work/open_options)' : ''}`,
-        },
-        {
-          title: '높이 열 탐색·채우기',
-          why: '파일마다 열 이름 상이 → 높이 열 → 층수 열×3m → 기본값 9m 순으로 height 채움. height_source: 사용 값 출처.',
-          tool: 'python',
-          run: 'python /scripts/fill_height.py /work/data.geojson /work/buildings.geojson',
-        },
-      ],
-      convert: [
-        {
-          title: 'GeoJSON 내보내기 (OGC API Features 경로)',
-          why: 'COORDINATE_PRECISION=7: 좌표 7자리. GeoJSON 원본도 위경도·도형 수정·height 채움 반영해 재생성.',
-          tool: 'gdal',
-          run: 'ogr2ogr -f GeoJSON /out/ogc/collections/buildings/items.json /work/buildings.geojson -lco RFC7946=YES -lco COORDINATE_PRECISION=7',
-        },
-      ],
-      outputs: [
-        { id: 'features', kind: 'geojson', path: 'ogc/collections/buildings/items.json', style: { height: 'height' }, label: 'GeoJSON (height 속성)', why: 'height 채운 GeoJSON. 뷰어가 height만큼 바닥면 돌출.' },
-      ],
-      viewers: {
-        ol: { unsupported: '2D 지도 — 건물 돌출 미지원.' },
-        maplibre: { output: 'features', note: 'fill-extrusion 레이어로 돌출.' },
-        deck: { output: 'features', note: 'GeoJsonLayer extruded 옵션으로 돌출.' },
-        cesium: { output: 'features', note: '다각형별 extrudedHeight로 돌출.' },
       },
-    },
+      {
+        id: 'mago',
+        title: 'mago 3DTiler',
+        preprocess,
+        convert: [
+          {
+            title: 'mago 입력 정리',
+            why: '-explodecollections: MultiPolygon → 다각형 단위(mago가 MultiPolygon 건너뜀). -select height: 높이만 남김(속성 복잡 시 실패 방지).',
+            tool: 'gdal',
+            run: 'ogr2ogr -f GeoJSON /work/mago_raw.geojson /work/buildings.geojson -explodecollections -select height',
+          },
+          {
+            title: '작은 구멍 메우기',
+            why: '수 ㎡ 구멍(채광창 등) → mago 벽 생성 실패·전체 중단. 10㎡ 미만 구멍만 메움, 큰 안뜰은 유지.',
+            tool: 'python',
+            run: 'python /scripts/fill_holes.py /work/mago_raw.geojson /work/mago.geojson 10',
+          },
+          {
+            title: '3D Tiles 생성 (높이 돌출)',
+            why: '-hc height: 바닥면을 height만큼 돌출한 메시 → 타일 분할. -c 4326: 입력 좌표계. -q 없음: 진행 로그를 실시간 출력으로.',
+            tool: 'mago-3d-tiler',
+            run: 'mkdir -p /work/in && cp /work/mago.geojson /work/in/ && mago-3d-tiler -i /work/in -o /out/tiles -it geojson -c 4326 -hc height -tv 1.0',
+          },
+        ],
+        outputs: [
+          { id: 'tiles', kind: '3dtiles', path: 'tiles/tileset.json', label: '3D Tiles (b3dm)', why: '건물 메시를 미리 만든 타일. 수십만 동도 보이는 영역만 요청.' },
+        ],
+        viewers: { ...no3dTiles, deck: { output: 'tiles' }, cesium: { output: 'tiles' } },
+      },
+      ...serverRecipes({ category: 'vector-25d', layer: UPLOAD_LAYER, preprocess, work: '/work/buildings.geojson', geom: 'polygon', height: 'height' }),
+    ],
   }
 }

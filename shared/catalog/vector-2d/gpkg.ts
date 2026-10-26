@@ -1,6 +1,6 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { vectorRecipe, vectorUpload } from './_vector.ts'
+import { geopandasRecipe, vectorRecipe, vectorUpload } from './_vector.ts'
 
 const RAW = '/raw/hrdk_test_sites.gpkg'
 const LAYER = '국가기술자격시험장소_GIS'
@@ -72,13 +72,23 @@ export default {
       // 같은 시험장 행이 원본에 중복 → 이름·주소·사용 횟수 조합
       key: 'name || address || uses',
       preprocess,
+      bounds: [124.676, 33.246, 129.566, 38.441],
+    }),
+    geopandasRecipe({
+      layer: 'sites',
+      check: {
+        why: 'list_layers: 레이어 이름·도형 종류. read_info: 좌표계·피처 수·필드 (한글·공백·괄호 필드명).',
+        code: `print(pyogrio.list_layers('${RAW}'))\ninfo = pyogrio.read_info('${RAW}')\nprint(info['crs'], info['features'], list(info['fields']))`,
+      },
+      tidy: {
+        title: '속성 정리',
+        why: 'read_file: 레이어 하나 → 이름 없이 읽기. rename: 한글 필드명 → name·address·uses (공백 포함 이름도 그대로 키). 좌표 중복 필드·우편번호 제외. 이미 위경도 → 좌표계 변환 없음.',
+        code: `df = gpd.read_file('${RAW}')\ndf = df.rename(columns={'시험장': 'name', '도로명 주소': 'address', '기술자격사용횟수': 'uses'})[['name', 'address', 'uses', 'geometry']]`,
+      },
     }),
     ...serverRecipes({ category: 'vector-2d', layer: 'sites', preprocess, work: '/work/sites.gpkg', geom: 'point', bounds: [124.67, 33.24, 129.57, 38.45] }),
   ],
-  alternatives: [
-    { tool: 'geopandas', cmd: "gpd.read_file('hrdk_test_sites.gpkg')", note: '레이어 하나면 이름 없이 읽기.' },
-    { tool: 'postgis', cmd: 'ogr2ogr -f PostgreSQL PG:dbname=gis hrdk_test_sites.gpkg', note: '모든 레이어 → DB 테이블 일괄 이전.' },
-  ],
+  alternatives: [],
   upload: vectorUpload({ accept: ['.gpkg'], note: '레이어가 여러 개면 하나로 병합.' }),
   view: { center: [127.8, 36.3], zoom: 6.6 },
 } satisfies FormatSpec

@@ -34,6 +34,8 @@ export function modelSpec(f: ModelFormat): FormatSpec {
     tool: 'python',
     run: 'mkdir -p /work/src && case $INPUT in *.zip) python /scripts/unpack.py $INPUT .gltf /work/src ;; *) cp $INPUT /work/src/ ;; esac',
   }
+  // 올린 모델 공통 전처리: (.gltf zip이면 풀기) + 구성 확인
+  const uploadInspect: Step[] = [...(gltf ? [unpack] : []), { ...inspect, run: `gltf-transform inspect ${src} --format md` }]
   const no2d = {
     ol: { unsupported: '2D 지도 — 3D 모델 미지원.' },
     maplibre: { unsupported: 'glTF·3D Tiles 기본 레이어 없음 → three.js 등 별도 라이브러리 필요.' },
@@ -102,19 +104,15 @@ export function modelSpec(f: ModelFormat): FormatSpec {
         viewers: { ...no2d, deck: { output: 'tiles' }, cesium: { output: 'tiles' } },
       },
     ],
-    alternatives: [
-      { tool: 'assimp', cmd: 'assimp export model.fbx model.glb -fglb2', note: 'FBX·OBJ 등 다른 모델 → glb 사전 변환.' },
-      { tool: 'obj2gltf', cmd: 'npx obj2gltf -i model.obj -o model.glb', note: 'OBJ 전용 변환기.' },
-    ],
+    alternatives: [],
     upload: {
       accept: gltf ? ['.gltf', '.zip'] : ['.glb'],
       note: `${gltf ? '.bin·텍스처가 따로 있으면 .gltf와 함께 zip 하나로. ' : ''}지도 위치 없음 → 서울광장에 배치. 모델 단위: m.`,
-      recipe: {
-        id: 'upload',
-        title: '내 파일',
+      recipes: [{
+        id: '3d-tiles-tools',
+        title: 'glTF Transform + 3d-tiles-tools',
         preprocess: [
-          ...(gltf ? [unpack] : []),
-          { ...inspect, run: `gltf-transform inspect ${src} --format md` },
+          ...uploadInspect,
           {
             title: '웹용 glb 최적화',
             why: 'glb 1개로 정리. --compress meshopt: 형상 압축. --texture-compress webp: 텍스처 압축.',
@@ -135,7 +133,23 @@ export function modelSpec(f: ModelFormat): FormatSpec {
           { id: 'tiles', kind: '3dtiles', path: 'model/tileset.json', label: '3D Tiles (glb 감싸기)', why: '위치 내장 tileset.json. Cesium용.' },
         ],
         viewers: { ...no2d, deck: { output: 'glb' }, cesium: { output: 'tiles' } },
-      },
+      }, {
+        id: 'mago',
+        title: 'mago 3DTiler',
+        preprocess: uploadInspect,
+        convert: [
+          {
+            title: '위치 지정 3D Tiles 생성',
+            why: '샘플 mago 레시피와 동일. -lon·-lat: 서울광장. 단순화 단계(LOD)별 b3dm 타일. -rx -90: glTF Y-위 → X축 -90° 회전. 내부 Assimp가 meshopt 압축 glb 미지원 → 올린 파일 그대로 입력(이미 meshopt 압축된 파일이면 실패). -q 없음: 진행 로그를 실시간 출력으로.',
+            tool: 'mago-3d-tiler',
+            run: `mkdir -p /work/in && ${gltf ? 'cp -r /work/src/. /work/in/' : 'cp $INPUT /work/in/model.glb'} && mago-3d-tiler -i /work/in -o /out/tiles -it ${f.id} -lon ${ANCHOR[0]} -lat ${ANCHOR[1]} -rx -90 -tv 1.0`,
+          },
+        ],
+        outputs: [
+          { id: 'tiles', kind: '3dtiles', path: 'tiles/tileset.json', label: '3D Tiles (b3dm, LOD)', why: '멀리서 단순 모델, 가까이서 원본 모델. Deck.gl·Cesium용.' },
+        ],
+        viewers: { ...no2d, deck: { output: 'tiles' }, cesium: { output: 'tiles' } },
+      }],
     },
     view: { center: [126.9779, 37.5663], zoom: 18.2, pitch: 65, bearing: 30 },
   }

@@ -25,20 +25,19 @@ export default defineNuxtConfig({
     // 파일을 추가·삭제하면 개발 서버를 다시 띄워 목록을 새로 만든다 (Vite 감시가 shared/를 보지 않는다)
     (_options, nuxt) => {
       const dir = fileURLToPath(new URL('./shared/catalog', import.meta.url))
-      nuxt.options.build.templates.push({
-        filename: 'catalog-formats.ts',
-        write: true,
-        getContents: () => {
-          const files = readdirSync(dir, { recursive: true, encoding: 'utf8' })
-            .map(f => f.replaceAll('\\', '/'))
-            .filter(f => /^[^/]+\/[^_/][^/]*\.ts$/.test(f))
-            .sort()
-          return [
-            ...files.map((f, i) => `import f${i} from ${JSON.stringify(`${dir.replaceAll('\\', '/')}/${f}`)}`),
-            `export default [${files.map((_, i) => `f${i}`).join(', ')}]`,
-          ].join('\n')
-        },
-      })
+      const getContents = () => {
+        const files = readdirSync(dir, { recursive: true, encoding: 'utf8' })
+          .map(f => f.replaceAll('\\', '/'))
+          .filter(f => /^[^/]+\/[^_/][^/]*\.ts$/.test(f))
+          .sort()
+        return [
+          ...files.map((f, i) => `import f${i} from ${JSON.stringify(`${dir.replaceAll('\\', '/')}/${f}`)}`),
+          `export default [${files.map((_, i) => `f${i}`).join(', ')}]`,
+        ].join('\n')
+      }
+      nuxt.options.build.templates.push({ filename: 'catalog-formats.ts', write: true, getContents })
+      // 서버(Nitro)는 #build 별칭을 쓸 수 없다 → 같은 목록을 가상 모듈 #catalog-formats로 (MCP·업로드 판별)
+      nuxt.hook('nitro:config', config => { config.virtual = { ...config.virtual, '#catalog-formats': getContents } })
       nuxt.hook('vite:serverCreated', (server, { isClient }) => {
         if (!isClient) return
         server.watcher.add(dir)
@@ -48,7 +47,11 @@ export default defineNuxtConfig({
       })
     },
   ],
-  nitro: { prerender: { crawlLinks: true, routes: ['/'] } },
+  nitro: {
+    prerender: { crawlLinks: true, routes: ['/'] },
+    // MCP App 화면에 SDK를 통째로 넣는다 (CDN 없이 뜨게). 설치된 버전 그대로 → useStorage('assets:mcp-sdk')
+    serverAssets: [{ baseName: 'mcp-sdk', dir: fileURLToPath(new URL('./node_modules/@modelcontextprotocol/ext-apps/dist/src', import.meta.url)), pattern: 'app-with-deps.js' }],
+  },
   // 서비스 레시피의 서버(compose.yaml)를 같은 주소 아래로 연다: /svc/<도구 id>/** → endpoint
   // ponytail: 주소는 빌드 때 고정 (127.0.0.1). 서버를 다른 호스트에 두면 endpoint를 환경 변수로
   routeRules: Object.fromEntries(tools.filter(t => t.endpoint).map(t => [`/svc/${t.id}/**`, { proxy: `${t.endpoint}/**` }])),

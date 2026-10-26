@@ -98,11 +98,6 @@ h2 .chip-dot { width: 12px; height: 12px; background: var(--c); }
 .closed .pick { color: var(--ink-2); }
 .closed .pill { filter: grayscale(1); opacity: 0.7; }
 .name { min-width: 0; font-weight: 500; }
-.help {
-  flex: none; width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface);
-  color: var(--ink-2); font: inherit; font-size: 0.75rem; font-weight: 700; line-height: 1; cursor: help;
-}
-.help:hover, .help:focus-visible { border-color: var(--ink); color: var(--ink); }
 .state { margin-left: auto; }
 .tip {
   position: fixed; z-index: 1; margin: 0; padding: 12px 14px; display: grid; gap: 6px;

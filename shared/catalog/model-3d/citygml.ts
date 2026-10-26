@@ -156,9 +156,9 @@ export default {
   upload: {
     accept: ['.gml', '.citygml'],
     note: 'CityGML 1.0·2.0 파일 1개. 좌표계(srsName) 기준 제자리 배치. 텍스처 미사용.',
-    recipe: {
-      id: 'upload',
-      title: '내 파일',
+    recipes: [{
+      id: 'mago',
+      title: 'mago 3DTiler',
       preprocess: [
         { ...stats, why: '도시 객체 종류·개수, 좌표계, LOD.', run: "citygml-tools stats --no-json-report $INPUT | grep -v '^\\['" },
         {
@@ -171,16 +171,16 @@ export default {
       convert: [
         {
           title: 'CityGML → 3D Tiles 직접 생성',
-          why: '샘플 mago 레시피와 동일. 좌표계 옵션: 앞 단계 결과. input.gml: mago가 .gml 확장자만 인식.',
+          why: '샘플 mago 레시피와 동일. 좌표계 옵션: 앞 단계 결과. input.gml: mago가 .gml 확장자만 인식. -q 없음: 진행 로그를 실시간 출력으로.',
           tool: 'mago-3d-tiler',
-          run: 'mkdir -p /work/in && cp $INPUT /work/in/input.gml && mago-3d-tiler -i /work/in -o /out/tiles -it citygml $(cat /work/mago_args) -tv 1.0 -q',
+          run: 'mkdir -p /work/in && cp $INPUT /work/in/input.gml && mago-3d-tiler -i /work/in -o /out/tiles -it citygml $(cat /work/mago_args) -tv 1.0',
         },
       ],
       outputs: [
         { id: 'tiles', kind: '3dtiles', path: 'tiles/tileset.json', label: '3D Tiles (b3dm)', why: '파일 좌표 그대로 배치. Deck.gl·Cesium용.' },
       ],
       viewers: { ...no2d, deck: { output: 'tiles' }, cesium: { output: 'tiles' } },
-    },
+    }],
   },
   view: { center: [139.7666, 35.6812], zoom: 16.4, pitch: 60, bearing: -25, basemap: 'osm' },
   noDomestic: '국내 CityGML 공개 원본 없음. VWorld 3D 건물은 공개제한.',
