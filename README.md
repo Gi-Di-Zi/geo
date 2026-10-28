@@ -2,6 +2,95 @@
 
 공간 데이터 유형·확장자별 웹 처리 과정 정리 사이트. 확장자마다 실제 공개 원본을 받아 수집 → 전처리 → 웹 형태 변환을 Docker로 돌리고, 결과를 시각화·렌더링 단계에서 웹 렌더러 4종(OpenLayers·MapLibre·MapLibre + Deck.gl·CesiumJS)과 엔진(Cesium for Unreal)으로 확인.
 
+![홈: 유형별 노선도 — 수집 → 전처리 → 웹 형태 변환(파일·서버·엔진) → 시각화·렌더링](docs/images/home.jpg)
+
+- **왜:** 공간 데이터는 형식마다 웹에 올리는 길(GeoJSON·벡터타일·COG·3D Tiles·지도 서버 …)과 도구가 다르고, 자료는 흩어져 있거나 예제 데이터 기준. 실제 공개 원본으로 끝까지 돌려 명령·로그·측정값까지 기록.
+- **규모:** 8개 유형 · 26개 확장자 · 레시피 71개 전부 실행 성공 · 도구 44개 · 수급처 59곳. 3D Tiles·지형 결과 11개는 Cesium for Unreal로도 확인.
+- **내 파일:** 파일을 넣으면 내용까지 읽어 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 같은 처리를 AI 대화 안에서도 (MCP).
+
+## 화면
+
+| | |
+|---|---|
+| ![전처리](docs/images/preprocess.jpg) | ![웹 형태 변환](docs/images/convert.jpg) |
+| 전처리: 단계별 실제 명령, 옵션마다 이유, 실행 결과 | 웹 형태 변환: 파일·서버 방식과 도구, 걸린 시간·용량·실행 환경 |
+| ![시각화·렌더링 웹](docs/images/view-citygml.jpg) | ![시각화·렌더링 엔진](docs/images/engine-citygml.jpg) |
+| PLATEAU 도쿄역 CityGML → 3D Tiles, MapLibre + Deck.gl | 같은 도쿄역 3D Tiles(mago 레시피)를 Cesium for Unreal로 |
+| ![업로드 형식 판별](docs/images/upload.jpg) | ![점군](docs/images/view-las.jpg) |
+| 업로드: 확장자 + 내용(밴드·비트·타일 구조)으로 판별, 후보 비교 | 국립공원공단 치악산 둘레길 LAS → 3D Tiles |
+
+## 구조
+
+```mermaid
+flowchart LR
+  spec["shared/catalog<br/>확장자 spec = 단계별 실제 명령"] --> pipe["scripts/pipeline.ts"]
+  up["내 파일 업로드 · MCP /mcp"] --> api["Nitro API /api/jobs"] --> pipe
+  pipe -- "단계마다 docker run" --> tools["도구 이미지<br/>GDAL · PDAL · tippecanoe · mago · py3dtiles · 3d-tiles-tools · IfcConvert …"]
+  tools --> files["public/data<br/>결과 파일 + report.json (명령·로그·시간)"]
+  tools --> svc["PostGIS · GeoServer · martin<br/>(docker compose)"]
+  files --> site["Nuxt 사이트"]
+  svc -- "/svc 프록시" --> site
+  site --> web["OpenLayers · MapLibre · Deck.gl · CesiumJS"]
+  files --> ue["scripts/unreal.ts<br/>Cesium for Unreal (스크린샷 · Pixel Streaming)"]
+```
+
+- 사이트: Nuxt 4 (Vue 3, TypeScript), Nitro 서버 API, plain CSS
+- 웹 렌더러: OpenLayers 10, MapLibre GL 6, deck.gl 9 + loaders.gl, CesiumJS 1.146
+- 엔진: Unreal Engine 5.8 + Cesium for Unreal (C++ 게임 모드), Pixel Streaming 2
+- 처리: Node 22 스크립트(빌드 없이 타입 제거 실행) + 버전 고정 Docker 도구 이미지, Python 보조 스크립트
+- 서버: PostGIS 18, GeoServer 3.0, martin 1.16 (Docker Compose)
+- AI: MCP TypeScript SDK + MCP Apps (대화 안 화면)
+
+## 대표 사례
+
+실행 기록(`report.json`) 수치. Ryzen 7 7700 · Docker Desktop(Windows), 도구 이미지 받아 둔 상태, 시간 = 단계 컨테이너 실행 시간 합.
+
+**1. 같은 CSV, 방식 4가지** — 국토교통부 전국 버스정류장(22만 행, CP949) 중 서울BIS 12,956개 점
+
+| 방식 · 도구 | 걸린 시간 | 결과 | 응답 (첫 요청 / 다시) |
+|---|---|---|---|
+| 파일 · GDAL (GeoJSON + MVT) | 66.4초 (MVT 분할 52.2초) | 5.5MB, 파일 496개 | — |
+| 파일 · GeoPandas (GeoJSON) | 4.5초 | 2.3MB, 파일 1개 | — |
+| 서버 · GeoServer (WMS·WMTS·WFS) | 15.4초 (적재·발행) | — | WMTS 36 / 4ms, WFS 141 / 150ms |
+| 서버 · martin (MVT) | 13.3초 (적재) | — | 타일 31 / 3ms |
+
+- 이 규모(점 1.3만)는 GeoJSON 하나가 가장 빠르고 단순. MVT는 줌별 타일 굽기가 시간 대부분.
+- 타일 전후 피처 수 검사: 줌 11~14 모두 12,956개 유지, 타일 경계에 걸쳐 나뉜 조각 6~8개.
+- 원본 검사: 좌표 이상 행(대전 5·세종 6·제주 1), 경기BIS가 함께 관리하는 서울 정류장 4,024개 중 3,844개가 서울BIS와 같은 단축번호 → 서울BIS만 사용.
+
+**2. 점군 3D Tiles, 도구 2가지** — 국립공원공단 치악산 둘레길 LAS 675,472점 (EPSG:5187)
+
+| 도구 | 걸린 시간 (변환 단계) | 결과 |
+|---|---|---|
+| mago-3d-tiler | 94.5초 (90.6초) | 8.4MB, 파일 91개 |
+| py3dtiles | 17.7초 (12.8초) | 9.8MB, 파일 123개 |
+
+- 업로드 제한(CPU 2·메모리 4GB)에서 mago는 720만 점에 885초 → 약 1,000만 점부터 단계당 20분 제한 → 큰 점군은 py3dtiles 안내.
+
+**3. CityGML → 3D Tiles, 경로 3가지** — PLATEAU 도쿄역 일대
+
+| 경로 | 걸린 시간 | 결과 |
+|---|---|---|
+| mago-3d-tiler (CityGML 직접) | 25.3초 | 3.3MB, 파일 169개 |
+| 3DCityDB 적재 → pg2b3dm | 9.1초 | 2.9MB, 파일 3개 |
+| citygml-tools → cjio → glb → 3d-tiles-tools | 24.2초 | 0.1MB (85동을 메시 하나로 압축, 건물별 속성 없음) |
+
+- 함정: EPSG:6697 = 위도 먼저 + 높이 포함. mago에 `-c 6668 -fc`가 없으면 건물이 바다 위로 (아래 "문제 해결 기록").
+
+## 문제 해결 기록
+
+| 문제 | 원인 | 해결 |
+|---|---|---|
+| Deck.gl 3D Tiles가 지도를 움직이기 전까지 안 보임 | deck.gl 9.4.0 Tile3DLayer: tileset.json이 첫 화면보다 늦게 오면 이미 비운 뷰포트로 타일을 고르고 끝남 | 뷰포트가 비었으면 마지막 뷰포트로 고르게 패치 ([ViewerDeck.client.vue](app/components/viewers/ViewerDeck.client.vue#L4)) |
+| 메모리 4GB 컨테이너에서 mago(Java) 메모리 부족 | JVM 기본 최대 힙 = 메모리의 1/4 | `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75` ([pipeline.ts](scripts/pipeline.ts#L92)) |
+| 북한산 DEM이 Terrain-RGB로 바꾸면 −9,314m | Int16 높이에 `(A+10000)×10` → 16비트 넘침 | 재투영 때 `-ot Float32` 먼저 ([_dem.ts](shared/catalog/terrain/_dem.ts#L67)) |
+| PLATEAU 건물이 바다 위에 | EPSG:6697: 위도 먼저 + 높이 포함 좌표계, proj4j 미지원 | 수평 좌표계 `-c 6668` + 축 교환 `-fc`, 파일별 판별 ([citygml_crs.py](pipeline/scripts/citygml_crs.py)) |
+| `.cpg` 없는 SHP 한글 깨짐 | 인코딩 정보 없음. UTF-8을 CP949로 읽으면 한자처럼 "성공"해 오판 | UTF-8 방향만 읽어 오류율로 판별 (CP949는 거의 모든 글자 오류) ([shp_unpack.py](pipeline/scripts/shp_unpack.py#L34)) |
+| 실행할수록 디스크가 줄어듦 | postgis 이미지의 `VOLUME` 선언 → DB 컨테이너를 지울 때마다 익명 볼륨 약 240MB 남음 (약 100개) | `docker rm -f -v` ([pipeline.ts](scripts/pipeline.ts#L57)) |
+| Claude Desktop 대화 안 화면에서 지도·내려받기 막힘 | MCP Apps 화면: frame·링크 열기는 https 공개 주소만, 직접 저장 불가 (앱 로그로 확인) | localhost면 지도 자리에 안내, 내려받기는 호스트 `downloadFile`로 넘김 ([mcp-app.html](server/assets/mcp-app.html#L135)) |
+
+그 밖의 시행착오: 각 단계의 `why`(사이트 단계 설명)와 [scripts/check.ts](scripts/check.ts) 주석.
+
 ## 처음 설치 (다른 PC에서 받아 돌리기)
 
 Windows 기준. Docker만 있으면 macOS·Linux도 데이터·사이트는 같음 (엔진 렌더러만 Windows 전용).
@@ -206,7 +295,7 @@ AI(Claude 등)가 공간 데이터 파일을 받아 판별 → 형식·방식 �
   - 내려받기 `/api/jobs/<작업>/download/<출력 id>`: 파일 하나는 그대로(`attachment`, GeoJSON은 `.geojson`), 타일 `{z}/{x}/{y}`·3D Tiles·지형은 폴더째 zip으로 흘려 보냄(archiver, ZIP64). 규칙은 `shared/catalog/delivery.ts`의 `downloadOf`
   - 결과 파일·서비스(GeoServer·martin 레이어, DB 표)는 24시간 보관 → 결과 화면과 `geo_status` 글에 지워지는 시각 표시
   - 엔진 실시간 보기(`geo_engine`): 위 "엔진 렌더러"
-- 연결 (사이트 `/ai`에 같은 안내, 주소는 그 화면을 연 주소 기준). 터미널 = 같은 PC에서 지금, 글만 / 웹 = 공개 https 배포 후, 대화 안 화면
+- 연결 (사이트 `/ai`에 같은 안내, 주소는 그 화면을 연 주소 기준). 터미널 = 같은 PC에서 지금, 글만 / 웹 = 공개 https 배포 후, 대화 안 화면. 직접 확인: Claude Desktop(대화 안 화면)·Claude Code, 나머지 미검증
   - Claude Code: `claude mcp add --transport http geo http://localhost:3000/mcp`
   - Codex CLI: `codex mcp add geo --url http://localhost:3000/mcp` (`~/.codex/config.toml`의 `[mcp_servers.geo]`)
   - claude.ai: Customize > Connectors > Add custom connector, Authentication "No sign in". Anthropic 클라우드에서 접속
@@ -233,3 +322,7 @@ AI(Claude 등)가 공간 데이터 파일을 받아 판별 → 형식·방식 �
 - 원본 50MB 이하만 사이트에 게시, 파일 7개 이상이면 `raw.zip` 하나로.
 - 중간 파일(`pipeline/work`)은 레시피가 성공하면 삭제, 실패하면 남김(원인 확인용).
 - 시행착오 기록: 각 단계 `why`, 그리고 `scripts/check.ts` 주석.
+
+## 라이선스
+
+코드는 [MIT](LICENSE). 샘플 원본·변환 결과는 저장소에 없음(`npm run setup`으로 받음), 각 출처 라이선스를 따름 — 확장자별 수집 단계와 `/sources`.
