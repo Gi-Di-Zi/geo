@@ -11,15 +11,16 @@ maplibregl.addProtocol('pmtiles', new Protocol({ metadata: true }).tile)
 /** 지형 높이를 과장하는 배율. MapLibre, Deck.gl, Cesium이 같은 값을 써서 나란히 비교한다 */
 export const EXAGGERATION = 1.5
 
+type BaseTiles = { url: string; minzoom: number; maxzoom: number; attribution: string }
+const baseSource = (t: BaseTiles): maplibregl.RasterSourceSpecification =>
+  ({ type: 'raster', tiles: [t.url], tileSize: 256, minzoom: t.minzoom, maxzoom: t.maxzoom, attribution: t.attribution })
+const baseLayer = (): maplibregl.RasterLayerSpecification => ({ id: 'base', type: 'raster', source: 'base', paint: { 'raster-saturation': -0.75 } })
+
 /** MapLibre 뷰어와 Deck.gl 뷰어가 같이 쓰는 배경지도 + 카메라 연결 */
-export function createBaseMap(container: HTMLElement, tiles: { url: string; minzoom: number; maxzoom: number; attribution: string }, c: Camera) {
+export function createBaseMap(container: HTMLElement, tiles: BaseTiles, c: Camera) {
   return new maplibregl.Map({
     container,
-    style: {
-      version: 8,
-      sources: { base: { type: 'raster', tiles: [tiles.url], tileSize: 256, minzoom: tiles.minzoom, maxzoom: tiles.maxzoom, attribution: tiles.attribution } },
-      layers: [{ id: 'base', type: 'raster', source: 'base', paint: { 'raster-saturation': -0.75 } }],
-    },
+    style: { version: 8, sources: { base: baseSource(tiles) }, layers: [baseLayer()] },
     center: [c.lon, c.lat],
     zoom: c.zoom,
     bearing: c.bearing,
@@ -40,5 +41,11 @@ export const cameraOf = (map: maplibregl.Map) => {
 export const jumpTo = (map: maplibregl.Map, c: Camera) =>
   map.jumpTo({ center: [c.lon, c.lat], zoom: c.zoom, bearing: c.bearing, pitch: c.pitch, ...(c.height ? { elevation: c.height } : {}) })
 
-export const setBaseTiles = (map: maplibregl.Map, url: string) =>
-  (map.getSource('base') as maplibregl.RasterTileSource | undefined)?.setTiles([url])
+/** 배경지도 바꾸기. 주소만 바꾸면(setTiles) 출처 표기·줌 범위(VWorld 6~, OSM 0~)가 처음 것으로 남아 소스째 바꾸고 맨 아래에 다시 넣는다.
+ *  맨 아래 = getLayersOrder()[0] (getStyle().layers에는 Deck.gl 사용자 레이어가 빠져 배경이 데이터를 덮는다) */
+export function setBaseTiles(map: maplibregl.Map, t: BaseTiles) {
+  map.removeLayer('base')
+  map.removeSource('base')
+  map.addSource('base', baseSource(t))
+  map.addLayer(baseLayer(), map.getLayersOrder()[0])
+}

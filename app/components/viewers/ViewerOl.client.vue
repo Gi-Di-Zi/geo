@@ -95,7 +95,7 @@ onMounted(() => {
     const { geometry, ...rest } = (f?.getProperties() ?? {}) as Record<string, unknown>
     emit('pick', f ? rest : null)
   })
-  watch(tiles, t => base.setUrl(t.url))
+  watch(tiles, t => { base.setUrl(t.url); base.setAttributions(t.attribution) })
 })
 
 onBeforeUnmount(() => map?.setTarget(undefined))

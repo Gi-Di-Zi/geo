@@ -90,7 +90,7 @@ onMounted(() => {
   })
   watchInput(el.value!)
   m.on('moveend', () => emitCamera(cameraOf(m)))
-  watch(tiles, t => setBaseTiles(m, t.url))
+  watch(tiles, t => setBaseTiles(m, t))
 })
 
 onBeforeUnmount(() => map?.remove())
