@@ -44,6 +44,7 @@ const glyphs: Record<string, string> = {
           <h2 id="mine-title">내 파일로 해 보기</h2>
           <p class="small muted">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도.</p>
           <NuxtLink to="/upload" class="btn mine-go">파일 올리러 가기 →</NuxtLink>
+          <p class="small muted">Claude·ChatGPT 대화 안에서도 같은 처리: <NuxtLink to="/ai">AI 연결(MCP)</NuxtLink></p>
         </section>
       </div>
       <p class="small muted start">노선·유형 카드 클릭 → 확장자 선택</p>

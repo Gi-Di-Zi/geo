@@ -37,6 +37,7 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 | `app/pages/[category]/[format]/[[step]].vue` | 확장자 4단계: 수집(`/유형/확장자`), 전처리(`/preprocess`), 웹 형태 변환(`/convert`), 시각화·렌더링(`/view`) |
 | `app/pages/sources.vue` | 데이터 받는 곳: 국내·해외·개인·커뮤니티 다운로드 사이트 모음 |
 | `app/pages/tools`, `status`, `concepts` | 뷰어·도구, 현황, 개념 |
+| `app/pages/ai.vue` | AI 연결(MCP) 안내: 연결 주소, 클라이언트별 설정(이 화면을 연 주소 기준), 도구, 한계 (아래 "MCP") |
 | `app/components/viewers/` | 웹 렌더러 4종. 결과물 종류(`OutputKind`)별 로딩 코드 |
 | `shared/catalog/<유형>/<확장자>.ts` | 확장자 spec 하나 = 확장자 하나 (`_`로 시작하는 파일은 spec 만드는 도우미) |
 | `shared/catalog/sources.ts`, `tools.ts`, `origins.ts`, `terms.ts` | 수급처(`scope`: 국내·해외·개인), 도구, 확장자 출신(표준/회사), 용어 |
@@ -205,14 +206,12 @@ AI(Claude 등)가 공간 데이터 파일을 받아 판별 → 형식·방식 �
   - 내려받기 `/api/jobs/<작업>/download/<출력 id>`: 파일 하나는 그대로(`attachment`, GeoJSON은 `.geojson`), 타일 `{z}/{x}/{y}`·3D Tiles·지형은 폴더째 zip으로 흘려 보냄(archiver, ZIP64). 규칙은 `shared/catalog/delivery.ts`의 `downloadOf`
   - 결과 파일·서비스(GeoServer·martin 레이어, DB 표)는 24시간 보관 → 결과 화면과 `geo_status` 글에 지워지는 시각 표시
   - 엔진 실시간 보기(`geo_engine`): 위 "엔진 렌더러"
-- 연결
-  - Claude Desktop (같은 PC, 대화 안 화면까지): 설정 > Developer > Edit Config → 트레이에서 완전히 종료 후 다시 시작. Windows는 `npx`가 `.cmd`라 `cmd /c`로 감싼다.
-
-    ```json
-    { "mcpServers": { "geo": { "command": "cmd", "args": ["/c", "npx", "-y", "mcp-remote@0.15.2", "http://localhost:3000/mcp"] } } }
-    ```
-  - Claude Code (글만, 화면 없음): `claude mcp add --transport http geo http://localhost:3000/mcp`
-  - claude.ai 웹·앱: Anthropic 클라우드에서 접속 → 공인 HTTPS 주소 + 인증 필요 (서버 PC 배포 때)
+- 연결 (사이트 `/ai`에 같은 안내, 주소는 그 화면을 연 주소 기준). 터미널 = 같은 PC에서 지금, 글만 / 웹 = 공개 https 배포 후, 대화 안 화면
+  - Claude Code: `claude mcp add --transport http geo http://localhost:3000/mcp`
+  - Codex CLI: `codex mcp add geo --url http://localhost:3000/mcp` (`~/.codex/config.toml`의 `[mcp_servers.geo]`)
+  - claude.ai: Customize > Connectors > Add custom connector, Authentication "No sign in". Anthropic 클라우드에서 접속
+  - ChatGPT: chatgpt.com/plugins > Add custom MCP server (공개 https, 또는 Secure MCP Tunnel)
+  - Claude Desktop (확인용): `claude_desktop_config.json`에 `{ "mcpServers": { "geo": { "command": "cmd", "args": ["/c", "npx", "-y", "mcp-remote@0.15.2", "http://localhost:3000/mcp"] } } }` → 트레이에서 완전히 종료 후 다시 시작. Windows는 `npx`가 `.cmd`라 `cmd /c`
 - Claude Desktop 대화 화면 규칙 (로그 `%LOCALAPPDATA%\Claude\Logs\claude.ai-web.log`로 확인):
   - frame(결과 지도)·링크 열기는 https 공개 주소만 (`http://localhost`, IP, 점 없는 이름, `.internal` 같은 내부망 이름 거절) → localhost에서는 지도 자리에 안내, 링크 버튼은 주소 복사로 대신
   - 서버로 바로 올리기·받기(connect)는 `http://localhost`도 됨 → 내려받기는 화면이 받아 호스트의 `downloadFile`로 넘김 (100MB 넘으면 호스트가 직접 받게)

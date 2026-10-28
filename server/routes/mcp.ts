@@ -83,7 +83,7 @@ function buildServer(origin: string, localPaths: boolean) {
     }
     if (!args.url && !args.path) {
       return {
-        content: [{ type: 'text', text: '대화 안에 업로드 화면을 띄웠다. 사용자가 파일을 놓으면 화면에 판별 결과와 형식·방식 선택이 나온다. 사용자가 화면에서 변환을 시작하면 그 내용이 대화에 전달된다.' }],
+        content: [{ type: 'text', text: '대화 안에 업로드 화면을 띄웠다. 사용자가 파일을 놓으면 화면에 판별 결과와 형식·방식 선택이 나온다. 사용자가 화면에서 변환을 시작하면 그 내용이 대화에 전달된다. 화면을 띄울 수 없는 클라이언트(Claude Code·Codex 등 터미널)면 사용자에게 파일 링크나 이 PC 파일 경로를 받아 url·path로 다시.' }],
         structuredContent: { mode: 'upload', origin },
       }
     }

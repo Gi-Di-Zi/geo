@@ -113,7 +113,7 @@ function drop(e: DragEvent) {
     <main class="wrap body">
       <header class="head">
         <h1>내 파일로 해 보기</h1>
-        <p class="lead">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 최대 200MB, 결과는 24시간 뒤 삭제.</p>
+        <p class="lead">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 최대 200MB, 결과는 24시간 뒤 삭제. Claude·ChatGPT 대화 안에서도 같은 처리: <NuxtLink to="/ai">AI 연결(MCP)</NuxtLink>.</p>
       </header>
 
       <ol class="flow">
