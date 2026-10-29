@@ -126,6 +126,7 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 | `app/pages/[category]/[format]/[[step]].vue` | 확장자 4단계: 수집(`/유형/확장자`), 전처리(`/preprocess`), 웹 형태 변환(`/convert`), 시각화·렌더링(`/view`) |
 | `app/pages/sources.vue` | 데이터 받는 곳: 국내·해외·개인·커뮤니티 다운로드 사이트 모음 |
 | `app/pages/tools`, `status`, `concepts` | 뷰어·도구, 현황, 개념 |
+| `app/pages/why.vue`, `app/assets/why-data.json` | 처음이라면: 왜 전처리·변환이 필요한지 장면 6개(SVG·CSS 애니메이션, 화면에 들어오면 재생). 그림 좌표는 .fgb 샘플의 한국 윤곽 + 버스정류장 원본에서 뽑은 점 |
 | `app/pages/ai.vue` | AI 연결(MCP) 안내: 연결 주소, 클라이언트별 설정(이 화면을 연 주소 기준), 도구, 한계 (아래 "MCP") |
 | `app/components/viewers/` | 웹 렌더러 4종. 결과물 종류(`OutputKind`)별 로딩 코드 |
 | `shared/catalog/<유형>/<확장자>.ts` | 확장자 spec 하나 = 확장자 하나 (`_`로 시작하는 파일은 spec 만드는 도우미) |

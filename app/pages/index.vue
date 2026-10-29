@@ -53,6 +53,7 @@ const glyphs: Record<string, string> = {
             공간 데이터를 웹에서 그리기까지의 과정 정리. {{ categories.length }}개 유형·{{ openCount }}개 확장자마다 실제 공개 원본으로 수집 → 전처리 → 웹 형태 변환 → 시각화·렌더링.
             단계별 명령·로그·측정값은 Docker 실제 실행 기록.
           </p>
+          <NuxtLink to="/why" class="why">처음이라면: 왜 다듬고 바꾸나 — 그림으로 3분 →</NuxtLink>
         </div>
         <section class="mine" aria-labelledby="mine-title">
           <h2 id="mine-title">내 파일로 해 보기</h2>
@@ -99,6 +100,7 @@ const glyphs: Record<string, string> = {
 .mine-go:hover { background: #2A3540; }
 @media (max-width: 900px) { .top { grid-template-columns: minmax(0, 1fr); } }
 .lead { max-width: 52rem; margin-top: 6px; color: var(--ink-2); line-height: 1.6; }
+.why { display: inline-block; margin-top: 14px; font-weight: 600; }
 .start { margin-top: 6px; }
 .map { margin-top: 20px; }
 #types { padding-top: 40px; }
