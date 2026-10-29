@@ -15,7 +15,8 @@
     "unreal": "node scripts/unreal.ts",
     "pipeline": "node scripts/pipeline.ts",
     "services": "docker compose up -d --wait",
-    "check": "node scripts/check.ts"
+    "check": "node scripts/check.ts",
+    "thumbs": "node scripts/thumbs.ts"
   },
   "dependencies": {
     "@deck.gl/core": "~9.4.0",

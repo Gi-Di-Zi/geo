@@ -15,6 +15,20 @@ const picked = computed({
 const extsOf = (id: string) => [...new Set(formatsOf(id).filter(f => !f.closed).map(f => f.extensions[0]))]
 const openCount = formats.filter(f => !f.closed).length
 
+// 카드 그림: 유형마다 대표 샘플의 시각화·렌더링 화면 (npm run thumbs → public/thumbs/<유형>-<확장자>.webp)
+const thumbs: Record<string, [format: string, label: string]> = {
+  'vector-2d': ['shp', '서울 상권 영역'],
+  'vector-25d': ['shp', '과천 건물'],
+  'raster': ['cog', '서울 위성영상'],
+  'terrain': ['terrain', '마터호른 지형'],
+  'pointcloud': ['las', '치악산 둘레길'],
+  'model-3d': ['citygml', '도쿄역 건물'],
+  'indoor-bim': ['ifc', 'IFC 예제 건물'],
+  'attribute': ['csv', '서울 버스정류장'],
+}
+const thumbBase = `${useRuntimeConfig().app.baseURL}thumbs/`
+const cards = categories.map(c => ({ ...c, thumb: thumbs[c.id] }))
+
 // 유형마다 데이터 모양을 범례 기호처럼 그린 작은 그림 (viewBox 40×40)
 const glyphs: Record<string, string> = {
   'vector-2d': '<path class="f" d="M7 27 13 11l14-3 7 13-11 11z"/><path d="M4 35c9-6 18 1 32-6"/><circle class="d" cx="13" cy="11" r="2"/><circle class="d" cx="27" cy="8" r="2"/><circle class="d" cx="34" cy="21" r="2"/>',
@@ -52,10 +66,15 @@ const glyphs: Record<string, string> = {
     </section>
     <section id="types" class="wrap" aria-label="데이터 유형">
       <ul class="cards">
-        <li v-for="c in categories" :key="c.id" :style="{ '--c': c.color }">
+        <li v-for="c in cards" :key="c.id" :style="{ '--c': c.color }">
           <button type="button" class="card" :disabled="!extsOf(c.id).length" @click="picked = c.id">
-            <svg class="glyph" viewBox="0 0 40 40" aria-hidden="true" v-html="glyphs[c.id]" />
-            <span class="name">{{ c.name }}</span>
+            <span v-if="c.thumb" class="shot">
+              <img :src="`${thumbBase}${c.id}-${c.thumb[0]}.webp`" :alt="`${c.name} 예: ${c.thumb[1]}`" width="640" height="400" loading="lazy">
+            </span>
+            <span class="head">
+              <svg class="glyph" viewBox="0 0 40 40" aria-hidden="true" v-html="glyphs[c.id]" />
+              <span class="name">{{ c.name }}</span>
+            </span>
             <span class="summary">{{ c.summary }}</span>
             <span class="exts">
               <span v-for="e in extsOf(c.id)" :key="e" class="pill">{{ e }}</span>
@@ -64,6 +83,7 @@ const glyphs: Record<string, string> = {
           </button>
         </li>
       </ul>
+      <p class="small muted note">카드 그림: 각 유형 샘플을 이 사이트에서 실제로 변환해 그린 화면. 배경지도 © OpenStreetMap contributors.</p>
     </section>
     <FormatPicker :category="picked" @close="picked = ''" />
   </div>
@@ -82,16 +102,22 @@ const glyphs: Record<string, string> = {
 .start { margin-top: 6px; }
 .map { margin-top: 20px; }
 #types { padding-top: 40px; }
-.cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr)); gap: 14px; }
+.cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 14px; }
 .card {
-  width: 100%; height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; gap: 6px; text-align: left;
-  padding: 18px 18px 16px; font: inherit; color: var(--ink); cursor: pointer;
+  width: 100%; height: 100%; display: grid; grid-template-rows: auto auto auto 1fr; gap: 6px; text-align: left;
+  padding: 0 0 14px; overflow: hidden; font: inherit; color: var(--ink); cursor: pointer;
   background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
 }
 .card:hover:not(:disabled), .card:focus-visible { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 14%, transparent); }
 .card:disabled { cursor: default; opacity: 0.55; }
+.shot { position: relative; display: block; aspect-ratio: 2 / 1; overflow: hidden; margin-bottom: 6px; background: var(--stage); border-bottom: 1px solid var(--rule); }
+.shot img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+.card:hover:not(:disabled) .shot img { transform: scale(1.05); }
+@media (prefers-reduced-motion: reduce) { .shot img { transition: none; } }
+.head { display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+.note { margin-top: 10px; }
 .glyph {
-  width: 44px; height: 44px; padding: 4px; margin-bottom: 8px; border-radius: 10px;
+  flex: none; width: 30px; height: 30px; padding: 3px; border-radius: 8px;
   background: color-mix(in srgb, var(--c) 9%, var(--surface));
   fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round;
 }
@@ -101,7 +127,15 @@ const glyphs: Record<string, string> = {
 .glyph :deep(.d), .glyph :deep(.dots) { fill: var(--c); stroke: none; }
 .glyph :deep(.dash) { stroke-dasharray: 2 2.5; opacity: 0.7; }
 .name { font-size: var(--fs-2); font-weight: 700; letter-spacing: -0.01em; }
-.summary { color: var(--ink-2); font-size: var(--fs-0); line-height: 1.6; }
-.exts { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
-@media (max-width: 720px) { .map { display: none; } }
+.summary { padding: 0 16px; color: var(--ink-2); font-size: var(--fs-0); line-height: 1.6; }
+.exts { display: flex; flex-wrap: wrap; align-content: end; gap: 4px; padding: 4px 16px 0; }
+.exts .pill { padding: 0 7px; font-size: 0.72rem; }
+@media (max-width: 720px) {
+  .map { display: none; }
+  /* 휴대폰: 두 줄로 그림 위주, 설명은 확장자 선택 창에 */
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .summary, .glyph { display: none; }
+  .head, .exts { padding-inline: 10px; }
+  .card { padding-bottom: 10px; }
+}
 </style>

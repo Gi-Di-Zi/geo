@@ -135,6 +135,7 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 | `scripts/pipeline.ts` | 수집·전처리·변환 실행기. spec의 `run` 명령을 도구 이미지 안에서 그대로 실행하고 기록(report.json) 작성 |
 | `scripts/unreal.ts`, `pipeline/unreal/GeoRender/` | 엔진 렌더러: 3D Tiles·지형 결과를 Cesium for Unreal로 그려 `unreal.png`·`unreal.json`, 실시간 보기(`stream`) |
 | `scripts/check.ts` | 카탈로그·기록 검사 |
+| `scripts/thumbs.ts`, `public/thumbs/` | 홈 유형 카드 그림: 확장자마다 시각화 화면을 화면 없는 Chrome으로 찍은 WebP (배경 OSM) |
 | `pipeline/Dockerfile`, `pipeline/scripts/` | 로컬 도구 이미지(geo-web/tools), 단계용 보조 스크립트 |
 | `pipeline/raw/` | 받은 원본 (git 제외, `npm run setup`으로 생성) |
 | `public/data/` | 변환 결과·기록: `collect.json`, `<레시피>/report.json`·`unreal.json`, `status.json`, 내려받기용 `raw/`·`raw.zip` (git 제외) |
@@ -156,6 +157,7 @@ npm run unreal -- <유형>/<확장자>[/<레시피>] | all [--missing]   # 엔�
 npm run unreal -- stream <유형>/<확장자>[/<레시피>]   # 엔진 실시간 보기 (Pixel Streaming, Ctrl+C로 종료)
 npm run unreal -- stream --job .data/jobs/<작업 id>   # 업로드 작업 결과 실시간 보기 (보통 MCP geo_engine이 띄움)
 npm run check                                 # 검사
+npm run thumbs [-- <유형>/<확장자> …]          # 홈 카드 그림 다시 찍기 (개발 서버가 떠 있을 때, Chrome 필요)
 npm run services                              # 서버 띄우기 (서비스 레시피 실행 시 pipeline이 자동으로도 띄움)
 ```
 
