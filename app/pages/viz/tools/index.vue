@@ -42,7 +42,7 @@ useHead({ title: '뷰어와 변환 도구 | 공간 데이터 시각화 도구' }
         <p class="muted">{{ g.summary }}</p>
         <ul class="rows">
           <li v-for="t in g.items" :key="t.id">
-            <NuxtLink :to="`/tools/${t.id}`" class="row">
+            <NuxtLink :to="`/viz/tools/${t.id}`" class="row">
               <span class="name"><strong>{{ t.name }}</strong></span>
               <span class="muted">{{ t.summary }}</span>
               <span class="meta small">

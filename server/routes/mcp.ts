@@ -5,13 +5,17 @@ import { EXTENSION_ID, registerAppResource, registerAppTool, RESOURCE_MIME_TYPE 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { z } from 'zod'
+import { registerLinkTools } from '../mcp/link'
+import { readLimitedBody } from '../services/link/access'
+import { mcpLinkOwner } from '../services/link/mcp-access'
 
 const APP = 'ui://geo/app.html'
 
 const INSTRUCTIONS = `공간 데이터 파일(SHP·GeoJSON·CSV·GeoTIFF·DEM·LAS·glTF·IFC·CityGML·3D Tiles 등)을 웹 지도용으로 변환하고 결과 주소를 준다.
 순서: geo_identify(url 또는 path로 파일 지정. 둘 다 없으면 대화 안에 업로드 화면) → 판별 결과의 형식·방식(file = 결과 파일, server = GeoServer·martin 서비스 주소)을 사용자와 정함(화면에서 직접 고를 수도 있음) → geo_convert → geo_status로 진행 확인 → 지도 화면(view)·결과 내려받기 주소·서비스 주소 전달. 같은 파일을 다른 방식으로 다시: geo_convert의 stage에 이전 작업 id.
 3D Tiles·지형 결과는 엔진(Unreal) 실시간 보기도 됨: geo_engine → 플레이어 주소 (이 PC·사내망 브라우저).
-채팅에 첨부된 파일은 도구로 넘길 수 없음 → geo_identify를 인자 없이 불러 업로드 화면을 띄운다. 받는 형식 전체: geo_formats.`
+채팅에 첨부된 파일은 도구로 넘길 수 없음 → geo_identify를 인자 없이 불러 업로드 화면을 띄운다. 받는 형식 전체: geo_formats.
+국내 주소·코드는 PNU·법정동코드(pnu_legal), 행정동코드(administrative), 주소(address)를 구분해 geo_link_resolve로 변환한다. target으로 pnu/legal_region/administrative_region/address를 정한다. PNU 앞 2/5/8/10자리는 법정구역 접두코드이며 행정동을 의미하지 않는다. 행정동 관계가 복수이면 후보를 선택하고 실제 필지 관할을 임의 확정하지 않는다. 입력 화면은 인자 없는 geo_link_resolve. 파일 화면은 제외한다.`
 
 // MCP Apps SDK(app-with-deps.js, 외부 import 없는 한 파일): 끝의 export { 내부 이름 as 공개 이름, … }을 globalThis.McpApps 대입으로 바꿔 화면 HTML 안에 넣는다
 let sdk: Promise<string> | undefined
@@ -63,7 +67,7 @@ function engineText(e: Awaited<ReturnType<typeof engineInfo>>) {
   ].join('\n')
 }
 
-function buildServer(origin: string, localPaths: boolean) {
+function buildServer(origin: string, localPaths: boolean, owner: string) {
   const server = new McpServer({ name: 'geo-web', version: '1.0.0' }, { instructions: INSTRUCTIONS, capabilities: { extensions: { [EXTENSION_ID]: {} } } })
   const ui = { ui: { resourceUri: APP } }
 
@@ -170,10 +174,16 @@ function buildServer(origin: string, localPaths: boolean) {
       _meta: { ui: { csp: { connectDomains: [origin], frameDomains: [origin] }, permissions: { clipboardWrite: {} }, prefersBorder: true } },
     }] }
   })
+  registerLinkTools(server, origin, owner, appSdk)
   return server
 }
 
 export default defineEventHandler(async event => {
+  if (event.method === 'DELETE' && getHeader(event, 'mcp-session-id')) {
+    await mcpLinkOwner(event)
+    setResponseStatus(event, 204)
+    return ''
+  }
   if (event.method !== 'POST') {
     setResponseStatus(event, 405)
     return { jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed.' }, id: null }
@@ -184,9 +194,15 @@ export default defineEventHandler(async event => {
   const origin = (process.env.PUBLIC_URL || url.origin).replace(/\/$/, '')
   // 파일 경로 입력: 이 PC에서 띄운 서버에 이 PC가 요청할 때만. 개발 서버는 기본 허용, 그 밖은 MCP_LOCAL_PATHS=1
   const localPaths = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname) && (process.env.MCP_LOCAL_PATHS || (import.meta.dev ? '1' : '0')) === '1'
-  const server = buildServer(origin, localPaths)
+  let body: any
+  try { body = JSON.parse((await readLimitedBody(event, 2 * 1024 ** 2)).toString('utf8')) }
+  catch (error) {
+    if (error instanceof SyntaxError) return { jsonrpc: '2.0', error: { code: -32700, message: 'Parse error.' }, id: null }
+    throw error
+  }
+  const server = buildServer(origin, localPaths, await mcpLinkOwner(event, body?.method === 'initialize'))
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
   event.node.res.on('close', () => { transport.close(); server.close() })
   await server.connect(transport)
-  await transport.handleRequest(event.node.req, event.node.res, await readBody(event))
+  await transport.handleRequest(event.node.req, event.node.res, body)
 })

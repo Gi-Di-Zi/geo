@@ -47,7 +47,7 @@ useHead({ title: '데이터 받는 곳 | 공간 데이터 시각화 도구' })
             <div class="small">
               <template v-if="formatsFromSource(s.id).length">
                 <p v-for="u in formatsFromSource(s.id)" :key="u.format.category + u.format.id" :class="{ muted: u.format.closed }">
-                  <NuxtLink :to="`/${u.format.category}/${u.format.id}`">{{ u.format.extensions[0] }} {{ u.format.name }}</NuxtLink>
+                  <NuxtLink :to="`/viz/${u.format.category}/${u.format.id}`">{{ u.format.extensions[0] }} {{ u.format.name }}</NuxtLink>
                   <span v-if="u.used" class="sk use" :class="`sk-${sampleOf(u.format)}`" :title="sampleLabels[sampleOf(u.format)]">샘플</span>
                   <span v-else class="muted"> 다른 경로</span>
                 </p>

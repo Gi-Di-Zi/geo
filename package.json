@@ -16,7 +16,12 @@
     "pipeline": "node scripts/pipeline.ts",
     "services": "docker compose up -d --wait",
     "check": "node scripts/check.ts",
-    "thumbs": "node scripts/thumbs.ts"
+    "thumbs": "node scripts/thumbs.ts",
+    "link:reference": "node --env-file-if-exists=.env scripts/link-reference.ts",
+    "link:administrative": "node --env-file-if-exists=.env scripts/link-administrative.ts",
+    "link:maintenance": "node --env-file-if-exists=.env scripts/link-maintenance.ts",
+    "test:link": "node scripts/test-link.ts",
+    "test:link:unit": "node --test tests/link/core.test.ts tests/link/reference.test.ts tests/link/administrative.test.ts tests/link/administrative-service.test.ts tests/link/reference-updates.test.ts tests/link/location.test.ts tests/link/location-resolve.test.ts tests/link/all.test.ts tests/link/boundary.test.ts tests/link/files.test.ts tests/link/jobs.test.ts tests/link/chunks.test.ts"
   },
   "dependencies": {
     "@deck.gl/core": "~9.4.0",
@@ -28,19 +33,23 @@
     "@loaders.gl/core": "^4.5.4",
     "@loaders.gl/gltf": "^4.5.4",
     "@loaders.gl/mvt": "^4.5.4",
+    "@mapbox/shp-write": "0.4.3",
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "archiver": "^7.0.1",
     "cesium": "^1.146.0",
+    "exceljs-community": "5.2.1",
     "maplibre-gl": "^6.14.0",
     "nuxt": "^4.6.1",
     "ol": "^10.11.0",
     "ol-pmtiles": "^2.0.2",
     "pmtiles": "^4.5.0",
+    "proj4": "2.22.0",
     "vue": "^3.5.44",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/archiver": "^6.0.4"
   }
 }

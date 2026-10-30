@@ -7,7 +7,9 @@ type Project = { id: string; name: string; base?: string; summary: string; thumb
 /** 공간 데이터 시각화 도구 (/viz). 예시 화면 헤더의 프로젝트 이름·돌아가기 주소 */
 export const vizProject = { id: 'viz', name: '공간 데이터 시각화 도구', base: '/viz', summary: '공간 데이터 26종을 실제 공개 원본으로 수집·전처리·웹 변환해 웹 지도·엔진으로 확인', thumb: 'thumbs/model-3d-citygml.webp' }
 
+export const linkProject = { id: 'link', name: '국내 주소·코드 연계 도구', base: '/link', summary: 'PNU·법정동코드·행정동코드·주소·위치를 입력하고 연결된 결과를 한 번에 확인' }
+
 export const projects: Project[] = [
   vizProject,
-  { id: 'next', name: '준비 중', summary: '다음 프로젝트 자리 (기획 중)' },
+  linkProject,
 ]

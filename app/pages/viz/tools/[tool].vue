@@ -15,7 +15,7 @@ useHead({ title: `${tool.name} | 공간 데이터 시각화 도구` })
   <div>
     <FlowSteps />
     <div class="wrap page">
-      <p class="small"><NuxtLink :to="`/tools#${tool.type}`">{{ type?.name }}</NuxtLink></p>
+      <p class="small"><NuxtLink :to="`/viz/tools#${tool.type}`">{{ type?.name }}</NuxtLink></p>
       <h1>{{ tool.name }}</h1>
       <p class="prose lead">{{ tool.summary }}</p>
       <p class="prose desc">{{ tool.description }}</p>

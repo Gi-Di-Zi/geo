@@ -17,6 +17,7 @@ const stats = [
 ] as const
 
 const uses = [
+  { to: '/link', title: '주소·코드 연결하기', text: 'PNU·법정동코드 / 행정동코드 / 주소 / 위치 입력 → 연결된 결과를 한 번에 확인' },
   { to: '/viz', title: '예시 둘러보기', text: '확장자마다 실제 공개 원본 → 처리 명령·로그 → 웹 지도·엔진 결과 화면' },
   { to: '/viz/upload', title: '내 파일로 해 보기', text: '형식 자동 판별, 방식·도구 고르기, 변환 과정 실시간 → 지도' },
   { to: '/ai', title: 'AI 대화에서 쓰기', text: 'Claude·ChatGPT에 MCP로 연결, 대화 안에서 업로드·변환·결과' },
@@ -38,18 +39,20 @@ const stack = [
     <div class="wrap page">
       <header class="hero">
         <p class="eyebrow">프로젝트 소개</p>
-        <h1>공간 데이터가 웹 지도가 되기까지, 실제 데이터로 끝까지</h1>
+        <h1>공간 데이터를 보고, 국내 주소와 코드를 연결하기</h1>
         <p class="lead">
-          SHP·GeoTIFF·LAS·CityGML 같은 공간 데이터를 형식마다 실제 공개 원본으로 받아 다듬고 웹용으로 바꿔 지도·3D·엔진으로 그리는 과정의 기록.
-          모든 단계는 Docker로 실제 실행 → 명령·로그·측정값 그대로. 내 파일로 같은 처리를 해 보거나 AI 대화 안에서도 사용.
+          공간 데이터 시각화 도구는 SHP·GeoTIFF·LAS·CityGML 같은 파일을 다듬어 지도·3D·엔진으로 보여 줍니다.
+          국내 주소·코드 연계 도구는 PNU·법정동코드·행정동코드·주소·위치를 연결하고 원본과 함께 결과를 확인합니다. 웹과 MCP에서 같은 처리 규칙을 사용합니다.
         </p>
         <nav class="go" aria-label="시작">
           <NuxtLink to="/viz" class="btn-go main">공간 데이터 시각화 도구 →</NuxtLink>
+          <NuxtLink to="/link" class="btn-go">국내 주소·코드 연계 도구 →</NuxtLink>
           <a href="https://github.com/Gi-Di-Zi/geo" class="btn-go">GitHub 저장소 →</a>
         </nav>
       </header>
 
-      <ul class="stats" aria-label="숫자로 보기">
+      <p class="small muted" style="margin-top: 32px">아래 통계는 공간 데이터 시각화 카탈로그의 예시·처리 현황입니다.</p>
+      <ul class="stats" aria-label="시각화 카탈로그 통계">
         <li v-for="[n, label] in stats" :key="label"><b>{{ n }}</b><span>{{ label }}</span></li>
       </ul>
 

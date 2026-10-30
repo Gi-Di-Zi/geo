@@ -36,6 +36,11 @@ const tools = [
   ['geo_engine', '3D Tiles·지형 결과를 이 PC 언리얼(Cesium for Unreal)로 띄워 Pixel Streaming 플레이어 주소'],
   ['geo_formats', '받는 형식 전체와 형식별 방식·도구'],
 ]
+const linkTools = [
+  ['geo_link_capabilities', '지원 입력과 실제 기준 자료의 상태·버전 확인'],
+  ['geo_link_resolve', '직접 입력한 주소·코드·위치 변환. 입력이 없으면 유형을 선택하는 화면 열기'],
+  ['geo_link_regions', '법정동·행정동 체계를 구분한 코드·명칭 및 하위 구역 조회'],
+]
 const asks = [
   ['C:\\data\\상권.zip 웹 지도로 바꿔 줘', '터미널: 이 PC 파일 경로로 판별 → 형식·방식 후보를 글로'],
   ['SHP 파일을 웹 지도로 바꾸고 싶어', '웹: 대화 안에 업로드 화면 → 판별 → 방식 카드'],
@@ -53,6 +58,7 @@ const asks = [
       <p class="prose lead">
         Claude·Codex·ChatGPT 대화 안에서 <NuxtLink to="/viz/upload">내 파일로 해 보기</NuxtLink>와 같은 처리. 파일 맡기기 → 형식 판별 → 형식·방식·도구 고르기 → 변환 → 결과 내려받기·서비스 주소.
       </p>
+      <p class="prose small muted">같은 연결에서 <NuxtLink to="/link">국내 주소·코드 연계</NuxtLink>도 사용합니다. 입력 유형과 값을 정하면 주소·PNU·법정동·행정동·위치를 한 번에 확인합니다.</p>
       <p class="addr">연결 주소 <code>{{ endpoint }}</code> <button class="btn" type="button" @click="copy('addr', endpoint)">{{ copied === 'addr' ? '복사됨' : '복사' }}</button></p>
 
       <section class="part" aria-labelledby="connect">
@@ -111,13 +117,21 @@ const asks = [
         </ul>
       </section>
 
+      <section class="part" aria-labelledby="link-tools">
+        <h2 id="link-tools">국내 주소·코드 연계 도구</h2>
+        <p class="prose small muted"><NuxtLink to="/link/reference">기준자료와 업데이트</NuxtLink>에서 확보 범위와 버전을 확인하세요. 법정동과 행정동은 별도 코드 체계이며 검증된 관계만 연결합니다. 코드 사전이나 위치 조회만으로 실제 필지 존재를 확인한 결과는 아닙니다. 법정동 경계 SHP는 출력 전용이며 VWorld 경계 API 권한이 필요합니다.</p>
+        <ul class="rows"><li v-for="[name, does] in linkTools" :key="name"><code>{{ name }}</code><span>{{ does }}</span></li></ul>
+        <p class="prose small muted">MCP Apps 화면은 <code>ui://geo/link.html</code>이며 기존 <code>ui://geo/app.html</code>도 유지합니다. 화면 미지원 호스트는 도구 결과와 웹 주소를 이용하세요. 새 주소·코드 화면의 실제 AI 호스트 동작은 미검증이며, 프로토콜·리소스 검증과 구분합니다.</p>
+        <p class="prose small muted">PNU·법정동코드 / 행정동코드 / 주소 / 위치 중 입력 유형을 먼저 고르고 값을 넣으면 모든 결과를 함께 보여 줍니다. 직접 도구를 호출할 때는 <code>options.target="all"</code>을 사용합니다. SHP는 법정구역 결과의 별도 다운로드 버튼으로만 요청합니다. 위치는 위경도 또는 EPSG와 X·Y를 입력하며 주소·지역의 좌표는 대표점입니다. 웹 주소 검색은 선택한 주소에 확인된 지번이 있을 때 연결합니다. CSV·XLSX 파일 처리는 현재 제외했습니다. 채팅 첨부파일·외부 URL·서버 로컬 경로는 자동으로 읽지 않습니다.</p>
+      </section>
+
       <section class="part" aria-labelledby="limits">
         <h2 id="limits">한계</h2>
         <ul class="prose limits">
-          <li>인증 없음 → 지금은 같은 PC·사내망 전제. 공개 배포 전 인증 필요.</li>
+          <li>기존 시각화 도구는 인증 없음 → 지금은 같은 PC·사내망 전제. 공개 배포 전 인증 필요. 주소·코드 도구는 별도의 작업 접근 권한을 적용합니다.</li>
           <li>직접 확인: Claude Desktop(mcp-remote, 대화 안 화면), Claude Code(연결). 미검증: Codex CLI, 웹(claude.ai·ChatGPT — 공개 주소 배포 후).</li>
           <li>파일 경로(path)는 서버와 같은 PC의 터미널 연결에서만.</li>
-          <li>파일 200MB까지, 한 번에 한 작업. 결과 파일·서비스(GeoServer·martin 레이어, DB 표)는 24시간 뒤 삭제.</li>
+          <li>기존 시각화 파일은 200MB까지, 한 번에 한 작업. 결과 파일·서비스(GeoServer·martin 레이어, DB 표)는 24시간 뒤 정리 대상입니다. 주소·코드 화면의 전체 변환은 위치 조회를 포함해 한 번에 20개까지입니다.</li>
           <li>엔진 실시간 보기: 이 PC·사내망 브라우저에서만, 한 번에 하나, 첫 실행은 셰이더 컴파일로 수 분.</li>
         </ul>
       </section>

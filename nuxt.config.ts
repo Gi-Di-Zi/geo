@@ -9,14 +9,14 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'ko' },
-      title: '공간 데이터 시각화 도구',
+      title: 'geo · 공간 데이터와 주소·코드',
       meta: [
-        { name: 'description', content: '공간 데이터 유형·확장자별 수집, 전처리, 웹 형태 변환 과정. OpenLayers·MapLibre·Deck.gl·Cesium 결과 비교.' },
+        { name: 'description', content: '공간 데이터 시각화와 국내 주소·코드 연계. 공개 공간 파일의 웹 지도 변환, PNU·법정동코드·행정동코드·주소·위치 변환과 법정구역 경계 출력.' },
         // 링크 공유 미리보기. og:image는 공개 주소(절대 URL)가 생기면
         { property: 'og:type', content: 'website' },
         { property: 'og:locale', content: 'ko_KR' },
-        { property: 'og:title', content: '공간 데이터 시각화 도구' },
-        { property: 'og:description', content: '공간 데이터 확장자마다 실제 공개 원본으로 수집 → 전처리 → 웹 형태 변환 → 시각화. 명령·로그·측정값은 Docker 실행 기록.' },
+        { property: 'og:title', content: 'geo · 공간 데이터와 주소·코드' },
+        { property: 'og:description', content: '공간 데이터를 웹 지도·3D로 보고, 국내 PNU·법정동코드·행정동코드·주소·위치를 연결합니다.' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },

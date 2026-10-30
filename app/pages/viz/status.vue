@@ -60,14 +60,14 @@ useHead({ title: '확장자별 현황 | 공간 데이터 시각화 도구' })
       </p>
 
       <section v-for="g in groups" :key="g.cat.id" class="group" :style="{ '--c': g.cat.color }" :aria-labelledby="`g-${g.cat.id}`">
-        <h2 :id="`g-${g.cat.id}`"><NuxtLink :to="{ path: '/', query: { type: g.cat.id } }">{{ g.cat.name }}</NuxtLink></h2>
+        <h2 :id="`g-${g.cat.id}`"><NuxtLink :to="{ path: '/viz', query: { type: g.cat.id } }">{{ g.cat.name }}</NuxtLink></h2>
         <div class="head-row small muted" aria-hidden="true">
           <span>확장자</span><span>샘플 출처</span><span>원본</span><span>변환</span><span>뷰어</span><span>업로드</span>
         </div>
         <ul class="rows">
           <li v-for="f in g.list" :key="f.id" class="row">
             <div>
-              <NuxtLink :to="`/${f.category}/${f.id}`" class="ext">{{ f.extensions.join(' ') }}</NuxtLink>
+              <NuxtLink :to="`/viz/${f.category}/${f.id}`" class="ext">{{ f.extensions.join(' ') }}</NuxtLink>
               <p class="small muted">{{ f.name }}</p>
             </div>
 
