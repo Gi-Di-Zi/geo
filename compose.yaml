@@ -14,6 +14,10 @@ services:
     environment:
       GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_ADMIN_PASSWORD:-geoserver}
       SKIP_DEMO_DATA: 'true'
+      # OGC API Features: 정식 확장(이 버전 배포본)을 컨테이너를 만들 때 내려받아 설치 → /geoserver/geo/ogc/features/v1 (인터넷 필요)
+      # OGC API Tiles·Maps는 커뮤니티 모듈이라 3.0.2용 배포본이 없음(매일 바뀌는 SNAPSHOT뿐) → 버전 고정이 안 돼 넣지 않음
+      INSTALL_EXTENSIONS: 'true'
+      STABLE_EXTENSIONS: ogcapi-features
     ports: ['127.0.0.1:8600:8080']
     # /serve: 서비스 레시피가 만든 래스터(GeoTIFF). pipeline 단계 컨테이너도 같은 폴더를 /serve로 쓴다
     volumes: [geoserver:/opt/geoserver_data, './pipeline/serve:/serve:ro']

@@ -87,7 +87,7 @@ function geoserverVector(v: ServerVector): Recipe {
       v.load ?? vectorLoad(v),
       {
         title: '작업공간·저장소 등록',
-        why: 'GeoServer REST API. 작업공간(geo): 레이어 묶음, 서비스 주소 /geo/wms·/geo/ows. 저장소(gis): PostGIS 연결 정보. 이미 있으면 건너뜀.',
+        why: 'GeoServer REST API. 작업공간(geo): 레이어 묶음, 서비스 주소 /geo/wms·/geo/ows·/geo/ogc/features/v1. 저장소(gis): PostGIS 연결 정보. 이미 있으면 건너뜀.',
         tool: 'geoserver',
         run: gs(workspace, `curl -sf $AUTH $GS/workspaces/geo/datastores/gis -o /dev/null || curl -sf $AUTH -XPOST -H 'Content-Type: text/xml' -d "<dataStore><name>gis</name><connectionParameters><dbtype>postgis</dbtype><host>$PGHOST</host><port>5432</port><database>$PGDATABASE</database><user>$PGUSER</user><passwd>$PGPASSWORD</passwd></connectionParameters></dataStore>" $GS/workspaces/geo/datastores`),
       },
@@ -96,7 +96,7 @@ function geoserverVector(v: ServerVector): Recipe {
         : `WMS·WMTS 그림은 서버가 그림 → 색·${v.geom === 'point' ? '점 크기' : '선 굵기'}를 서버 스타일(SLD)로 지정. 다른 레시피의 화면 스타일과 같게${v.height ? '(돌출 대신 바닥면만)' : ''}.`),
       {
         title: '레이어 발행',
-        why: 'featureType: 표 → 레이어. 범위·좌표계는 GeoServer가 표에서 계산. numDecimals 7: WFS 좌표 소수 7자리(기본 4자리 ≈ 10 m). 발행과 함께 GeoWebCache 타일 레이어 자동 생성 → WMTS. 다시 실행 시 지우고 새로 발행(속성 목록·타일 캐시 갱신).',
+        why: 'featureType: 표 → 레이어. 범위·좌표계는 GeoServer가 표에서 계산. numDecimals 7: WFS·OGC API 좌표 소수 7자리(기본 4자리 ≈ 10 m). 발행과 함께 GeoWebCache 타일 레이어(WMTS)와 OGC API Features 컬렉션 자동 생성. 다시 실행 시 지우고 새로 발행(속성 목록·타일 캐시 갱신).',
         tool: 'geoserver',
         run: gs(
           `curl -s $AUTH -XDELETE "$GS/workspaces/geo/datastores/gis/featuretypes/${v.layer}?recurse=true" -o /dev/null`,
@@ -113,19 +113,25 @@ function geoserverVector(v: ServerVector): Recipe {
         path: `/svc/geoserver/ows?service=WFS&version=2.0.0&request=GetFeature&typeNames=${v.layer}&outputFormat=application/json&srsName=EPSG:4326`,
         why: `도형·속성 그대로 응답. outputFormat=application/json: GeoJSON. srsName=EPSG:4326: 표 좌표계가 달라도 서버가 위경도로 변환. bbox·필터로 일부만 요청 가능.${v.height ? ' 돌출은 뷰어가 height로.' : ''}`,
       },
+      {
+        id: 'ogc', kind: 'geojson', ...h, label: v.height ? `OGC API Features (GeoJSON, ${v.height} 속성)` : 'OGC API Features (GeoJSON)',
+        path: `/svc/geoserver/ogc/features/v1/collections/${v.layer}/items?f=application/geo%2Bjson`,
+        why: `WFS의 후속 표준(REST). /collections/{레이어}/items 주소에 GeoJSON 기본, 좌표는 항상 경도·위도(CRS84) → srsName 불필요. limit·bbox·filter(CQL2)로 일부만, 많으면 next 링크로 나눠 받음. GeoServer 확장 ogcapi-features(compose.yaml).${v.height ? ' 돌출은 뷰어가 height로.' : ''}`,
+      },
     ],
+    // 서비스 4개를 뷰어 4개에 하나씩 (같은 표를 서비스마다 어떻게 받는지 비교)
     viewers: v.height
       ? {
           ol: { output: 'wms', note: '2D 지도 — 서버가 그린 바닥면 그림.' },
           maplibre: { output: 'wfs', note: 'WFS GeoJSON → fill-extrusion으로 돌출.' },
           deck: { output: 'wfs', note: 'WFS GeoJSON → GeoJsonLayer extruded.' },
-          cesium: { output: 'wfs', note: 'WFS GeoJSON → 다각형별 extrudedHeight.' },
+          cesium: { output: 'ogc', note: 'OGC API Features GeoJSON → 다각형별 extrudedHeight.' },
         }
       : {
           ol: { output: 'wms', note: '움직일 때마다 화면 범위 그림 한 장 요청.' },
           maplibre: { output: 'wmts', note: 'WMS 직접 미지원 → WMTS 타일 주소를 XYZ 템플릿으로.' },
           deck: { output: 'wfs', note: 'WFS GeoJSON 받아 브라우저에서 그림(스타일은 화면 쪽).' },
-          cesium: { output: 'wms', note: '타일 칸마다 GetMap 요청.' },
+          cesium: { output: 'ogc', note: 'OGC API Features GeoJSON → GeoJsonDataSource. WFS와 같은 도형을 더 단순한 주소로.' },
         },
   }
 }

@@ -51,7 +51,7 @@ flowchart LR
 |---|---|---|---|
 | 파일 · GDAL (GeoJSON + MVT) | 66.4초 (MVT 분할 52.2초) | 5.5MB, 파일 496개 | — |
 | 파일 · GeoPandas (GeoJSON) | 4.5초 | 2.3MB, 파일 1개 | — |
-| 서버 · GeoServer (WMS·WMTS·WFS) | 15.4초 (적재·발행) | — | WMTS 36 / 4ms, WFS 141 / 150ms |
+| 서버 · GeoServer (WMS·WMTS·WFS·OGC API) | 15.5초 (적재·발행) | — | WMTS 40 / 4ms, WFS 163 / 154ms, OGC API Features 144 / 106ms |
 | 서버 · martin (MVT) | 13.3초 (적재) | — | 타일 31 / 3ms |
 
 - 이 규모(점 1.3만)는 GeoJSON 하나가 가장 빠르고 단순. MVT는 줌별 타일 굽기가 시간 대부분.
@@ -144,7 +144,7 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 | `shared/catalog/delivery.ts` | 방식(파일·서버·엔진) 고르기 안내, 도구별 고르는 기준·장단점, 결과 내려받기 규칙 |
 | `server/api/` | 업로드 작업(`/api/jobs` → `pipeline.ts --job`, 결과 파일·내려받기), 맡기기·판별(`/api/stage`) |
 | `server/routes/mcp.ts`, `server/assets/mcp-app.html`, `server/utils/` | MCP 서버(`/mcp`)와 대화 안 화면, 작업·맡긴 파일·형식 설명·엔진 실시간 보기 (아래 "MCP") |
-| `compose.yaml`, `pipeline/martin.yaml` | 서비스 레시피용 상시 서버: PostGIS, GeoServer, martin. 사이트가 `/svc/<서버>/**`로 프록시 |
+| `compose.yaml`, `pipeline/martin.yaml` | 서비스 레시피용 상시 서버: PostGIS, GeoServer(+ OGC API Features 정식 확장, 컨테이너를 만들 때 내려받음 → 인터넷 필요), martin. 사이트가 `/svc/<서버>/**`로 프록시 |
 
 ## 실행
 
@@ -168,7 +168,7 @@ npm run services                              # 서버 띄우기 (서비스 레�
   - 벡터타일 레시피 끝에 `tileCount`(`shared/catalog/vector-2d/_vector.ts`) 단계 — 줌별로 타일에 남은 피처 수를 변환 전과 비교. `key` = 피처를 가르는 속성(식). 변환 전 수를 못 읽으면 단계 실패.
   - `report.json`의 `env`: CPU, Docker 자원(코어·메모리), OS. 서버 출력은 `ms`(첫 요청)와 `cachedMs`(같은 요청 다시).
   - 처리 수준(직접 처리 / 변환 후 처리 / 일부 기능만 / 미검증 / 미지원): 웹 렌더러는 `supportOf`(`app/utils/catalog.ts`)가 레시피·실행 기록에서 계산. 엔진은 `unreal.json`이 있으면 "엔진 확인", 없으면 "미확인".
-- 서버 포트는 127.0.0.1에만 열림. GeoServer는 작업공간 `geo` 아래(WMS·WFS·WMTS)만 프록시, 관리 화면·REST는 사이트로 노출 안 함. 업로드 레시피는 DB 도구(임시 PostGIS 컨테이너) 사용 불가.
+- 서버 포트는 127.0.0.1에만 열림. GeoServer는 작업공간 `geo` 아래(WMS·WFS·WMTS·OGC API Features `/geo/ogc/features/v1`)만 프록시, 관리 화면·REST는 사이트로 노출 안 함. 업로드 레시피는 DB 도구(임시 PostGIS 컨테이너) 사용 불가.
 - `shared/catalog`에 파일을 추가·삭제하면 개발 서버가 스스로 다시 시작해 확장자 목록을 새로 만듦 (앱 `#build/catalog-formats`, 서버 `#catalog-formats`).
 
 ## 엔진 렌더러 (Cesium for Unreal)
@@ -235,7 +235,7 @@ npm run services                              # 서버 띄우기 (서비스 레�
 
   | 유형 | 파일 방식 | 서버 방식 |
   |---|---|---|
-  | 2D 벡터·CSV | GDAL(GeoJSON + MVT), tippecanoe(GeoJSON + PMTiles) | GeoServer(WMS·WMTS·WFS), martin(MVT) |
+  | 2D 벡터·CSV | GDAL(GeoJSON + MVT), tippecanoe(GeoJSON + PMTiles) | GeoServer(WMS·WMTS·WFS·OGC API Features), martin(MVT) |
   | 2.5D 벡터 | GDAL(돌출 GeoJSON), mago(3D Tiles) | GeoServer, martin |
   | 영상 tif·COG / jpg·png·webp | GDAL(COG + XYZ) / GDAL(한 장), XYZ 타일 | GeoServer |
   | DEM | GDAL + mago(Terrain-RGB + quantized-mesh) | GeoServer(회색 음영기복) |

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { engine, kindLabels, viewers } from '#shared/viewers'
-import type { FormatSpec, OutputKind, Recipe } from '#shared/types'
+import type { FormatSpec, Output, OutputKind, Recipe, ViewerId } from '#shared/types'
 
 // 홈 노선도. 데이터 유형 하나가 노선 하나이고, 그 유형의 확장자 중 하나라도 그릴 수 있는 뷰어로만 갈라져 간다.
 // 세 과정 판 위에는 유형마다 그 과정의 요소(확장자 수·정리 작업·결과물)를 얹는다.
@@ -81,7 +81,10 @@ function preChips(list: FormatSpec[], y: number) {
  * 엔진 형식 줄은 칩 뒤에서 한 번 더 갈라져 [Unreal 전달] 줄이 엔진 역으로 간다.
  * parent·at = 갈라져 나온 줄(번호)과 갈라지는 x, engine = 웹 뷰어 대신 엔진 역으로 가는 줄
  */
-type LaneDef = { rs: Recipe[]; parent?: number; at?: number; engine?: true; trunk?: true; make: (y: number) => { chips: Chip[]; arrows: number[] } }
+type LaneDef = { rs: Recipe[]; parent?: number; at?: number; engine?: true; trunk?: true; svc?: string[]; make: (y: number) => { chips: Chip[]; arrows: number[] } }
+/** 서비스 이름 = 출력 이름 첫 낱말 (WMS, WMTS, WFS …). OGC API는 두 낱말 */
+const serviceOf = (o: Output) => (o.label.startsWith('OGC API') ? 'OGC API' : o.label.split(' ')[0]!)
+const OGC = 'OGC API'
 const L = X0 + 10, R = X1 - 10
 const SX = L + width('PostGIS') + 14 // 서버 칩 열
 const KX = CONVERT.cx - 40 // 형식별로 나눌 때 형식 칩 열
@@ -113,12 +116,19 @@ function lanes(list: FormatSpec[], category: string): LaneDef[] {
     const rs = all.filter(r => isService(r) && r.title === name)
     const firsts = [...new Set(rs.map(r => r.convert[0]!.title))]
     const store = firsts.some(t => /PostGIS/.test(t)) ? 'PostGIS' : 'COG'
-    const services = [...new Set(rs.flatMap(r => r.outputs.map(o => o.label.split(' ')[0]!)))]
+    const served = rs.flatMap(r => r.outputs)
+    // SAFETY: s는 아래 services(= served의 서비스 이름)에서만 오므로 항상 찾음
+    const titleOf = (s: string) => served.find(o => serviceOf(o) === s)!.label
+    // OGC API는 기존 서비스(WMS·WMTS·WFS)의 후속 표준 → 서버 칩 뒤에서 아래 줄로 갈라졌다가 판 끝에서 다시 합류
+    const services = [...new Set(served.map(serviceOf))]
+    const classic = services.filter(s => s !== OGC)
+    const sw = width(name)
+    const trunk = out.length
     out.push({
       rs,
+      ...(services.includes(OGC) && { svc: classic }),
       make: y => {
-        const sw = width(name)
-        const outs = chips(services.map(s => ({ label: s, title: rs.flatMap(r => r.outputs).find(o => o.label.startsWith(s))!.label })), { right: R }, y, R - SX - sw - 14)
+        const outs = chips(classic.map(s => ({ label: s, title: titleOf(s) })), { right: R }, y, R - SX - sw - 14)
         return {
           chips: [
             { label: store, title: `서버가 읽는 저장 형태: ${firsts.join(', ')}`, style: 'store', x: L, y, w: width(store) },
@@ -129,6 +139,17 @@ function lanes(list: FormatSpec[], category: string): LaneDef[] {
         }
       },
     })
+    if (services.includes(OGC)) {
+      const at = SX + sw + 4
+      out.push({
+        rs, svc: [OGC], parent: trunk, at,
+        make: y => {
+          const c = chips([{ label: OGC, title: `${titleOf(OGC)} — WFS의 후속 표준 (REST·GeoJSON)` }], { right: R }, y, R - at)
+          // 화살표: 갈라져 내려온 곡선(폭 24 + 한 줄 높이 / 2, into의 shift와 같음)이 끝난 곳과 칩 사이. SAFETY: 칩 하나를 넣었으니 c[0]은 있음
+          return { chips: c, arrows: [(at + 24 + LANE / 2 + c[0]!.x) / 2] }
+        },
+      })
+    }
   }
   if (unreal) out.push({ rs: files, ...unreal, engine: true, make: y => ({ chips: [{ ...UNREAL, x: R - UNREAL.w, y }], arrows: [] }) })
   return out
@@ -163,6 +184,14 @@ const termY = (j: number) => (rows[0]!.y + rows.at(-1)!.y) / 2 - 160 + j * 80
 const ENGINE_Y = termY(viewers.length)
 const engineCats = rows.filter(r => r.ls.some(l => l.engine)).map(r => r.c)
 
+/** 레시피가 뷰어로 이어지는지. svc가 있는 줄(서비스별로 나뉜 서버 줄)은 그 뷰어가 쓰는 출력의 서비스가 그 줄 것일 때만 */
+function reaches(r: Recipe, v: ViewerId, svc?: string[]) {
+  if (!supports(r, v)) return false
+  const use = r.viewers[v]
+  const o = 'output' in use ? r.outputs.find(x => x.id === use.output) : undefined
+  return !svc || (!!o && svc.includes(serviceOf(o)))
+}
+
 const lines = rows.map(({ c, list, ls, y, dys }, i) => {
   const offset = (i - (categories.length - 1) / 2) * 3.2
   const dyOf = (k: number) => dys[k]!
@@ -172,7 +201,7 @@ const lines = rows.map(({ c, list, ls, y, dys }, i) => {
   const ey = ENGINE_Y + offset
   const paths = placed.flatMap(l => l.engine
     ? [{ j: viewers.length, d: `M170 ${y}${into(y, l.hops)} H${R} C${R + 170} ${y + l.dy} ${TX - 170} ${ey} ${TX} ${ey}` }]
-    : viewers.flatMap((v, j) => l.rs.some(r => supports(r, v.id)) ? [j] : [])
+    : viewers.flatMap((v, j) => l.rs.some(r => reaches(r, v.id, l.svc)) ? [j] : [])
       .map(j => ({ j, d: `M170 ${y}${into(y, l.hops)}${back(y, l.dy)} H${FX} C${FX + 150} ${y} ${TX - 150} ${termY(j) + offset} ${TX} ${termY(j) + offset}` })))
   return {
     c, y,

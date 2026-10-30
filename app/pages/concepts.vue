@@ -103,7 +103,8 @@ useHead({ title: '개념 | 공간 데이터 웹 처리' })
         <h2>{{ label('ogc-api') }}</h2>
         <div class="prose">
           <p>도형 데이터를 <code>/collections</code>(목록), <code>/collections/{id}</code>(설명), <code>/collections/{id}/items</code>(GeoJSON 도형)처럼 정해진 주소로 주고받는 웹 표준. WFS의 후속.</p>
-          <p>이 사이트는 같은 경로의 정적 파일로 흉내만 → 범위(bbox)·개수(limit) 질의 불가. 실서버라면 pygeoapi 같은 서버 연결.</p>
+          <p>WFS와 차이: XML 요청·GetCapabilities 대신 REST 주소, 응답 기본 GeoJSON, 좌표는 항상 경도·위도. 범위(<code>bbox</code>)·개수(<code>limit</code>, 넘치면 <code>next</code> 링크)·조건(<code>filter</code>, CQL2)은 주소 질의로.</p>
+          <p>이 사이트: 서버 방식은 GeoServer 확장(ogcapi-features)이 실제 제공 → WMS·WMTS·WFS와 나란히. 파일 방식 GeoJSON은 같은 경로의 정적 파일로 흉내만 (질의 불가).</p>
         </div>
       </section>
 

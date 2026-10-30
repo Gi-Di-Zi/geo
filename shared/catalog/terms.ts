@@ -9,7 +9,7 @@ export const terms: Term[] = [
   { id: 'range', label: 'Range 요청', match: 'Range 요청', short: '파일 일부만("100~200바이트") 받는 HTTP 요청. COG·PMTiles는 이것으로 서버 없이 필요한 조각만 읽기.' },
   { id: 'cog', label: 'COG', match: 'COG', short: '웹 부분 읽기용 블록·축소본을 넣은 GeoTIFF. 확장자는 그대로 .tif.' },
   { id: 'pmtiles', label: 'PMTiles', match: 'PMTiles', short: '타일 수천 장을 파일 하나에 묶은 형식. 앞쪽 목차 + Range 요청으로 필요한 타일만 읽기.' },
-  { id: 'ogc-api', label: 'OGC API Features', match: 'OGC API', short: '도형 데이터를 /collections/{id}/items 같은 정해진 주소로 주고받는 웹 표준. 이 사이트는 같은 구조의 정적 파일로 흉내.' },
+  { id: 'ogc-api', label: 'OGC API Features', match: 'OGC API', short: '도형 데이터를 /collections/{id}/items 같은 정해진 주소로 주고받는 웹 표준. WFS의 후속. 서버 방식은 GeoServer가 실제 제공, 파일 방식은 같은 구조의 정적 파일.' },
   { id: '3d-tiles', label: '3D Tiles', match: '3D Tiles', short: '3D 데이터를 공간별 나무 구조로 묶은 OGC 표준. 멀리서는 단순하게, 가까이서는 자세하게.' },
   { id: 'terrain', label: 'Terrain-RGB · quantized-mesh', match: 'Terrain-RGB|quantized-mesh', short: '웹 지형 두 방식. Terrain-RGB: 높이를 색으로 담은 이미지 타일, quantized-mesh: 삼각형 메시 타일.' },
   { id: 'lod', label: 'LOD', match: 'LOD', short: '상세 수준(Level of Detail). 같은 대상을 멀리서는 단순한 모양, 가까이서는 자세한 모양으로.' },

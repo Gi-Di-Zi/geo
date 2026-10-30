@@ -177,8 +177,8 @@ export const toolNotes: Record<string, ToolNote> = {
     cons: ['부재 속성(층·실·설비) 손실', '타일 분할·LOD 없음', '도구 3개 연결'],
   },
   'geoserver': {
-    when: 'WMS·WFS 표준 연동, 속성 조회, DB 수정 즉시 반영',
-    pros: ['WMS·WMTS·WFS 표준 → GIS 소프트웨어·타 기관 연동', 'SLD로 서버에서 스타일', '국내 현장 사용 많음'],
+    when: 'WMS·WFS·OGC API 표준 연동, 속성 조회, DB 수정 즉시 반영',
+    pros: ['WMS·WMTS·WFS 표준 → GIS 소프트웨어·타 기관 연동', 'OGC API Features: WFS 후속, 주소만으로 GeoJSON', 'SLD로 서버에서 스타일', '국내 현장 사용 많음'],
     cons: ['Java 서버 상시 운영', '설정 단계 많음 (작업공간·저장소·스타일·레이어)', '타일 캐시 없으면 요청마다 그림'],
   },
   'raster/geoserver': {
