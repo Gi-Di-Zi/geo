@@ -2,7 +2,7 @@
 import { terms } from '#shared/catalog/terms'
 
 const label = (id: string) => terms.find(t => t.id === id)!.label
-useHead({ title: '개념 | 공간 데이터 웹 처리' })
+useHead({ title: '개념 | 공간 데이터 시각화 도구' })
 </script>
 
 <template>

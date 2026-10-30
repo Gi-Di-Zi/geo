@@ -1,4 +1,4 @@
-# 공간 데이터 웹 처리
+# 공간 데이터 시각화 도구
 
 공간 데이터 유형·확장자별 웹 처리 과정 정리 사이트. 확장자마다 실제 공개 원본을 받아 수집 → 전처리 → 웹 형태 변환을 Docker로 돌리고, 결과를 시각화·렌더링 단계에서 웹 렌더러 4종(OpenLayers·MapLibre·MapLibre + Deck.gl·CesiumJS)과 엔진(Cesium for Unreal)으로 확인.
 
@@ -122,12 +122,13 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 
 | 경로 | 내용 |
 |---|---|
-| `app/pages/index.vue` | 홈: 노선도(수집 → 전처리 → 웹 형태 변환(파일·서버 가지) → 시각화·렌더링), 유형 카드, 확장자 선택 창 |
-| `app/pages/[category]/[format]/[[step]].vue` | 확장자 4단계: 수집(`/유형/확장자`), 전처리(`/preprocess`), 웹 형태 변환(`/convert`), 시각화·렌더링(`/view`) |
-| `app/pages/sources.vue` | 데이터 받는 곳: 국내·해외·개인·커뮤니티 다운로드 사이트 모음 |
-| `app/pages/tools`, `status`, `concepts` | 뷰어·도구, 현황, 개념 |
-| `app/pages/why.vue`, `app/assets/why-data.json` | 처음이라면: 왜 전처리·변환이 필요한지 장면 6개(SVG·CSS 애니메이션, 화면에 들어오면 재생). 그림 좌표는 .fgb 샘플의 한국 윤곽 + 버스정류장 원본에서 뽑은 점 |
-| `app/pages/ai.vue` | AI 연결(MCP) 안내: 연결 주소, 클라이언트별 설정(이 화면을 연 주소 기준), 도구, 한계 (아래 "MCP") |
+| `app/pages/index.vue`, `app/utils/projects.ts` | 첫 화면(`/`): 프로젝트 소개(무엇을 하는 사이트인지, 숫자, 할 수 있는 것, 만든 방식) + 맨 아래 프로젝트 카드. 프로젝트마다 주소 앞부분이 다름(이 프로젝트 `/viz`), 헤더는 프로젝트 이름들(예시 화면 안에서만 유형·확장자·단계), 오른쪽에 AI 연결 + 맨 끝 소개로 가는 화살표. MCP(`/mcp`)·API(`/api`)·서버 프록시(`/svc`)는 사이트에 하나로 함께 씀 |
+| `app/pages/viz/index.vue` | 공간 데이터 시각화 도구 홈(`/viz`): 바로 가기 버튼, 노선도(수집 → 전처리 → 웹 형태 변환(파일·서버 가지) → 시각화·렌더링), 유형 카드, 확장자 선택 창 |
+| `app/pages/viz/[category]/[format]/[[step]].vue` | 확장자 4단계: 수집(`/viz/유형/확장자`), 전처리(`/preprocess`), 웹 형태 변환(`/convert`), 시각화·렌더링(`/view`) |
+| `app/pages/viz/sources.vue` | 데이터 받는 곳: 국내·해외·개인·커뮤니티 다운로드 사이트 모음 |
+| `app/pages/viz/tools`, `status`, `concepts` | 뷰어·도구, 현황, 개념 |
+| `app/pages/viz/why.vue`, `app/assets/why-data.json` | 처음이라면: 왜 전처리·변환이 필요한지 장면 6개(SVG·CSS 애니메이션, 화면에 들어오면 재생). 그림 좌표는 .fgb 샘플의 한국 윤곽 + 버스정류장 원본에서 뽑은 점 |
+| `app/pages/ai.vue` | AI 연결(MCP) 안내(사이트 공용, 헤더 오른쪽 버튼): 연결 주소, 클라이언트별 설정(이 화면을 연 주소 기준), 도구, 한계 (아래 "MCP") |
 | `app/components/viewers/` | 웹 렌더러 4종. 결과물 종류(`OutputKind`)별 로딩 코드 |
 | `shared/catalog/<유형>/<확장자>.ts` | 확장자 spec 하나 = 확장자 하나 (`_`로 시작하는 파일은 spec 만드는 도우미) |
 | `shared/catalog/sources.ts`, `tools.ts`, `origins.ts`, `terms.ts` | 수급처(`scope`: 국내·해외·개인), 도구, 확장자 출신(표준/회사), 용어 |
@@ -140,7 +141,7 @@ npm run unreal -- all --missing   # (선택) 엔진 렌더링. 언리얼을 레�
 | `pipeline/Dockerfile`, `pipeline/scripts/` | 로컬 도구 이미지(geo-web/tools), 단계용 보조 스크립트 |
 | `pipeline/raw/` | 받은 원본 (git 제외, `npm run setup`으로 생성) |
 | `public/data/` | 변환 결과·기록: `collect.json`, `<레시피>/report.json`·`unreal.json`, `status.json`, 내려받기용 `raw/`·`raw.zip` (git 제외) |
-| `app/pages/upload.vue`, `shared/sniff.ts`, `app/components/JobProgress.vue` | 내 파일 업로드 화면(파일 → 형식 → 방식·도구 → 변환), 형식 판별, 변환 진행 화면 (아래 "내 파일 업로드") |
+| `app/pages/viz/upload.vue`, `shared/sniff.ts`, `app/components/JobProgress.vue` | 내 파일 업로드 화면(파일 → 형식 → 방식·도구 → 변환), 형식 판별, 변환 진행 화면 (아래 "내 파일 업로드") |
 | `shared/catalog/delivery.ts` | 방식(파일·서버·엔진) 고르기 안내, 도구별 고르는 기준·장단점, 결과 내려받기 규칙 |
 | `server/api/` | 업로드 작업(`/api/jobs` → `pipeline.ts --job`, 결과 파일·내려받기), 맡기기·판별(`/api/stage`) |
 | `server/routes/mcp.ts`, `server/assets/mcp-app.html`, `server/utils/` | MCP 서버(`/mcp`)와 대화 안 화면, 작업·맡긴 파일·형식 설명·엔진 실시간 보기 (아래 "MCP") |
@@ -220,7 +221,7 @@ npm run services                              # 서버 띄우기 (서비스 레�
 ## 확장자 추가·바꾸기
 
 1. `shared/catalog/<유형>/<확장자>.ts`: `collect`(출처·수집 단계), `recipes`(전처리·변환 단계, 출력, 뷰어별 사용), `upload`, `view`. 국내 원본이 아니면 `noDomestic`에 이유, 변환 샘플이면 `collect.converted`.
-2. 수급처가 새로우면 `sources.ts`에 추가 (`scope`: `domestic`·`abroad`·`personal`). 다른 경로는 spec의 `otherSources`에 데이터셋과 함께 → 수집 단계 "데이터 받는 곳"과 `/sources`에 나옴.
+2. 수급처가 새로우면 `sources.ts`에 추가 (`scope`: `domestic`·`abroad`·`personal`). 다른 경로는 spec의 `otherSources`에 데이터셋과 함께 → 수집 단계 "데이터 받는 곳"과 `/viz/sources`에 나옴.
 3. 새 확장자면 `origins.ts`에 출신(표준/회사) 추가.
 4. `npm run pipeline -- <유형>/<확장자> --recollect` (3D Tiles·지형 결과가 있으면 `npm run unreal -- <유형>/<확장자>`도)
 5. `npm run check`
@@ -229,7 +230,7 @@ npm run services                              # 서버 띄우기 (서비스 레�
 
 ## 내 파일 업로드
 
-흐름: 홈(또는 수집 단계)의 "파일 올리러 가기" → `/upload`(`app/pages/upload.vue`) ① 파일 넣기·형식 판별(`shared/sniff.ts`, 브라우저에서 파일 조각만 읽음) ② 형식 고르기(후보가 여럿이면 설명과 함께) ③ 방식·도구 고르기(`DeliveryGuide`, 샘플과 같은 설명) ④ 좌표계(필요할 때)·변환 시작 → `/api/jobs` → `pipeline.ts --job`(고른 업로드 레시피) → 진행 화면(`JobProgress`, 1초마다 `live.log` 끝부분) → 지도.
+흐름: 홈(또는 수집 단계)의 "파일 올리러 가기" → `/viz/upload`(`app/pages/viz/upload.vue`) ① 파일 넣기·형식 판별(`shared/sniff.ts`, 브라우저에서 파일 조각만 읽음) ② 형식 고르기(후보가 여럿이면 설명과 함께) ③ 방식·도구 고르기(`DeliveryGuide`, 샘플과 같은 설명) ④ 좌표계(필요할 때)·변환 시작 → `/api/jobs` → `pipeline.ts --job`(고른 업로드 레시피) → 진행 화면(`JobProgress`, 1초마다 `live.log` 끝부분) → 지도.
 
 - 방식·도구: spec의 `upload.recipes` (첫 번째가 기본값). id는 같은 일을 하는 샘플 레시피 id와 같아 `delivery.ts` 설명을 같이 씀 (검사가 확인).
 
@@ -298,7 +299,7 @@ AI(Claude 등)가 공간 데이터 파일을 받아 판별 → 형식·방식 �
   - 내려받기 `/api/jobs/<작업>/download/<출력 id>`: 파일 하나는 그대로(`attachment`, GeoJSON은 `.geojson`), 타일 `{z}/{x}/{y}`·3D Tiles·지형은 폴더째 zip으로 흘려 보냄(archiver, ZIP64). 규칙은 `shared/catalog/delivery.ts`의 `downloadOf`
   - 결과 파일·서비스(GeoServer·martin 레이어, DB 표)는 24시간 보관 → 결과 화면과 `geo_status` 글에 지워지는 시각 표시
   - 엔진 실시간 보기(`geo_engine`): 위 "엔진 렌더러"
-- 연결 (사이트 `/ai`에 같은 안내, 주소는 그 화면을 연 주소 기준). 터미널 = 같은 PC에서 지금, 글만 / 웹 = 공개 https 배포 후, 대화 안 화면. 직접 확인: Claude Desktop(대화 안 화면)·Claude Code, 나머지 미검증
+- 연결 (사이트 `/ai`에 같은 안내, 헤더 오른쪽 "AI 연결", 주소는 그 화면을 연 주소 기준). 터미널 = 같은 PC에서 지금, 글만 / 웹 = 공개 https 배포 후, 대화 안 화면. 직접 확인: Claude Desktop(대화 안 화면)·Claude Code, 나머지 미검증
   - Claude Code: `claude mcp add --transport http geo http://localhost:3000/mcp`
   - Codex CLI: `codex mcp add geo --url http://localhost:3000/mcp` (`~/.codex/config.toml`의 `[mcp_servers.geo]`)
   - claude.ai: Customize > Connectors > Add custom connector, Authentication "No sign in". Anthropic 클라우드에서 접속
@@ -328,4 +329,4 @@ AI(Claude 등)가 공간 데이터 파일을 받아 판별 → 형식·방식 �
 
 ## 라이선스
 
-코드는 [MIT](LICENSE). 샘플 원본·변환 결과는 저장소에 없음(`npm run setup`으로 받음), 각 출처 라이선스를 따름 — 확장자별 수집 단계와 `/sources`.
+코드는 [MIT](LICENSE). 샘플 원본·변환 결과는 저장소에 없음(`npm run setup`으로 받음), 각 출처 라이선스를 따름 — 확장자별 수집 단계와 `/viz/sources`.

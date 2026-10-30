@@ -8,7 +8,7 @@ const type = toolTypes.find(t => t.id === tool.type)
 const usages = usagesOf(tool.id)
 const statusLabels = { active: '사용 중', stale: '업데이트 중단', dead: '개발 종료' }
 const serves = tool.serves?.map(k => kindLabels[k]).join(', ')
-useHead({ title: `${tool.name} | 공간 데이터 웹 처리` })
+useHead({ title: `${tool.name} | 공간 데이터 시각화 도구` })
 </script>
 
 <template>

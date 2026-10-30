@@ -239,7 +239,7 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
     </g>
     <g v-for="(l, i) in lines" :key="l.c.id">
       <a
-        :href="`/?type=${l.c.id}`" :aria-label="`${l.c.name}: ${l.stops.join(', ')}에서 확인 가능`" :class="dim(l.c.id)"
+        :href="`/viz?type=${l.c.id}`" :aria-label="`${l.c.name}: ${l.stops.join(', ')}에서 확인 가능`" :class="dim(l.c.id)"
         @click.prevent="emit('pick', l.c.id)" @mouseenter="hot = l.c.id" @mouseleave="hot = ''" @focus="hot = l.c.id" @blur="hot = ''"
       >
         <text x="156" :y="l.y + 5" text-anchor="end" class="cat">{{ l.c.name }}</text>

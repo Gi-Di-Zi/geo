@@ -3,7 +3,7 @@
 // 그림 좌표(why-data.json): 한국 윤곽 = 2D .fgb 샘플(countries.fgb)의 KOR, 점 = 버스정류장 원본 CSV에서 700행마다 1개 / 서울BIS 40개마다 1개
 import data from '~/assets/why-data.json'
 
-useHead({ title: '처음이라면 | 공간 데이터 웹 처리' })
+useHead({ title: '처음이라면 | 공간 데이터 시각화 도구' })
 
 // 화면에 들어오면 한 번 재생. "다시 보기" = key를 바꿔 그림을 새로 그림 → CSS 애니메이션이 처음부터
 const runs = reactive<Record<string, number>>({})
@@ -117,8 +117,11 @@ const cloud = (() => {
           <p class="eyebrow">전처리 ①</p>
           <h2 id="s-crs">위치를 적는 기준이 파일마다 다름</h2>
           <p>같은 서울시청도 국내 파일은 미터 단위 (198,054, 551,897), 웹 지도는 위도·경도 (37.567, 126.978). 기준을 모르고 읽으면 점이 바다나 지도 밖으로 → 웹 지도 기준으로 다시 적기 (좌표계 변환).</p>
-          <p class="fact"><b>이 사이트</b> 서울 상권 SHP: 국내 미터 좌표 → 위도·경도. 도쿄역 3D 건물은 위도·경도 순서를 반대로 읽어 바다 위로 갔던 경우. <NuxtLink to="/concepts#crs">좌표계 자세히</NuxtLink></p>
-          <button class="btn replay" type="button" @click="replay('crs')">다시 보기</button>
+          <p class="fact"><b>이 사이트</b> 서울 상권 SHP: 국내 미터 좌표 → 위도·경도. 도쿄역 3D 건물은 위도·경도 순서를 반대로 읽어 바다 위로 갔던 경우.</p>
+          <div class="btns">
+            <button class="btn replay" type="button" @click="replay('crs')">다시 보기</button>
+            <NuxtLink to="/viz/concepts#crs" class="btn replay">좌표계 자세히 →</NuxtLink>
+          </div>
         </div>
         <svg :key="runs.crs" class="fig f2" :class="{ play: runs.crs }" viewBox="0 0 480 260" role="img" aria-label="미터 좌표를 그대로 읽은 점은 바다로 가고, 위도·경도로 바꾼 점은 서울시청에 놓임">
           <rect x="0" y="0" width="250" height="260" rx="10" class="sea" />
@@ -282,10 +285,12 @@ const cloud = (() => {
           <li><b>웹 형태 변환</b><span>웹이 읽는 형식으로, 보이는 만큼만 받는 조각으로.</span></li>
           <li><b>시각화·렌더링</b><span>웹 지도 라이브러리(OpenLayers·MapLibre·Deck.gl·CesiumJS)와 엔진으로 그리기.</span></li>
         </ol>
-        <p class="more">
-          실제 과정 보기: <NuxtLink to="/attribute/csv">서울 버스정류장 CSV</NuxtLink> · <NuxtLink to="/pointcloud/las">치악산 점군</NuxtLink> ·
-          <NuxtLink to="/">전체 노선도</NuxtLink> · <NuxtLink to="/concepts">용어 풀이</NuxtLink>
-        </p>
+        <nav class="more" aria-label="이어서 보기">
+          <NuxtLink to="/viz/attribute/csv" class="go main">서울 버스정류장 CSV 실제 과정 →</NuxtLink>
+          <NuxtLink to="/viz/pointcloud/las" class="go main">치악산 점군 실제 과정 →</NuxtLink>
+          <NuxtLink to="/viz" class="go">전체 노선도</NuxtLink>
+          <NuxtLink to="/viz/concepts" class="go">용어 풀이</NuxtLink>
+        </nav>
       </section>
     </div>
   </div>
@@ -303,7 +308,8 @@ const cloud = (() => {
 .text h2 { font-size: var(--fs-3); }
 .fact { font-size: var(--fs-0); color: var(--ink-2); padding: 8px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-tile); }
 .fact b { color: var(--ink); margin-right: 6px; }
-.replay { font-size: var(--fs-0); }
+.replay { font-size: var(--fs-0); text-decoration: none; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 860px) { .scene { grid-template-columns: minmax(0, 1fr); } }
 
 /* 그림 공통 */
@@ -424,5 +430,9 @@ const cloud = (() => {
 .steps li { counter-increment: s; display: grid; gap: 4px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); }
 .steps li::before { content: counter(s); width: 22px; height: 22px; display: grid; place-items: center; border: 1px solid var(--ink-2); border-radius: 50%; font-size: 12px; }
 .steps span { font-size: var(--fs-0); color: var(--ink-2); }
-.more { margin-top: 16px; font-size: var(--fs-0); }
+.more { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.go { padding: 9px 16px; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); color: var(--ink); font-weight: 600; text-decoration: none; }
+.go:hover, .go:focus-visible { border-color: var(--ink-2); }
+.go.main { background: var(--ink); border-color: var(--ink); color: #fff; }
+.go.main:hover, .go.main:focus-visible { background: #2A3540; }
 </style>

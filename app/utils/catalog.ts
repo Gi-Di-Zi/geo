@@ -89,7 +89,7 @@ export const outPath = (dir: string, o: Output) => (o.path.startsWith('/') ? o.p
 export const nativeKind: Record<string, OutputKind> = { geojson: 'geojson', mvt: 'mvt', pmtiles: 'pmtiles', cog: 'cog', terrain: 'quantized-mesh', pnts: '3dtiles', i3dm: '3dtiles', glb: 'glb' }
 
 /** 단계 주소. 첫 단계는 확장자 주소 그대로 */
-export const stepPath = (f: FormatSpec, step: FlowStep) => `/${f.category}/${f.id}${step === 'collect' ? '' : `/${step}`}`
+export const stepPath = (f: FormatSpec, step: FlowStep) => `/viz/${f.category}/${f.id}${step === 'collect' ? '' : `/${step}`}`
 
 export const categoryOf = (id: string) => categories.find(c => c.id === id)
 export const toolOf = (id: string) => tools.find(t => t.id === id)

@@ -125,13 +125,13 @@ const perViewer = computed(() => viewers.map(v => {
               </ul>
             </template>
             <p v-if="!where.length" class="small muted">같은 형식의 다른 공개 데이터 없음.</p>
-            <p class="small more"><NuxtLink to="/sources">사이트 모음 전체 →</NuxtLink></p>
+            <p class="small more"><NuxtLink to="/viz/sources">사이트 모음 전체 →</NuxtLink></p>
           </details>
         </template>
         <section class="card mine">
           <h3>내 파일로 해 보기</h3>
           <p class="small muted">{{ 'note' in spec.upload ? `이 확장자: ${spec.upload.note}` : spec.upload.unsupported }}</p>
-          <NuxtLink to="/upload" class="btn mine-go">파일 올리러 가기 →</NuxtLink>
+          <NuxtLink to="/viz/upload" class="btn mine-go">파일 올리러 가기 →</NuxtLink>
         </section>
       </div>
     </div>

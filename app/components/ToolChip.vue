@@ -26,7 +26,7 @@ function place(e: Event) {
   <span v-if="tool" :id="uid" popover class="tool-pop" :style="pos" @beforetoggle="place">
     <span class="head"><strong>{{ tool.name }}</strong> <span class="muted small">{{ tool.lang }}, {{ tool.license }}, v{{ tool.version }}</span></span>
     <span class="small">{{ tool.summary }}</span>
-    <NuxtLink :to="`/tools/${id}`" class="small more">자세히 보기</NuxtLink>
+    <NuxtLink :to="`/viz/tools/${id}`" class="small more">자세히 보기</NuxtLink>
   </span>
 </template>
 

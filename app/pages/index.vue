@@ -1,143 +1,133 @@
 <script setup lang="ts">
-const route = useRoute()
-const router = useRouter()
+// 첫 화면: 이 프로젝트(사이트) 소개 — 무엇을 하는 곳인지, 할 수 있는 것, 숫자, 만든 방식. 맨 아래에 프로젝트 카드(app/utils/projects.ts)
+import { tools } from '#shared/catalog/tools'
+import { viewers } from '#shared/viewers'
 
-// 확장자 선택 창은 주소(?type=)로 연다. 뒤로 가기로 창이 다시 열리고, 다른 화면에서 이 창으로 바로 올 수 있다.
-// 정적으로 미리 그린 화면과 어긋나지 않게 브라우저에 붙은 뒤에만 읽는다
-const mounted = ref(false)
-onMounted(() => { mounted.value = true })
-const picked = computed({
-  get: () => (mounted.value && typeof route.query.type === 'string' ? route.query.type : ''),
-  set: type => router.replace({ query: type ? { type } : {} }),
-})
+useHead({ title: '소개' })
+const base = useRuntimeConfig().app.baseURL
 
-// GeoTIFF와 COG처럼 확장자가 같은 포맷은 한 번만
-const extsOf = (id: string) => [...new Set(formatsOf(id).filter(f => !f.closed).map(f => f.extensions[0]))]
-const openCount = formats.filter(f => !f.closed).length
+// 숫자는 카탈로그에서 센다 → 확장자·레시피가 늘면 같이 바뀐다
+const open = formats.filter(f => !f.closed)
+const stats = [
+  [categories.length, '데이터 유형'],
+  [open.length, '확장자 예시'],
+  [open.reduce((n, f) => n + f.recipes.length, 0), '처리 방법'],
+  [tools.length, '정리한 도구'],
+  [`${viewers.length} + 1`, '웹 렌더러 + 엔진'],
+] as const
 
-// 카드 그림: 유형마다 대표 샘플의 시각화·렌더링 화면 (npm run thumbs → public/thumbs/<유형>-<확장자>.webp)
-const thumbs: Record<string, [format: string, label: string]> = {
-  'vector-2d': ['shp', '서울 상권 영역'],
-  'vector-25d': ['shp', '과천 건물'],
-  'raster': ['cog', '서울 위성영상'],
-  'terrain': ['terrain', '마터호른 지형'],
-  'pointcloud': ['las', '치악산 둘레길'],
-  'model-3d': ['citygml', '도쿄역 건물'],
-  'indoor-bim': ['ifc', 'IFC 예제 건물'],
-  'attribute': ['csv', '서울 버스정류장'],
-}
-const thumbBase = `${useRuntimeConfig().app.baseURL}thumbs/`
-const cards = categories.map(c => ({ ...c, thumb: thumbs[c.id] }))
+const uses = [
+  { to: '/viz', title: '예시 둘러보기', text: '확장자마다 실제 공개 원본 → 처리 명령·로그 → 웹 지도·엔진 결과 화면' },
+  { to: '/viz/upload', title: '내 파일로 해 보기', text: '형식 자동 판별, 방식·도구 고르기, 변환 과정 실시간 → 지도' },
+  { to: '/ai', title: 'AI 대화에서 쓰기', text: 'Claude·ChatGPT에 MCP로 연결, 대화 안에서 업로드·변환·결과' },
+  { to: '/viz/why', title: '처음이라면', text: '왜 전처리·변환이 필요한지 그림으로 3분' },
+]
 
-// 유형마다 데이터 모양을 범례 기호처럼 그린 작은 그림 (viewBox 40×40)
-const glyphs: Record<string, string> = {
-  'vector-2d': '<path class="f" d="M7 27 13 11l14-3 7 13-11 11z"/><path d="M4 35c9-6 18 1 32-6"/><circle class="d" cx="13" cy="11" r="2"/><circle class="d" cx="27" cy="8" r="2"/><circle class="d" cx="34" cy="21" r="2"/>',
-  'vector-25d': '<path class="f2" d="M6 15l8-4 8 4-8 4z"/><path class="f" d="M6 15v16l8 4V19zM14 19v16l8-4V15z"/><path class="f2" d="M22 23l6-3 6 3-6 3z"/><path class="f" d="M22 23v9l6 3v-9zM28 26v9l6-3v-9z"/>',
-  'raster': '<rect class="f" x="5" y="5" width="7" height="7"/><rect class="f2" x="12" y="5" width="7" height="7"/><rect class="f3" x="19" y="5" width="7" height="7"/><rect class="f2" x="26" y="5" width="7" height="7"/><rect class="f2" x="5" y="12" width="7" height="7"/><rect class="f3" x="12" y="12" width="7" height="7"/><rect class="f" x="19" y="12" width="7" height="7"/><rect class="f3" x="26" y="12" width="7" height="7"/><rect class="f3" x="5" y="19" width="7" height="7"/><rect class="f" x="12" y="19" width="7" height="7"/><rect class="f2" x="19" y="19" width="7" height="7"/><rect class="f" x="26" y="19" width="7" height="7"/><rect class="f" x="5" y="26" width="7" height="7"/><rect class="f2" x="12" y="26" width="7" height="7"/><rect class="f3" x="19" y="26" width="7" height="7"/><rect class="f2" x="26" y="26" width="7" height="7"/>',
-  'terrain': '<path class="f" d="M3 33l9-13 6 6 8-14 11 21z"/><path d="M8 26l4-6 6 6 8-14 6 11"/><path d="M3 36h34"/>',
-  'pointcloud': '<g class="dots"><circle cx="20" cy="9" r="1.4"/><circle cx="14" cy="12" r="1.4"/><circle cx="26" cy="12" r="1.4"/><circle cx="20" cy="15" r="1.4"/><circle cx="10" cy="17" r="1.4"/><circle cx="30" cy="17" r="1.4"/><circle cx="16" cy="19" r="1.4"/><circle cx="24" cy="19" r="1.4"/><circle cx="7" cy="23" r="1.4"/><circle cx="33" cy="23" r="1.4"/><circle cx="13" cy="24" r="1.4"/><circle cx="20" cy="23" r="1.4"/><circle cx="27" cy="24" r="1.4"/><circle cx="5" cy="30" r="1.4"/><circle cx="11" cy="30" r="1.4"/><circle cx="17" cy="29" r="1.4"/><circle cx="23" cy="29" r="1.4"/><circle cx="29" cy="30" r="1.4"/><circle cx="35" cy="30" r="1.4"/></g>',
-  'model-3d': '<path class="f" d="M7 14h18v18H7z"/><path d="M7 14l8-7h18l-8 7M25 14l8-7v18l-8 7"/><path class="dash" d="M15 7v18h18M15 25l-8 7"/>',
-  'indoor-bim': '<path class="dash" d="M10 6h26v22"/><path class="f" d="M4 12h26v24H4z"/><path d="M17 12v10M4 24h8M17 30v6M30 24h-6"/><path d="M12 24a5 5 0 0 1 5-5"/>',
-  'attribute': '<rect class="f" x="4" y="6" width="27" height="25" rx="2"/><path class="f2" d="M4 8a2 2 0 0 1 2-2h23a2 2 0 0 1 2 2v5H4z"/><path d="M4 13h27M4 19h27M4 25h17M14 6v25"/><path class="d" d="M30 21c-3.3 0-6 2.5-6 5.7 0 4 6 9.3 6 9.3s6-5.3 6-9.3c0-3.2-2.7-5.7-6-5.7z"/><circle cx="30" cy="26.6" r="2.1" style="fill: var(--surface); stroke: none"/>',
-}
+const stack = [
+  { name: '사이트', items: ['Nuxt 4', 'Vue 3', 'TypeScript'] },
+  { name: '처리', items: ['Docker 도구 이미지', 'GDAL', 'tippecanoe', 'mago 3D', 'py3dtiles'] },
+  { name: '서버', items: ['PostGIS', 'GeoServer (WMS·WMTS·WFS·OGC API)', 'martin'] },
+  { name: '렌더링', items: ['OpenLayers', 'MapLibre', 'Deck.gl', 'CesiumJS', 'Cesium for Unreal'] },
+  { name: 'AI 연동', items: ['MCP', 'MCP Apps (대화 안 화면)'] },
+]
 </script>
 
 <template>
   <div>
     <FlowSteps />
-    <section class="wrap hero">
-      <div class="top">
-        <div>
-          <h1>공간 데이터 웹 처리</h1>
-          <p class="lead">
-            공간 데이터를 웹에서 그리기까지의 과정 정리. {{ categories.length }}개 유형·{{ openCount }}개 확장자마다 실제 공개 원본으로 수집 → 전처리 → 웹 형태 변환 → 시각화·렌더링.
-            단계별 명령·로그·측정값은 Docker 실제 실행 기록.
-          </p>
-          <NuxtLink to="/why" class="why">처음이라면: 왜 다듬고 바꾸나 — 그림으로 3분 →</NuxtLink>
-        </div>
-        <section class="mine" aria-labelledby="mine-title">
-          <h2 id="mine-title">내 파일로 해 보기</h2>
-          <p class="small muted">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도.</p>
-          <NuxtLink to="/upload" class="btn mine-go">파일 올리러 가기 →</NuxtLink>
-          <p class="small muted">Claude·ChatGPT 대화 안에서도 같은 처리: <NuxtLink to="/ai">AI 연결(MCP)</NuxtLink></p>
-        </section>
-      </div>
-      <p class="small muted start">노선·유형 카드 클릭 → 확장자 선택</p>
-      <RouteMap class="map" @pick="picked = $event" />
-    </section>
-    <section id="types" class="wrap" aria-label="데이터 유형">
-      <ul class="cards">
-        <li v-for="c in cards" :key="c.id" :style="{ '--c': c.color }">
-          <button type="button" class="card" :disabled="!extsOf(c.id).length" @click="picked = c.id">
-            <span v-if="c.thumb" class="shot">
-              <img :src="`${thumbBase}${c.id}-${c.thumb[0]}.webp`" :alt="`${c.name} 예: ${c.thumb[1]}`" width="640" height="400" loading="lazy">
-            </span>
-            <span class="head">
-              <svg class="glyph" viewBox="0 0 40 40" aria-hidden="true" v-html="glyphs[c.id]" />
-              <span class="name">{{ c.name }}</span>
-            </span>
-            <span class="summary">{{ c.summary }}</span>
-            <span class="exts">
-              <span v-for="e in extsOf(c.id)" :key="e" class="pill">{{ e }}</span>
-              <span v-if="!extsOf(c.id).length" class="small muted">준비 중</span>
-            </span>
-          </button>
-        </li>
+    <div class="wrap page">
+      <header class="hero">
+        <p class="eyebrow">프로젝트 소개</p>
+        <h1>공간 데이터가 웹 지도가 되기까지, 실제 데이터로 끝까지</h1>
+        <p class="lead">
+          SHP·GeoTIFF·LAS·CityGML 같은 공간 데이터를 형식마다 실제 공개 원본으로 받아 다듬고 웹용으로 바꿔 지도·3D·엔진으로 그리는 과정의 기록.
+          모든 단계는 Docker로 실제 실행 → 명령·로그·측정값 그대로. 내 파일로 같은 처리를 해 보거나 AI 대화 안에서도 사용.
+        </p>
+        <nav class="go" aria-label="시작">
+          <NuxtLink to="/viz" class="btn-go main">공간 데이터 시각화 도구 →</NuxtLink>
+          <a href="https://github.com/Gi-Di-Zi/geo" class="btn-go">GitHub 저장소 →</a>
+        </nav>
+      </header>
+
+      <ul class="stats" aria-label="숫자로 보기">
+        <li v-for="[n, label] in stats" :key="label"><b>{{ n }}</b><span>{{ label }}</span></li>
       </ul>
-      <p class="small muted note">카드 그림: 각 유형 샘플을 이 사이트에서 실제로 변환해 그린 화면. 배경지도 © OpenStreetMap contributors.</p>
-    </section>
-    <FormatPicker :category="picked" @close="picked = ''" />
+
+      <section class="part" aria-labelledby="uses">
+        <h2 id="uses">할 수 있는 것</h2>
+        <ul class="uses">
+          <li v-for="u in uses" :key="u.to">
+            <NuxtLink :to="u.to" class="use"><b>{{ u.title }} →</b><span>{{ u.text }}</span></NuxtLink>
+          </li>
+        </ul>
+      </section>
+
+      <section class="part" aria-labelledby="stack">
+        <h2 id="stack">만든 방식</h2>
+        <ul class="stack">
+          <li v-for="s in stack" :key="s.name">
+            <b>{{ s.name }}</b>
+            <span class="chips"><span v-for="i in s.items" :key="i" class="pill">{{ i }}</span></span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="part" aria-labelledby="projects-title">
+        <h2 id="projects-title">프로젝트</h2>
+        <ul class="list">
+          <li v-for="p in projects" :key="p.id">
+            <NuxtLink v-if="p.base" :to="p.base" class="proj">
+              <img v-if="p.thumb" :src="`${base}${p.thumb}`" alt="" width="640" height="400">
+              <span class="body"><b>{{ p.name }}</b><span>{{ p.summary }}</span></span>
+            </NuxtLink>
+            <div v-else class="proj soon">
+              <span class="ph" aria-hidden="true">기획 중</span>
+              <span class="body"><b>{{ p.name }}</b><span>{{ p.summary }}</span></span>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.hero { padding-top: 28px; }
-.hero h1 { font-size: var(--fs-4); }
-.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem); gap: 20px 40px; align-items: start; }
-.mine { display: grid; gap: 8px; justify-items: start; padding: 16px 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); }
-.mine h2 { font-size: var(--fs-1); }
-.mine-go { text-decoration: none; background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; padding: 7px 16px; }
-.mine-go:hover { background: #2A3540; }
-@media (max-width: 900px) { .top { grid-template-columns: minmax(0, 1fr); } }
-.lead { max-width: 52rem; margin-top: 6px; color: var(--ink-2); line-height: 1.6; }
-.why { display: inline-block; margin-top: 14px; font-weight: 600; }
-.start { margin-top: 6px; }
-.map { margin-top: 20px; }
-#types { padding-top: 40px; }
-.cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 14px; }
-.card {
-  width: 100%; height: 100%; display: grid; grid-template-rows: auto auto auto 1fr; gap: 6px; text-align: left;
-  padding: 0 0 14px; overflow: hidden; font: inherit; color: var(--ink); cursor: pointer;
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
-}
-.card:hover:not(:disabled), .card:focus-visible { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 14%, transparent); }
-.card:disabled { cursor: default; opacity: 0.55; }
-.shot { position: relative; display: block; aspect-ratio: 2 / 1; overflow: hidden; margin-bottom: 6px; background: var(--stage); border-bottom: 1px solid var(--rule); }
-.shot img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
-.card:hover:not(:disabled) .shot img { transform: scale(1.05); }
-@media (prefers-reduced-motion: reduce) { .shot img { transition: none; } }
-.head { display: flex; align-items: center; gap: 8px; padding: 0 16px; }
-.note { margin-top: 10px; }
-.glyph {
-  flex: none; width: 30px; height: 30px; padding: 3px; border-radius: 8px;
-  background: color-mix(in srgb, var(--c) 9%, var(--surface));
-  fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round;
-}
-.glyph :deep(.f) { fill: color-mix(in srgb, var(--c) 16%, transparent); }
-.glyph :deep(.f2) { fill: color-mix(in srgb, var(--c) 38%, transparent); }
-.glyph :deep(.f3) { fill: color-mix(in srgb, var(--c) 70%, transparent); }
-.glyph :deep(.d), .glyph :deep(.dots) { fill: var(--c); stroke: none; }
-.glyph :deep(.dash) { stroke-dasharray: 2 2.5; opacity: 0.7; }
-.name { font-size: var(--fs-2); font-weight: 700; letter-spacing: -0.01em; }
-.summary { padding: 0 16px; color: var(--ink-2); font-size: var(--fs-0); line-height: 1.6; }
-.exts { display: flex; flex-wrap: wrap; align-content: end; gap: 4px; padding: 4px 16px 0; }
-.exts .pill { padding: 0 7px; font-size: 0.72rem; }
-@media (max-width: 720px) {
-  .map { display: none; }
-  /* 휴대폰: 두 줄로 그림 위주, 설명은 확장자 선택 창에 */
-  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .summary, .glyph { display: none; }
-  .head, .exts { padding-inline: 10px; }
-  .card { padding-bottom: 10px; }
-}
+.page { padding-top: 48px; }
+.hero { max-width: 52rem; }
+.eyebrow { font-size: var(--fs-0); font-weight: 600; color: var(--ink-2); }
+.hero h1 { margin-top: 6px; font-size: var(--fs-5); }
+.lead { margin-top: 14px; font-size: var(--fs-2); line-height: 1.6; color: var(--ink-2); }
+.go { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.btn-go { padding: 9px 16px; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); color: var(--ink); font-weight: 600; text-decoration: none; }
+.btn-go:hover, .btn-go:focus-visible { border-color: var(--ink-2); }
+.btn-go.main { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn-go.main:hover, .btn-go.main:focus-visible { background: #2A3540; }
+
+.stats { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; }
+.stats li { display: grid; gap: 2px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); }
+.stats b { font-size: var(--fs-4); font-family: var(--mono); font-weight: 500; }
+.stats span { font-size: var(--fs-0); color: var(--ink-2); }
+
+.part { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--rule); }
+.part h2 { font-size: var(--fs-3); }
+.uses { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 12px; }
+.use { display: grid; gap: 6px; height: 100%; padding: 16px 18px; color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); }
+.use:hover, .use:focus-visible { border-color: var(--ink-2); box-shadow: 0 2px 10px rgb(22 32 42 / 0.08); }
+.use span { font-size: var(--fs-0); color: var(--ink-2); }
+.stack { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 10px; max-width: 52rem; }
+.stack li { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .pill { font-family: var(--font); background: var(--surface); border: 1px solid var(--rule); color: var(--ink); }
+
+.list { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 16px; }
+.proj { display: grid; align-content: start; height: 100%; overflow: hidden; color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; }
+a.proj:hover, a.proj:focus-visible { border-color: var(--ink-2); box-shadow: 0 2px 12px rgb(22 32 42 / 0.08); }
+/* height: auto — img의 height 속성(400)이 비율(2:1)보다 앞서지 않게 */
+.proj img, .ph { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; border-bottom: 1px solid var(--rule); }
+.ph { display: grid; place-items: center; background: repeating-linear-gradient(-45deg, var(--paper) 0 10px, var(--stage) 10px 20px); color: var(--ink-2); font-size: var(--fs-0); }
+.body { display: grid; gap: 4px; padding: 14px 16px 16px; }
+.body b { font-size: var(--fs-2); }
+.body span { color: var(--ink-2); font-size: var(--fs-0); }
+.soon { color: var(--ink-2); }
+@media (max-width: 560px) { .stack li { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
 </style>

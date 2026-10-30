@@ -93,7 +93,7 @@ export async function jobInfo(id: string, origin: string) {
     srs: job.srs,
     error: job.error,
     progress: { done, total: steps.length, current: job.state === 'running' ? steps[done]?.title : undefined, ms: report?.totalMs ?? 0 },
-    view: `${origin}/${job.format}/view?job=${id}`,
+    view: `${origin}/viz/${job.format}/view?job=${id}`,
     /** 엔진(Unreal) 실시간 보기 가능: 3D Tiles·지형 결과 (geo_engine) */
     engine: job.state === 'done' && !!job.recipe && !!engineOutput(job.recipe),
     /** 이 시각 이후 다음 작업을 시작할 때 결과·서비스가 지워진다 (cleanOld) */

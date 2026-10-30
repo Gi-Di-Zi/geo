@@ -76,7 +76,7 @@ try {
   for (const s of specs) {
     const name = `${s.category}-${s.id}`
     inflight.clear() // 앞 화면에서 끝나지 않은 요청은 버린다
-    await send('Page.navigate', { url: `${site}/${s.category}/${s.id}/view?embed=1` })
+    await send('Page.navigate', { url: `${site}/viz/${s.category}/${s.id}/view?embed=1` })
     await sleep(3000) // 하이드레이션 전 클릭은 무시된다
     await idle()
     await send('Runtime.evaluate', { expression: prepare })

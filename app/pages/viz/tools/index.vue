@@ -5,7 +5,7 @@ const statusLabels = { active: '사용 중', stale: '업데이트 중단', dead:
 const filter = ref<string>('')
 const groups = computed(() => toolTypes.filter(t => !filter.value || t.id === filter.value)
   .map(t => ({ ...t, items: tools.filter(x => x.type === t.id) })))
-useHead({ title: '뷰어와 변환 도구 | 공간 데이터 웹 처리' })
+useHead({ title: '뷰어와 변환 도구 | 공간 데이터 시각화 도구' })
 </script>
 
 <template>

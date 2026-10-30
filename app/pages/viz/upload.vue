@@ -5,7 +5,7 @@ import type { FormatSpec, Recipe } from '#shared/types'
 
 // 내 파일로 해 보기: ① 파일 넣기(형식 판별) → ② 형식 고르기 → ③ 방식·도구 고르기 → ④ 변환 시작
 // → 그 확장자의 시각화 단계로 이동해 변환 진행(JobProgress)·결과 지도
-useHead({ title: '내 파일로 해 보기 | 공간 데이터 웹 처리' })
+useHead({ title: '내 파일로 해 보기 | 공간 데이터 시각화 도구' })
 const router = useRouter()
 
 const file = ref<File | null>(null)

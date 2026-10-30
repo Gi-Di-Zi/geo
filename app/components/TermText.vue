@@ -23,7 +23,7 @@ const parts = computed(() => {
 </script>
 
 <template>
-  <span><template v-for="(p, i) in parts" :key="i"><template v-if="!p.term">{{ p.text }}</template><template v-else><button type="button" class="term" :popovertarget="`${uid}-${i}`">{{ p.text }}</button><span :id="`${uid}-${i}`" popover class="term-pop"><strong>{{ p.term.label }}</strong> {{ p.term.short }} <NuxtLink :to="`/concepts#${p.term.id}`">자세히</NuxtLink></span></template></template></span>
+  <span><template v-for="(p, i) in parts" :key="i"><template v-if="!p.term">{{ p.text }}</template><template v-else><button type="button" class="term" :popovertarget="`${uid}-${i}`">{{ p.text }}</button><span :id="`${uid}-${i}`" popover class="term-pop"><strong>{{ p.term.label }}</strong> {{ p.term.short }} <NuxtLink :to="`/viz/concepts#${p.term.id}`">자세히</NuxtLink></span></template></template></span>
 </template>
 
 <style>

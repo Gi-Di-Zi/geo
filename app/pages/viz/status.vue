@@ -36,7 +36,7 @@ const planned = [
 ]
 const candidates = 'KML, GPX, DXF, ECW, ASC, HGT, E57, PLY, OBJ, FBX, OSM PBF, COPC'
 
-useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
+useHead({ title: '확장자별 현황 | 공간 데이터 시각화 도구' })
 </script>
 
 <template>
@@ -54,9 +54,9 @@ useHead({ title: '확장자별 현황 | 공간 데이터 웹 처리' })
         변환 성공: 레시피 {{ recipes.length }}개 중 {{ done }}개. 파일 업로드 지원: {{ uploadable }}개 확장자.
       </p>
       <p class="prose small muted">
-        샘플 기준: 국내 기관 원본(국내 공공) → 없으면 해외 기관 원본(해외) → 없으면 다른 형식에서 변환한 샘플·개인 자료(기타) → 샘플 없음. 공통: 로그인 없이, 재배포 허용. 사이트 목록: <NuxtLink to="/sources">데이터 받는 곳</NuxtLink>.
+        샘플 기준: 국내 기관 원본(국내 공공) → 없으면 해외 기관 원본(해외) → 없으면 다른 형식에서 변환한 샘플·개인 자료(기타) → 샘플 없음. 공통: 로그인 없이, 재배포 허용. 사이트 목록: <NuxtLink to="/viz/sources">데이터 받는 곳</NuxtLink>.
         뷰어 칸: 레시피 중 가장 좋은 처리 수준. 직접 처리(원본 형식 그대로), 변환 후 처리, 일부 기능만, 미검증(성공한 실행 기록 없음), 미지원.
-        DEM(수치표고모델)은 확장자가 아닌 데이터 종류. 대표 형식: <NuxtLink to="/terrain/tif">GeoTIFF(.tif)</NuxtLink>, ERDAS IMG(.img, 국내 공개DEM은 로그인 필요 → 해외 샘플).
+        DEM(수치표고모델)은 확장자가 아닌 데이터 종류. 대표 형식: <NuxtLink to="/viz/terrain/tif">GeoTIFF(.tif)</NuxtLink>, ERDAS IMG(.img, 국내 공개DEM은 로그인 필요 → 해외 샘플).
       </p>
 
       <section v-for="g in groups" :key="g.cat.id" class="group" :style="{ '--c': g.cat.color }" :aria-labelledby="`g-${g.cat.id}`">

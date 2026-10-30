@@ -9,13 +9,13 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'ko' },
-      title: '공간 데이터 웹 처리',
+      title: '공간 데이터 시각화 도구',
       meta: [
         { name: 'description', content: '공간 데이터 유형·확장자별 수집, 전처리, 웹 형태 변환 과정. OpenLayers·MapLibre·Deck.gl·Cesium 결과 비교.' },
         // 링크 공유 미리보기. og:image는 공개 주소(절대 URL)가 생기면
         { property: 'og:type', content: 'website' },
         { property: 'og:locale', content: 'ko_KR' },
-        { property: 'og:title', content: '공간 데이터 웹 처리' },
+        { property: 'og:title', content: '공간 데이터 시각화 도구' },
         { property: 'og:description', content: '공간 데이터 확장자마다 실제 공개 원본으로 수집 → 전처리 → 웹 형태 변환 → 시각화. 명령·로그·측정값은 Docker 실행 기록.' },
       ],
       link: [

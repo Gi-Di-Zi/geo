@@ -70,7 +70,7 @@ const shown = computed<Recipe>(() => (mine.value && uploadRecipe.value ? job.val
 const shownReport = computed(() => (mine.value ? job.value?.report : report.value) ?? null)
 const stepLink = (id: FlowStep) => ({ path: stepPath(spec, id), query: route.query })
 
-useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!.name} | 공간 데이터 웹 처리` }))
+useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!.name} | 공간 데이터 시각화 도구` }))
 </script>
 
 <template>
@@ -78,7 +78,7 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
     <!-- 도구(레시피)는 전처리·변환 단계 본문 카드, 시각화 단계 지도 위 도구 메뉴에서 고른다 -->
     <FlowSteps v-if="!embed" :spec="spec.closed ? undefined : spec" :step>
       <span v-if="mine" class="chip">내 파일</span>
-      <NuxtLink v-if="step === 'view'" to="/" class="btn back">← 다른 데이터 보기</NuxtLink>
+      <NuxtLink v-if="step === 'view'" to="/viz" class="btn back">← 다른 데이터</NuxtLink>
     </FlowSteps>
 
     <div v-if="spec.closed" class="wrap body">
@@ -96,7 +96,7 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
         <JobProgress v-if="job" :spec :job="job.job" :report="job.report" :live="job.live" :now="job.now" />
         <p v-else-if="jobError" class="prose">{{ jobError }}</p>
         <p v-else class="small muted">작업 불러오는 중…</p>
-        <p class="small"><NuxtLink to="/upload">다른 파일 올리기</NuxtLink> · <NuxtLink :to="{ query: {} }">샘플 보기</NuxtLink></p>
+        <p class="small"><NuxtLink to="/viz/upload">다른 파일 올리기</NuxtLink> · <NuxtLink :to="{ query: {} }">샘플 보기</NuxtLink></p>
       </section>
     </template>
 

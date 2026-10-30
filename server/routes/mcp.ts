@@ -159,7 +159,7 @@ function buildServer(origin: string, localPaths: boolean) {
     return { content: [{ type: 'text', text: identifyText(info) }], structuredContent: { mode: 'choose', origin, upload: r.upload, ...info } }
   })
 
-  registerAppResource(server, '공간 데이터 웹 처리', APP, { description: '업로드·형식 고르기·변환 진행·결과 지도' }, async () => {
+  registerAppResource(server, '공간 데이터 시각화 도구', APP, { description: '업로드·형식 고르기·변환 진행·결과 지도' }, async () => {
     const code = await appSdk()
     return { contents: [{
       uri: APP,

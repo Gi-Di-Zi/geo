@@ -9,7 +9,7 @@ const notes: Record<Source['scope'], string> = {
 const groups = (Object.keys(scopeLabels) as Source['scope'][])
   .map(scope => ({ scope, title: scopeLabels[scope], note: notes[scope], list: sources.filter(s => s.scope === scope) }))
   .filter(g => g.list.length)
-useHead({ title: '데이터 받는 곳 | 공간 데이터 웹 처리' })
+useHead({ title: '데이터 받는 곳 | 공간 데이터 시각화 도구' })
 </script>
 
 <template>

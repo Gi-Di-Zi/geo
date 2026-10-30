@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// AI 연결(MCP) 안내: 서버 /mcp(server/routes/mcp.ts)에 붙는 방법. 주소는 이 화면을 연 주소 기준
-useHead({ title: 'AI 연결 (MCP) | 공간 데이터 웹 처리' })
+// AI 연결(MCP) 안내: 사이트 공용 서버 /mcp(server/routes/mcp.ts)에 붙는 방법 (헤더 오른쪽 버튼). 주소는 이 화면을 연 주소 기준
+useHead({ title: 'AI 연결 (MCP)' })
 
 // 미리 그린 화면과 어긋나지 않게 브라우저에 붙은 뒤에 실제 주소로 바꾼다
 const origin = ref('http://localhost:3000')
@@ -51,7 +51,7 @@ const asks = [
     <div class="wrap page">
       <h1>AI 연결 (MCP)</h1>
       <p class="prose lead">
-        Claude·Codex·ChatGPT 대화 안에서 <NuxtLink to="/upload">내 파일로 해 보기</NuxtLink>와 같은 처리. 파일 맡기기 → 형식 판별 → 형식·방식·도구 고르기 → 변환 → 결과 내려받기·서비스 주소.
+        Claude·Codex·ChatGPT 대화 안에서 <NuxtLink to="/viz/upload">내 파일로 해 보기</NuxtLink>와 같은 처리. 파일 맡기기 → 형식 판별 → 형식·방식·도구 고르기 → 변환 → 결과 내려받기·서비스 주소.
       </p>
       <p class="addr">연결 주소 <code>{{ endpoint }}</code> <button class="btn" type="button" @click="copy('addr', endpoint)">{{ copied === 'addr' ? '복사됨' : '복사' }}</button></p>
 
