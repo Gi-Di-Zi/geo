@@ -129,8 +129,8 @@ watch([showEngine, dir], async ([open]) => {
             :aria-pressed="current === t.meta.id && !live" @click="current = t.meta.id; live = false"
           >{{ t.meta.name }} <span class="small">{{ t.output ? t.meta.dims : '표시 불가' }}</span></button>
           <p class="menu-head small">엔진 · 수동 확인</p>
-          <button type="button" :class="{ off: !engineOut }" :aria-pressed="showEngine" @click="showEngine = !showEngine">
-            {{ engine.name }} <span class="small">{{ engineOut ? engine.dims : '표시 불가' }}</span>
+          <button type="button" disabled title="이 서버에서는 Cesium for Unreal을 사용하지 않습니다" :aria-pressed="false">
+            {{ engine.name }} <span class="small">서버에서 비활성화</span>
           </button>
         </div>
       </details>

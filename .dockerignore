@@ -1,0 +1,5 @@
+*
+!.output/
+!.output/**
+!deploy/
+!deploy/Dockerfile
