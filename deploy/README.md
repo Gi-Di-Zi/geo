@@ -8,7 +8,7 @@ Node 24.19.0에서 npm ci와 npm run build로 만든 .output만 실행 이미지
 
 geo-data-docker.service는 /srv/storage/sda/apps/geo/docker-data를 사용한다. 수집 명령은 PATH=/srv/storage/sda/apps/geo/bin:$PATH, DOCKER_HOST=unix:///run/user/1000/geo-docker.sock 환경에서 실행한다. 프로젝트 Docker wrapper는 수집·변환 컨테이너를 rootless 엔진 안의 UID 0(호스트의 strop)으로 실행해 이미지별 기본 사용자에 따른 Linux bind 쓰기 오류를 해결하며 다른 엔진을 변경하지 않는다. .env는 gitignore와 mode 600을 유지한다.
 
-흐름도는 Windows·OS의 움직임 줄이기 설정과 관계없이 기본 재생한다. 노선·과정 칩·알갱이는 처음부터 표시하고, 꼬리 애니메이션은 공통 움직임 줄이기 CSS가 중단하지 않도록 한다. 사용자가 직접 끄기를 선택할 수 있다. MCP·업로드 변경 범위에는 npm run lint를 연결했으며 dev·build·generate·setup·pipeline·check·test:viz·test:mcp-app의 선행 hook이 검사 실패를 차단한다. 일반 anti-slop 규칙18개와 native companion을 error로 적용하고 기존 저장소 전체 이전으로 주장하지 않는다. .github/workflows/quality.yml은 Node24에서 npm ci → lint → 검사기 회귀 검사 → build를 실행한다. PR과 main/deploy 브랜치 push에서만 실행하며 자동 배포나 secret 연결은 없다. 실제 GitHub CI 실행 상태와 서버 배포 상태는 별도 확인한다. npm run test:viz·test:mcp-app과 npm run check의 실제 데이터 검증을 완료 조건으로 유지한다.
+흐름도는 Windows·OS의 움직임 줄이기 설정과 관계없이 기본 재생한다. 노선·과정 칩·알갱이는 처음부터 표시하고, 꼬리 애니메이션은 공통 움직임 줄이기 CSS가 중단하지 않도록 한다. 사용자가 직접 끄기를 선택할 수 있다. MCP·업로드 변경 범위에는 npm run lint를 연결했으며 dev·build·generate·setup·pipeline·check·test:viz·test:mcp-app의 선행 hook이 검사 실패를 차단한다. 일반 anti-slop 규칙18개와 native companion을 error로 적용하고 기존 저장소 전체 이전으로 주장하지 않는다. .github/workflows/quality.yml은 Node24에서 npm ci → lint → 검사기 회귀 검사 → 사전 갱신 회귀 검사 → build를 실행한다. PR과 main/deploy 브랜치 push에서만 실행하며 자동 배포나 secret 연결은 없다. 실제 GitHub CI 실행 상태와 서버 배포 상태는 별도 확인한다. npm run test:viz·test:mcp-app과 npm run check의 실제 데이터 검증을 완료 조건으로 유지한다.
 
 복구에는 Git 소스/배포 설정과 함께 public/data, pipeline/raw·serve, 공간 DB의 일관된 snapshot과 GeoServer 설정을 보호해야 한다. 공용 파일 백업만으로 실행 중인 공간 DB/볼륨 복구를 대체하지 않는다.
 

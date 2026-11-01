@@ -12,14 +12,19 @@ function fixture() {
   const info = (name: string): ReferenceUpdateInfo => ({ available: true, version: name + '-v1', source: '검사 전용 자료', sourceUrl: 'https://example.invalid/reference', sourceDate: '2026-10-01', activatedAt: '2026-10-01T00:00:00Z', checkedAt: '2026-10-29T00:00:00Z', count: 1 })
   const legal = info('legal'), administrative = info('administrative')
   let fail = false
+
   const sources: ReferenceUpdateSource[] = [legal, administrative].map((value, index) => ({ id: index ? 'administrative' : 'legal', label: index ? '행정동' : '법정동', info: async () => ({ ...value }), refresh: async force => {
     calls.push(index ? 'administrative' : 'legal'); forced.push(!!force)
     await new Promise(done => setTimeout(done, 15))
+
     if (index && fail) throw new Error('검사용 공식 원천 장애')
     value.checkedAt = new Date(clock).toISOString()
+
     return { state: 'no_change', version: value.version }
   } }))
+
   const make = () => createReferenceUpdater({ directory, sources, now: () => clock })
+
   return { directory, sources, calls, forced, legal, administrative, make, now: () => clock, setClock: (value: number) => { clock = value }, setFail: (value: boolean) => { fail = value } }
 }
 
@@ -52,6 +57,59 @@ test('독립 manager 인스턴스도 영속 독점 시도로 같은 업데이트
   assert.ok(results.every(value => value.state === 'checking' || value.state === 'done'))
   assert.equal(data.calls.length, 2)
   assert.equal((await second.status()).state, 'done')
+})
+
+test('상태 조회 뒤 다른 manager가 예약해도 새 시도 번호로 중복 실행하지 않는다', { timeout: 5_000 }, async () => {
+  const data = fixture()
+  const infoEntered = Promise.withResolvers<void>()
+  const releaseInfo = Promise.withResolvers<void>()
+  const refreshEntered = Promise.withResolvers<void>()
+  const releaseRefresh = Promise.withResolvers<void>()
+  const duplicate = Promise.withResolvers<void>()
+
+  for (const source of data.sources) {
+    source.refresh = async () => {
+      data.calls.push(source.id)
+
+      if (data.calls.length === 2) refreshEntered.resolve()
+
+      if (data.calls.length > 2) duplicate.resolve()
+      await releaseRefresh.promise
+      const value = source.id === 'legal' ? data.legal : data.administrative
+      value.checkedAt = new Date(data.now()).toISOString()
+
+      return { state: 'no_change', version: value.version }
+    }
+  }
+
+  const delayedSources = data.sources.map(source => ({
+    ...source,
+    info: async () => {
+      infoEntered.resolve()
+      await releaseInfo.promise
+
+      return source.info()
+    },
+  }))
+
+  const delayed = createReferenceUpdater({ directory: data.directory, sources: delayedSources, now: data.now })
+  const secondRun = delayed.update()
+  await infoEntered.promise
+  const firstRun = data.make().update()
+  await refreshEntered.promise
+  releaseInfo.resolve()
+  let outcome: string
+
+  try {
+    outcome = await Promise.race([secondRun.then(() => 'shared'), duplicate.promise.then(() => 'duplicated')])
+  } finally {
+    releaseRefresh.resolve()
+    await Promise.all([firstRun, secondRun])
+  }
+
+  assert.equal(outcome, 'shared')
+  assert.equal(data.calls.length, 2)
+  assert.equal((await readdir(join(data.directory, '2026-10-30'))).length, 1)
 })
 
 test('원본이 그대로여도 다음 한국 날짜에는 한 번 다시 확인할 수 있다', async () => {
@@ -103,9 +161,33 @@ test('소스 확인 중은 중복 요청을 막고 당일 실패 기록은 숨�
   assert.equal(failed.state, 'failed'); assert.equal(failed.canUpdate, false)
 })
 
+test('원천 CLI가 남긴 ISO 임대 기한도 진행 중으로 읽고 새 확인을 시작하지 않는다', async () => {
+  const data = fixture()
+  data.sources[0]!.history = async () => ({ state: 'checking', checkedAt: new Date(data.now() - 60_000).toISOString(), leaseUntil: new Date(data.now() + 60_000).toISOString(), pid: process.pid })
+  const pending = await data.make().update()
+  assert.equal(pending.state, 'checking')
+  assert.equal(pending.canUpdate, false)
+  assert.equal(data.calls.length, 0)
+})
+
+test('문법만 맞고 결과 필드가 손상된 시도는 완료·진행 중으로 신뢰하지 않는다', async () => {
+  const data = fixture(), day = referenceDay(data.now()), folder = join(data.directory, day)
+  await mkdir(folder, { recursive: true })
+  await writeFile(join(folder, '0001.json'), JSON.stringify({ day, attempt: 1, state: 'checking', startedAt: new Date(data.now()).toISOString(), pid: process.pid, leaseUntil: data.now() + 60_000, results: { legal: { state: 'done', checkedAt: 123 } } }))
+  const status = await data.make().status()
+  assert.equal(status.state, 'failed')
+  assert.equal(status.canUpdate, false)
+  assert.equal(data.calls.length, 0)
+})
+
 test('소스가 기존 실행을 공유한다고 응답하면 기록을 잠시 읽지 못해도 재실행하지 않는다', async () => {
   const data = fixture()
-  data.sources[0]!.refresh = async () => { data.calls.push('legal'); return { state: 'checking' } }
+  data.sources[0]!.refresh = async () => {
+    data.calls.push('legal')
+
+    return { state: 'checking' }
+  }
+
   const manager = data.make()
   assert.equal((await manager.update()).state, 'checking')
   assert.equal((await data.make().update()).canUpdate, false)

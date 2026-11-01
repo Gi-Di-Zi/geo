@@ -13,6 +13,7 @@ const files = [
   'server/utils/upload-storage.ts',
   'server/utils/job-files.ts',
   'server/middleware/conversion-worker.ts',
+  'server/services/link/reference-updates.ts',
   'server/api/jobs.post.ts',
   'server/api/stage.ts',
   'server/api/jobs/[id]/files/[...path].get.ts',
@@ -25,6 +26,7 @@ const files = [
   'scripts/lint-scope.test.mjs',
   'tests/viz/mcp-app.test.ts',
   'tests/viz/mcp-app-host.ts',
+  'tests/link/reference-updates.test.ts',
 ]
 
 const options = process.argv.slice(2)
