@@ -14,28 +14,39 @@ export default defineEventHandler(async event => {
     'Access-Control-Allow-Headers': '*',
     'Access-Control-Allow-Private-Network': 'true',
   })
-  if (event.method === 'OPTIONS') { setResponseStatus(event, 204); return '' }
+
+  if (event.method === 'OPTIONS') { setResponseStatus(event, 204);
+
+ return '' }
+
   if (event.method !== 'GET') throw createError({ statusCode: 405 })
 
   const dir = jobDir(getRouterParam(event, 'id'))
   const job: Job | null = await readFile(join(dir, 'job.json'), 'utf8').then(JSON.parse, () => null)
   const o = job?.state === 'done' ? job.recipe?.outputs.find(x => x.id === getRouterParam(event, 'output')) : undefined
+
   if (!job || !o || o.path.startsWith('/svc/')) throw createError({ statusCode: 404, statusMessage: '내려받을 결과 없음' })
   const { path, zip, name } = downloadOf(o, job.name)
-  const target = join(dir, 'upload', path)
-  if (!existsSync(target)) throw createError({ statusCode: 404, statusMessage: '결과 파일 없음 (24시간 지남)' })
+  const target = await jobOutputPath(getRouterParam(event, 'id'), path)
+
+  if (!existsSync(target)) throw createError({ statusCode: 404, statusMessage: '결과 파일 없음' })
 
   setResponseHeaders(event, {
     'content-type': zip ? 'application/zip' : 'application/octet-stream',
     'content-disposition': `attachment; filename="${o.id}${extname(name)}"; filename*=UTF-8''${encodeURIComponent(name)}`,
   })
+
   if (!zip) {
     setResponseHeader(event, 'content-length', statSync(target).size)
+
     return sendStream(event, createReadStream(target))
   }
+
   // 타일 수가 많아도(ZIP64) 메모리에 모으지 않고 흘려 보낸다
+  await assertNoOutputLinks(target)
   const a = archiver('zip')
   a.directory(target, basename(target))
   void a.finalize()
+
   return sendStream(event, a)
 })

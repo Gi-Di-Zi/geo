@@ -1,0 +1,27 @@
+[Unit]
+Description=Geo private file conversion worker
+After=geo-data-docker.service
+Requires=geo-data-docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/storage/sda/apps/geo/worker-current
+EnvironmentFile=/srv/storage/sda/apps/geo/worker-config/worker.env
+Environment=PATH=/srv/storage/sda/apps/geo/bin:/srv/storage/sda/apps/geo/build-cache/node24-bin:/usr/local/bin:/usr/bin:/bin
+Environment=NODE_OPTIONS=
+ExecStartPre=/srv/storage/sda/apps/geo/build-cache/node24 /usr/share/nodejs/npm/bin/npm-cli.js run lint
+ExecStart=/srv/storage/sda/apps/geo/build-cache/node24 --max-old-space-size=1024 .output/server/index.mjs
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+MemoryHigh=2G
+MemoryMax=3G
+CPUQuota=200%
+TasksMax=256
+
+[Install]
+WantedBy=default.target

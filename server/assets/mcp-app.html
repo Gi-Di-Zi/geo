@@ -157,7 +157,7 @@
     const input = h('input', { type: 'file', hidden: true, onchange: e => upload(e.target.files[0]) })
     const zone = h('label', { class: 'drop' }, input,
       h('strong', {}, '파일 끌어 놓기 또는 고르기'),
-      h('span', { class: 'small muted' }, 'SHP는 zip으로(폴더째 가능), 타일셋은 zip 하나로. 최대 200MB, 24시간 뒤 삭제'))
+      h('span', { class: 'small muted' }, 'SHP는 zip으로(폴더째 가능), 타일셋은 zip 하나로. 최대 200MB · 한 번에 한 변환 · 원본/결과는 운영자가 정리할 때까지 보관'))
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over') })
     zone.addEventListener('dragleave', () => zone.classList.remove('over'))
     zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('over'); upload(e.dataTransfer.files[0]) })
@@ -350,12 +350,9 @@
     return box
   }
 
-  /** 보관 기한: 서버 방식은 서비스(레이어·DB 표)가 내려가 주소가 끊기고, 파일 방식은 결과 파일이 지워진다 */
+  /** 원본과 결과는 운영자가 명시적으로 정리할 때까지 보관한다. */
   function expiry(s) {
-    const until = new Date(s.expiresAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    return s.method?.way === 'server'
-      ? h('p', { class: 'small warn' }, `서비스는 24시간만 유지: ${until} 이후 GeoServer·martin 레이어와 DB 표가 지워지고 아래 서비스 주소가 끊김. 계속 쓰려면 파일 방식으로 변환해 받아 두기.`)
-      : h('p', { class: 'small muted' }, `결과 파일은 24시간 보관: ${until} 이후 지워짐. 필요하면 내려받아 두기.`)
+    return h('p', { class: 'small muted' }, '원본·결과는 운영자가 정리할 때까지 보관합니다. 결과 링크를 아는 사용자가 열 수 있습니다.')
   }
 
   // 호스트가 지도 화면(frame)을 막으면(Claude는 https 공개 주소만 허용) 빈 상자 대신 안내

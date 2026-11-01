@@ -6,9 +6,11 @@ import { noteOf } from '#shared/catalog/delivery'
 import { tools } from '#shared/catalog/tools'
 import { kindLabels } from '#shared/viewers'
 import type { FormatSpec, Recipe } from '#shared/types'
+import { fileUploadRecipes } from '#shared/conversion'
 
 /** 확장자 spec 전체 (판별 sniff()에 그대로 넘긴다) */
 export const allFormats = specs
+
 /** 업로드를 받는 열린 형식 */
 export const uploadFormats = specs.filter(f => !f.closed && 'recipes' in f.upload)
 
@@ -16,7 +18,8 @@ export const isServerRecipe = (r: Recipe) => r.convert.some(s => tools.find(t =>
 
 /** 형식 하나: 업로드 조건 + 고를 수 있는 방식·도구(첫 번째가 기본값)와 고르는 기준·장단점 */
 export function describeFormat(f: FormatSpec) {
-  const recipes = 'recipes' in f.upload ? f.upload.recipes : []
+  const recipes = fileUploadRecipes(f)
+
   return {
     id: `${f.category}/${f.id}`,
     name: f.name,
@@ -27,6 +30,7 @@ export function describeFormat(f: FormatSpec) {
     upload: 'recipes' in f.upload ? { accept: f.upload.accept, note: f.upload.note } : { unsupported: f.upload.unsupported },
     methods: recipes.map(r => {
       const n = noteOf(f.category, f.id, r.id)
+
       return {
         id: r.id,
         title: r.title,

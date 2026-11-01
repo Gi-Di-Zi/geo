@@ -22,7 +22,19 @@
     "link:administrative": "node --env-file-if-exists=.env scripts/link-administrative.ts",
     "link:maintenance": "node --env-file-if-exists=.env scripts/link-maintenance.ts",
     "test:link": "node scripts/test-link.ts",
-    "test:link:unit": "node --test tests/link/core.test.ts tests/link/reference.test.ts tests/link/administrative.test.ts tests/link/administrative-service.test.ts tests/link/reference-updates.test.ts tests/link/location.test.ts tests/link/location-resolve.test.ts tests/link/all.test.ts tests/link/boundary.test.ts tests/link/files.test.ts tests/link/jobs.test.ts tests/link/chunks.test.ts"
+    "test:link:unit": "node --test tests/link/core.test.ts tests/link/reference.test.ts tests/link/administrative.test.ts tests/link/administrative-service.test.ts tests/link/reference-updates.test.ts tests/link/location.test.ts tests/link/location-resolve.test.ts tests/link/all.test.ts tests/link/boundary.test.ts tests/link/files.test.ts tests/link/jobs.test.ts tests/link/chunks.test.ts",
+    "lint": "node scripts/lint-scope.mjs",
+    "test:lint": "node --test scripts/lint-scope.test.mjs",
+    "predev": "npm run lint",
+    "prebuild": "npm run lint",
+    "pregenerate": "npm run lint",
+    "presetup": "npm run lint",
+    "prepipeline": "npm run lint",
+    "precheck": "npm run lint",
+    "pretest:viz": "npm run lint",
+    "pretest:lint": "npm run lint",
+    "test:mcp-app": "node --test tests/viz/mcp-app.test.ts",
+    "pretest:mcp-app": "npm run lint"
   },
   "dependencies": {
     "@deck.gl/core": "~9.4.0",
@@ -50,7 +62,10 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.90.0",
     "@playwright/test": "1.64.1",
-    "@types/archiver": "^6.0.4"
+    "@types/archiver": "^6.0.4",
+    "esbuild": "0.28.2",
+    "oxlint": "1.90.0"
   }
 }

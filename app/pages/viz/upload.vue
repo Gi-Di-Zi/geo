@@ -2,23 +2,29 @@
 import { sniff, type Sniff } from '#shared/sniff'
 import { kindLabels } from '#shared/viewers'
 import type { FormatSpec, Recipe } from '#shared/types'
+import { fileUploadRecipes } from '#shared/conversion'
 
 // 내 파일로 해 보기: ① 파일 넣기(형식 판별) → ② 형식 고르기 → ③ 방식·도구 고르기 → ④ 변환 시작
 // → 그 확장자의 시각화 단계로 이동해 변환 진행(JobProgress)·결과 지도
 useHead({ title: '내 파일로 해 보기 | 공간 데이터 시각화 도구' })
+
 const router = useRouter()
 
 const file = ref<File | null>(null)
 const found = ref<Sniff | null>(null)
+
 /** 차례로 보인 판별 단계 수 (4 = 판별 끝) */
 const shown = ref(0)
 const format = ref<FormatSpec>()
+
 /** 고른 방식·도구 = 업로드 레시피 id */
 const method = ref<string>()
+
 /** 업로드 진행률 0~1 (null = 올리기 전) */
 const sent = ref<number | null>(null)
 const error = ref('')
 const over = ref(false)
+
 /** 파일에 좌표계가 없을 때 고른 원본 좌표계 */
 const srs = ref('')
 let run = 0
@@ -37,21 +43,26 @@ const SRS_LIST = [
   ['EPSG:4326', '위경도 (WGS84)'],
 ]
 
-const recipes = computed<Recipe[]>(() => (format.value && 'recipes' in format.value.upload ? format.value.upload.recipes : []))
+const recipes = computed<Recipe[]>(() => format.value ? fileUploadRecipes(format.value) : [])
 const recipe = computed(() => recipes.value.find(r => r.id === method.value))
+
 // 형식을 바꾸면 그 형식의 첫 방식·도구(기본값)로
 watch(format, () => { method.value = recipes.value[0]?.id })
+
 const srsOk = computed(() => !found.value?.srs || /^EPSG:\d{4,6}$/.test(srs.value.trim()))
 const kinds = computed(() => [...new Set(recipe.value?.outputs.map(o => kindLabels[o.kind]) ?? [])])
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 const cat = (f: FormatSpec) => categoryOf(f.category)!
+
 // 확장자가 같은 형식(GeoTIFF·COG·DEM .tif)이 있어 이름으로 부른다. 괄호 설명은 뺀다
 const label = (f: FormatSpec) => `${cat(f).name} ${f.name.replace(/\s*\(.*\)$/, '')}`
 
 const stages = computed(() => {
   const f = file.value, s = found.value
+
   if (!f) return []
+
   return [
     { label: '파일', text: `${f.name} · ${bytes(f.size)}` },
     { label: '확장자', text: s ? (s.byExt.length > 3 ? `${s.ext} → 받는 형식 ${s.byExt.length}개 (내용으로 구분)` : s.byExt.length ? `${s.ext} → 후보 ${s.byExt.map(label).join(', ')}` : s.ext || '없음') : '' },
@@ -64,39 +75,50 @@ async function take(f?: File | null) {
   if (!f || sent.value !== null) return
   const me = ++run
   file.value = f; found.value = null; format.value = undefined; error.value = ''; shown.value = 1
-  const result = await sniff(f, f.name, formats).catch(e => ({ ext: '', byExt: [], facts: [], picks: [], warns: [], note: `파일 읽기 실패: ${e.message}` }) as Sniff)
+  const result = await sniff(f, f.name, formats).catch<Sniff>(error => ({ ext: '', byExt: [], facts: [], picks: [], warns: [], note: error instanceof Error ? `파일 읽기 실패: ${error.message}` : '파일을 읽지 못했습니다.' }))
+
   if (f.size > LIMIT) Object.assign(result, { picks: [], note: `${bytes(f.size)} — 업로드 상한 ${bytes(LIMIT)} 넘음` })
   srs.value = result.srs?.guess ?? ''
+
   // 판별은 수십 ms. 단계마다 잠깐 머물러 무엇을 보고 정했는지 보이게 한다 (새 파일을 놓으면 앞 판별 표시는 멈춤)
   for (let i = 2; i <= 4; i++) {
     await wait(420)
+
     if (me !== run) return
     found.value = result
     shown.value = i
   }
+
   format.value = result.picks[0]
 }
 
 // $fetch는 업로드 진행률을 주지 않아 XHR로 올린다
 function send() {
   const f = file.value, spec = format.value
+
   if (!f || !spec || !recipe.value) return
   const body = new FormData()
   body.append('format', `${spec.category}/${spec.id}`)
   body.append('method', recipe.value.id)
+
   if (found.value?.srs) body.append('srs', srs.value.trim())
   body.append('file', f)
   const x = new XMLHttpRequest()
   x.open('POST', '/api/jobs')
   x.upload.onprogress = e => { if (e.lengthComputable) sent.value = e.loaded / e.total }
+
   x.onload = () => {
     let res: any = {}
+
     try { res = JSON.parse(x.responseText) } catch {}
+
     if (x.status === 200 && res.id) return router.push({ path: stepPath(spec, 'view'), query: { job: res.id } })
     error.value = res.statusMessage ?? res.message ?? `업로드 실패 (${x.status})`
     sent.value = null
   }
+
   x.onerror = () => { error.value = '업로드 실패. 서버 실행 여부 확인.'; sent.value = null }
+
   sent.value = 0
   x.send(body)
 }
@@ -113,7 +135,7 @@ function drop(e: DragEvent) {
     <main class="wrap body">
       <header class="head">
         <h1>내 파일로 해 보기</h1>
-        <p class="lead">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 최대 200MB, 결과는 24시간 뒤 삭제. Claude·ChatGPT 대화 안에서도 같은 처리: <NuxtLink to="/ai">AI 연결(MCP)</NuxtLink>.</p>
+        <p class="lead">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 최대 200MB, 한 번에 한 파일을 변환합니다. 원본과 결과는 운영자가 정리할 때까지 보관되며 결과 링크를 아는 사용자가 열 수 있습니다. Claude·ChatGPT 대화 안에서도 같은 처리: <NuxtLink to="/ai">AI 연결(MCP)</NuxtLink>.</p>
       </header>
 
       <ol class="flow">
@@ -170,7 +192,7 @@ function drop(e: DragEvent) {
             <span class="arrow" aria-hidden="true">→</span>
             <span v-for="k in kinds" :key="k" class="pill">{{ k }}</span>
           </p>
-          <p v-if="isService(recipe)" class="small muted">서버 방식: 공유 서버(PostGIS·GeoServer·martin)에 발행 → 결과는 서버 주소. 서버가 꺼져 있으면 자동으로 켬(처음 1~2분). 24시간 뒤 표·레이어도 삭제.</p>
+          <p class="small muted">이 배포에서는 파일로 만드는 변환 경로를 제공합니다. 공유 공간 서버에 새 레이어를 발행하는 방식은 제공하지 않습니다.</p>
           <div v-if="found?.srs" class="srs">
             <label class="small" for="srs-in"><strong>좌표계 선택</strong> — {{ found.srs.why }}</label>
             <input id="srs-in" v-model="srs" list="srs-list" placeholder="EPSG:5186" autocomplete="off" spellcheck="false" :disabled="sent !== null">

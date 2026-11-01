@@ -7,12 +7,20 @@ export default defineEventHandler(async event => {
     'Access-Control-Allow-Headers': '*',
     'Access-Control-Allow-Private-Network': 'true',
   })
-  if (event.method === 'OPTIONS') { setResponseStatus(event, 204); return '' }
+
+  if (event.method === 'OPTIONS') { setResponseStatus(event, 204);
+
+ return '' }
+
   if (event.method !== 'POST') throw createError({ statusCode: 405 })
+
   if (Number(getRequestHeader(event, 'content-length') ?? 0) > UPLOAD_LIMIT + 1024 ** 2) {
     throw createError({ statusCode: 413, statusMessage: `파일이 너무 큼. 최대 ${UPLOAD_LIMIT / 1024 ** 2}MB.` })
   }
+
   const file = (await readMultipartFormData(event))?.find(p => p.name === 'file' && p.filename)
+
   if (!file) throw createError({ statusCode: 400, statusMessage: '파일 필요 (file 필드).' })
+
   return identify(await stageData(file.filename!, file.data))
 })
