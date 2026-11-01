@@ -1,9 +1,13 @@
 # 서버 공개 배포
 
-원본 저장소: https://github.com/Gi-Di-Zi/geo
+원본: https://github.com/Gi-Di-Zi/geo
 
-Node 24.19.0에서 npm ci와 npm run build로 만든 .output만 실행 이미지에 복사한다. 런타임에는 Docker 소켓, 원본 파일, 개발 도구, Unreal을 마운트하지 않는다. Cesium for Unreal 버튼은 비활성화하며 웹 CesiumJS는 유지한다.
+Node 24.19.0에서 npm ci와 npm run build로 만든 .output만 실행 이미지에 복사한다. public/data는 읽기 전용 bind로 제공하며 데이터 생성과 서비스 DB는 /srv/storage/sda/apps/geo의 별도 rootless Docker 엔진에 보관한다. 런타임에는 Docker 소켓이나 Unreal을 마운트하지 않는다. Cesium for Unreal 버튼은 비활성화하며 웹 CesiumJS는 유지한다.
 
-공개 경로는 탐색·설명·웹 뷰어용이다. 인증 없는 로컬 사용을 전제로 한 /mcp, /api/, /svc/와 변경 요청은 공개 프록시에서 403으로 차단한다. 원본과 변환 데이터가 Git에 없으므로 전체 파이프라인·실제 지도 데이터는 별도 준비가 필요하다. 엔진 및 전체 데이터 검사는 배포 성공으로 주장하지 않는다.
+외부에는 웹 탐색·설명·뷰어·변환 결과와 지도 서비스의 GET/HEAD 조회만 제공한다. /mcp, /api, GeoServer 관리 경로와 변경 요청은 403이다. GeoServer/Martin은 localhost와 프로젝트 전용 Docker bridge(10.242.18.1)의 18600/18601로만 연결한다. 원본과 수집·변환 실행 기록을 생성한 뒤 scripts/check.ts로 전체 26개 형식·71개 경로를 검사한다. Unreal은 설치·실행하지 않는다.
 
-기존 lint 명령·CI 구성은 없다. 이번 소스 변경은 CompareStage.vue의 Unreal 버튼 template에 한정하며 script는 유지한다. 기존 npm run build와 npm run test:viz를 실제 실행하고 npm run check의 데이터 준비 상태를 별도로 기록한다. anti-slop의 script 변경 범위를 넓히는 전량 리팩터링은 수행하지 않는다.
+geo-data-docker.service는 /srv/storage/sda/apps/geo/docker-data를 사용한다. 수집 명령은 PATH=/srv/storage/sda/apps/geo/bin:$PATH, DOCKER_HOST=unix:///run/user/1000/geo-docker.sock 환경에서 실행한다. 프로젝트 Docker wrapper는 curl 이미지의 기본 사용자에 따른 Linux bind 쓰기 오류를 해결하며 다른 엔진을 변경하지 않는다. .env는 gitignore와 mode 600을 유지한다.
+
+흐름도는 시스템의 움직임 줄이기 설정을 기본으로 따르며 사용자가 재생·끄기를 선택할 수 있다. 이번 UI 변경은 template/CSS이며 SFC script는 유지한다. 기존 lint 명령·CI는 없다. npm run build와 npm run test:viz를 실제 실행하고 npm run check의 실제 데이터 검증을 완료 조건으로 유지한다.
+
+복구에는 Git 소스/배포 설정과 함께 public/data, pipeline/raw·serve, 공간 DB의 일관된 snapshot과 GeoServer 설정을 보호해야 한다. 공용 파일 백업만으로 실행 중인 공간 DB/볼륨 복구를 대체하지 않는다.

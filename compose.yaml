@@ -18,7 +18,7 @@ services:
       # OGC API Tiles·Maps는 커뮤니티 모듈이라 3.0.2용 배포본이 없음(매일 바뀌는 SNAPSHOT뿐) → 버전 고정이 안 돼 넣지 않음
       INSTALL_EXTENSIONS: 'true'
       STABLE_EXTENSIONS: ogcapi-features
-    ports: ['127.0.0.1:8600:8080']
+    ports: ['127.0.0.1:8600:8080', '${GEO_SERVICE_BRIDGE_ADDRESS:-127.0.0.1}:18600:8080']
     # /serve: 서비스 레시피가 만든 래스터(GeoTIFF). pipeline 단계 컨테이너도 같은 폴더를 /serve로 쓴다
     volumes: [geoserver:/opt/geoserver_data, './pipeline/serve:/serve:ro']
     healthcheck: { test: curl -sf -o /dev/null 'http://localhost:8080/geoserver/ows?service=WMS&request=GetCapabilities', interval: 5s, retries: 60 }
@@ -30,7 +30,7 @@ services:
     image: ghcr.io/maplibre/martin:1.16.1
     command: --config /martin.yaml
     volumes: ['./pipeline/martin.yaml:/martin.yaml:ro']
-    ports: ['127.0.0.1:3001:3000']
+    ports: ['127.0.0.1:3001:3000', '${GEO_SERVICE_BRIDGE_ADDRESS:-127.0.0.1}:18601:3000']
     depends_on: { db: { condition: service_healthy } }
     restart: unless-stopped
 

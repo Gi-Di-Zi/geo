@@ -224,6 +224,15 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
 </script>
 
 <template>
+  <div class="route-map-shell">
+    <label class="motion-control">
+      흐름도 움직임
+      <select aria-label="흐름도 움직임">
+        <option value="auto" selected>시스템 설정</option>
+        <option value="on">재생</option>
+        <option value="off">끄기</option>
+      </select>
+    </label>
   <svg class="route-map" :viewBox="`0 0 ${W} ${H}`" role="img" aria-labelledby="map-title">
     <title id="map-title">데이터 유형 {{ categories.length }}개가 수집(확장자 수), 전처리(정리 작업), 웹 형태 변환(파일, 또는 저장 형태 › 서버 › 서비스)을 지나 시각화·렌더링(웹 렌더러 4종, 엔진 Cesium for Unreal)으로 갈라지는 노선도</title>
     <!-- 과정 판: 노선이 가로지르도록 맨 먼저 그린다 -->
@@ -254,7 +263,7 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
       <g v-for="(l, i) in lines" :key="l.c.id" :class="dim(l.c.id)">
         <template v-for="(d, k) in l.paths" :key="k">
           <!-- 알갱이 뒤로 끌리는 밝은 꼬리. 알갱이와 같은 시각에 출발해 같은 속도로 간다 -->
-          <path :d="d" pathLength="1" class="trail" :style="{ animationDuration: `${FLOW}s`, animationDelay: `-${lag(i, k)}s` }" />
+          <path :d="d" pathLength="1" class="trail" :style="{ '--flow-duration': `${FLOW}s`, '--flow-delay': `-${lag(i, k)}s` }" />
           <circle r="5.5" :fill="l.c.color" class="packet">
             <animateMotion :path="d" :dur="`${FLOW}s`" :begin="`-${lag(i, k)}s`" repeatCount="indefinite" />
           </circle>
@@ -286,9 +295,13 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
       <text :x="TX + 24" :y="ENGINE_Y + 19" class="dims">{{ engine.dims }} · 수동 확인</text>
     </g>
   </svg>
+  </div>
 </template>
 
 <style scoped>
+.motion-control { display: flex; align-items: center; justify-content: end; gap: 8px; margin-bottom: 12px; color: var(--ink-2); font-size: var(--fs-0); }
+.motion-control select { color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 8px; }
+.route-map-shell:has(option[value="off"]:checked) .packets { display: none; }
 .route-map { width: 100%; height: auto; display: block; }
 a { cursor: pointer; }
 .line {
@@ -324,7 +337,7 @@ a.dim, .packets .dim, .cells.dim > * { opacity: 0.12; transition: opacity 0.15s;
 .packet { stroke: var(--surface); stroke-width: 2.5; }
 .trail {
   fill: none; stroke: var(--surface); stroke-width: 3; stroke-linecap: round; opacity: 0.7;
-  stroke-dasharray: 0.07 0.93; animation: run linear infinite;
+  stroke-dasharray: 0.07 0.93; animation: run var(--flow-duration) linear infinite var(--flow-delay);
 }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes run { from { stroke-dashoffset: 0.07; } to { stroke-dashoffset: -0.93; } }
@@ -333,5 +346,7 @@ a.dim, .packets .dim, .cells.dim > * { opacity: 0.12; transition: opacity 0.15s;
   .line { animation: none; stroke-dashoffset: 0; }
   .cells { animation: none; opacity: 1; }
   .packets { display: none; }
+  .route-map-shell:has(option[value="on"]:checked) .packets { display: inline; opacity: 1; }
+  .route-map-shell:has(option[value="on"]:checked) .trail { animation: run var(--flow-duration) linear infinite var(--flow-delay) !important; }
 }
 </style>
