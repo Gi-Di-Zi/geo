@@ -21,6 +21,7 @@ const files = [
   'shared/conversion.ts',
   'app/pages/ai.vue',
   'app/pages/viz/upload.vue',
+  'app/pages/viz/[category]/[format]/[[step]].vue',
   'scripts/pipeline.ts',
   'scripts/lint-scope.mjs',
   'scripts/lint-scope.test.mjs',

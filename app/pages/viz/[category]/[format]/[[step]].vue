@@ -1,15 +1,28 @@
 <script setup lang="ts">
 import type { CollectReport, Job, Recipe, Report } from '#shared/types'
+import type { FlowStep } from '~/utils/catalog'
 
 const route = useRoute()
 const router = useRouter()
 const spec = formatOf(String(route.params.category), String(route.params.format))
+
 if (!spec) throw createError({ statusCode: 404, message: '아직 없는 확장자예요' })
+
 const cat = categoryOf(spec.category)!
 
 // 단계는 주소의 마지막 칸 (/유형/확장자[/preprocess|convert|view]). 없으면 첫 단계(수집)
-const step = computed(() => (route.params.step || 'collect') as FlowStep)
-if (!flow.some(s => s.id === step.value)) throw createError({ statusCode: 404, message: '없는 단계예요' })
+function isFlowStep(value: string | string[]): value is FlowStep {
+  return flow.some(stage => stage.id === value)
+}
+
+const step = computed<FlowStep>(() => {
+  const value = route.params.step || 'collect'
+
+  if (!isFlowStep(value)) throw createError({ statusCode: 404, message: '없는 단계예요' })
+
+  return value
+})
+
 const at = computed(() => flow.findIndex(s => s.id === step.value))
 const prev = computed(() => flow[at.value - 1])
 const next = computed(() => flow[at.value + 1])
@@ -18,7 +31,9 @@ const recipeId = computed({
   get: () => String(route.query.tool ?? spec.recipes[0]!.id),
   set: tool => router.replace({ query: tool === spec.recipes[0]!.id ? {} : { tool } }),
 })
+
 const recipe = computed(() => spec.recipes.find(r => r.id === recipeId.value) ?? spec.recipes[0]!)
+
 // 전처리 도구 고르기: 지금 레시피가 이미 그 전처리를 쓰면 그대로, 아니면 그 전처리를 쓰는 첫 레시피로
 const preGroups = preprocessGroups(spec)
 const preGroup = computed(() => preGroups.find(g => g.recipes.includes(recipe.value)))
@@ -26,41 +41,74 @@ const pickPre = (g: (typeof preGroups)[number]) => { if (!g.recipes.includes(rec
 
 // 실측 기록은 public/ 정적 파일이라 브라우저에서 받는다 (SSR 내부 요청은 public/을 못 본다)
 const dir = `${useRuntimeConfig().app.baseURL}data/${spec.category}/${spec.id}`
-const { data: report } = useFetch<Report>(() => `${dir}/${recipe.value.id}/report.json`, { server: false, immediate: !spec.closed, default: () => null as any })
-const { data: collected } = useFetch<CollectReport>(`${dir}/collect.json`, { server: false, immediate: !spec.closed, default: () => null as any })
+const { data: report } = useFetch<Report | null>(() => `${dir}/${recipe.value.id}/report.json`, { server: false, immediate: !spec.closed, default: () => null })
+const { data: collected } = useFetch<CollectReport | null>(`${dir}/collect.json`, { server: false, immediate: !spec.closed, default: () => null })
 
 // 내 파일 모드 (?job=작업 id). 정적으로 미리 그린 화면과 어긋나지 않게 브라우저에 붙은 뒤에만 읽는다
 const mounted = ref(false)
-const jobId = computed(() => (mounted.value && typeof route.query.job === 'string' ? route.query.job : ''))
+
+const jobId = computed(() => {
+  const value = route.query.job
+
+  return mounted.value && !Array.isArray(value) ? value || '' : ''
+})
+
 const mine = computed(() => !!jobId.value)
+
 // ?embed=1: 다른 화면 안에 넣어 보일 때(MCP App 결과 지도) 위쪽 단계 막대를 숨긴다
 const embed = computed(() => mounted.value && route.query.embed === '1')
+
 type JobState = { job: Job; report: Report | null; live: string; now: number }
+
 const job = ref<JobState | null>(null)
 const jobError = ref('')
+
 /** 지도로 바꿔도 되는지. 도는 걸 보던 중 끝나면 완료 표시를 잠깐 보인 뒤 */
 const mapReady = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
+
+interface JobErrorBody { statusCode: number; statusMessage: string }
+
+function isJobErrorBody(value: unknown): value is JobErrorBody {
+  if (!value || typeof value !== 'object') return false
+
+  return 'statusCode' in value && Number.isInteger(value.statusCode)
+    && Number(value.statusCode) >= 400 && Number(value.statusCode) <= 599
+    && 'statusMessage' in value && typeof value.statusMessage === 'string'
+}
+
 async function poll() {
   clearTimeout(timer)
-  if (!jobId.value) { job.value = null; return }
+
+  if (!jobId.value) {
+    job.value = null
+
+    return
+  }
+
   try {
     const next = await $fetch<JobState>(`/api/jobs/${jobId.value}`)
     const prev = job.value?.job.id === next.job.id ? job.value : null
+
     // 기록 파일을 쓰는 순간 읽으면 null → 앞서 받은 기록 유지
     if (!next.report && prev) next.report = prev.report
+
     if (next.job.state !== 'done') mapReady.value = false
     else if (prev?.job.state === 'running') setTimeout(() => { mapReady.value = true }, 1500)
     else mapReady.value = true
     job.value = next
     jobError.value = ''
+
     if (next.job.state === 'running') timer = setTimeout(poll, 1000)
-  } catch (e: any) {
+  } catch (error) {
     job.value = null
-    jobError.value = e?.data?.statusMessage ?? '작업 없음. 업로드는 서버 실행 중에만 가능.'
+    jobError.value = error instanceof Error && 'data' in error && isJobErrorBody(error.data)
+      ? error.data.statusMessage : '작업 없음. 업로드는 서버 실행 중에만 가능.'
   }
 }
+
 onMounted(() => { mounted.value = true; watch(jobId, poll, { immediate: true }) })
+
 onBeforeUnmount(() => clearTimeout(timer))
 
 // 내 파일: 업로드 때 고른 방식·도구(레시피). 끝나면 범위·시점을 채운 작업의 레시피
@@ -87,6 +135,11 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
       <p class="pager"><NuxtLink :to="{ path: '/', query: { type: cat.id } }" class="btn">← 확장자 다시 고르기</NuxtLink></p>
     </div>
     <template v-else-if="step === 'view'">
+      <section v-if="!embed && mine && mapReady && job?.job.recipe" class="job-results" aria-label="내 파일 결과 내려받기">
+        <strong>변환 결과</strong>
+        <a v-for="output in job.job.recipe.outputs" :key="output.id" class="btn" :href="`/api/jobs/${job.job.id}/download/${encodeURIComponent(output.id)}`" download>{{ output.label }} 내려받기</a>
+        <NuxtLink to="/viz/upload" class="btn">다른 파일 올리기</NuxtLink>
+      </section>
       <CompareStage
         v-if="!mine || mapReady"
         :spec :recipe="shown" :color="cat.color" :base="mine ? `/api/jobs/${jobId}/files/` : undefined"
@@ -136,6 +189,8 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 .pager .btn { text-decoration: none; padding: 8px 16px; }
 .pager .next { margin-left: auto; background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
 .back { text-decoration: none; white-space: nowrap; }
+.job-results { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px var(--gutter); background: var(--surface); border-bottom: 1px solid var(--rule); }
+.job-results .btn { text-decoration: none; }
 .pre-pick { display: grid; gap: 8px; justify-items: start; margin-bottom: 28px; }
 .pre-pick h2 { font-size: var(--fs-2); }
 .pending { flex: 1; min-height: 0; overflow: auto; display: grid; justify-items: center; align-content: start; gap: 12px; padding: 32px var(--gutter); background: var(--stage); }

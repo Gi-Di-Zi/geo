@@ -23,7 +23,7 @@
 - `server/api/jobs/[id]/files/[...path].get.ts`
 - `server/api/jobs/[id]/download/[output].ts`
 - `shared/conversion.ts`
-- `app/pages/ai.vue`, `app/pages/viz/upload.vue`의 SFC script
+- `app/pages/ai.vue`, `app/pages/viz/upload.vue`, `app/pages/viz/[category]/[format]/[[step]].vue`의 SFC script
 - `scripts/pipeline.ts`
 - `scripts/lint-scope.mjs`, `scripts/lint-scope.test.mjs`
 - `tests/viz/mcp-app.test.ts`, `tests/viz/mcp-app-host.ts`
@@ -57,3 +57,5 @@ npm run build
 초기 도입 연결 확인: 정식 `npm run lint`가19개 명시 파일에서 exit0으로 끝났고, 이어서 `npm run test:lint`도 선행 lint와 실제 검사기 contract3개를 모두 통과했습니다. 정상 JS/Vue는 exit0, 신규 JS/Vue 위반은 exit1과 해당 규칙 진단을 냈습니다. MCP Apps 브라우저 호스트가 직접 사용하는 esbuild는 기존에 해석된0.28.2 그대로 exact dev dependency로 명시했습니다. GitHub workflow의 YAML·명령 순서·공식 action SHA는 확인했으나 원격 CI 성공은 push 이후 실제 run으로 별도 확인해야 합니다.
 
 MCP Apps 베타 표시 후 전체 회귀 검사에서 사전 갱신의 중복 예약과 ISO 임대 기한 처리 오류를 찾아 수정했습니다. 검사 범위는 21개 파일로 확장했으며, 전용 갱신 회귀 11개를 `npm run test:reference-updates`와 필수 CI에 연결했습니다. 격리된 공식 법정동·행정동 사전을 준비한 전체 연계 검사 130개도 통과했습니다. 테스트 원문·이전 실패·수정 전후 증거는 `ops/runs/20261101-geo-mcp-beta`에 보존하며 해당 사전을 공개 운영 경로에 활성화하지 않았습니다.
+
+웹 업로드 완료 화면의 내려받기 버튼을 보완하면서 결과 페이지도 범위에 추가해 총22개 파일을 검사합니다. 해당 script의 null 초기값·단계·오류 타입을 명시했으며, 샘플·업로드·임베드 동작은 기존 브라우저 회귀와 실제 결과 파일 내려받기로 확인합니다.
