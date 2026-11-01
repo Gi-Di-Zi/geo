@@ -228,11 +228,11 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
     <label class="motion-control">
       흐름도 움직임
       <select aria-label="흐름도 움직임">
-        <option value="auto" selected>시스템 설정</option>
-        <option value="on">재생</option>
+        <option value="on" selected>재생</option>
         <option value="off">끄기</option>
       </select>
     </label>
+  <div class="route-map-scroll" tabindex="0" role="region" aria-label="데이터 처리 흐름도">
   <svg class="route-map" :viewBox="`0 0 ${W} ${H}`" role="img" aria-labelledby="map-title">
     <title id="map-title">데이터 유형 {{ categories.length }}개가 수집(확장자 수), 전처리(정리 작업), 웹 형태 변환(파일, 또는 저장 형태 › 서버 › 서비스)을 지나 시각화·렌더링(웹 렌더러 4종, 엔진 Cesium for Unreal)으로 갈라지는 노선도</title>
     <!-- 과정 판: 노선이 가로지르도록 맨 먼저 그린다 -->
@@ -246,7 +246,7 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
       <text :x="RENDER.x + RENDER.w / 2" y="14" text-anchor="middle" class="label">{{ RENDER.name }}</text>
       <text :x="RENDER.x + RENDER.w / 2" :y="BOTTOM + 26" text-anchor="middle" class="caption">{{ RENDER.caption }}</text>
     </g>
-    <g v-for="(l, i) in lines" :key="l.c.id">
+    <g v-for="l in lines" :key="l.c.id">
       <a
         :href="`/viz?type=${l.c.id}`" :aria-label="`${l.c.name}: ${l.stops.join(', ')}에서 확인 가능`" :class="dim(l.c.id)"
         @click.prevent="emit('pick', l.c.id)" @mouseenter="hot = l.c.id" @mouseleave="hot = ''" @focus="hot = l.c.id" @blur="hot = ''"
@@ -254,7 +254,7 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
         <text x="156" :y="l.y + 5" text-anchor="end" class="cat">{{ l.c.name }}</text>
         <path
           v-for="(d, k) in l.paths" :key="k" :d="d" pathLength="1" class="line"
-          :style="{ stroke: l.c.color, animationDelay: `${i * 90 + k * 40}ms` }"
+          :style="{ stroke: l.c.color }"
         />
       </a>
     </g>
@@ -272,7 +272,7 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
     </g>
     <!-- 과정 요소: 유형마다 수집(확장자 수)·전처리(작업 칩)·변환(가지별 칩). 마우스를 올리면 자세히 -->
     <g
-      v-for="(l, i) in lines" :key="l.c.id" class="cells" :class="dim(l.c.id)" :style="{ '--c': l.c.color, animationDelay: `${700 + i * 90}ms` }" aria-hidden="true"
+      v-for="l in lines" :key="l.c.id" class="cells" :class="dim(l.c.id)" :style="{ '--c': l.c.color }" aria-hidden="true"
       @click="emit('pick', l.c.id)" @mouseenter="hot = l.c.id" @mouseleave="hot = ''"
     >
       <g v-for="c in l.chips" :key="`${c.x},${c.y}`" class="chip" :class="c.style">
@@ -296,17 +296,19 @@ const dim = (id: string) => ({ dim: !!hot.value && hot.value !== id })
     </g>
   </svg>
   </div>
+  </div>
 </template>
 
 <style scoped>
 .motion-control { display: flex; align-items: center; justify-content: end; gap: 8px; margin-bottom: 12px; color: var(--ink-2); font-size: var(--fs-0); }
 .motion-control select { color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 8px; }
 .route-map-shell:has(option[value="off"]:checked) .packets { display: none; }
-.route-map { width: 100%; height: auto; display: block; }
+.route-map-scroll { overflow-x: auto; }
+.route-map { width: 100%; min-width: 960px; height: auto; display: block; }
 a { cursor: pointer; }
 .line {
   fill: none; stroke-width: 5; stroke-linecap: round; opacity: 0.92;
-  stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.1s ease-out forwards;
+  stroke-dasharray: 1; stroke-dashoffset: 0;
 }
 a:hover .line, a:focus-visible .line { stroke-width: 7; opacity: 1; }a:focus-visible { outline: none; }
 a:focus-visible .cat, a:hover .cat { text-decoration: underline; }
@@ -317,7 +319,7 @@ a:focus-visible .cat, a:hover .cat { text-decoration: underline; }
 .label { font-size: 15px; font-weight: 600; fill: var(--ink); }
 .dims { font-size: 13px; fill: var(--ink-2); }
 .caption { font-size: 11px; fill: var(--ink-2); }
-.cells { cursor: pointer; opacity: 0; animation: appear 0.5s ease-out forwards; }
+.cells { cursor: pointer; }
 .chip rect { fill: var(--surface); stroke: var(--c); stroke-width: 1.3; }
 .chip text { font-size: 10px; font-weight: 500; fill: var(--ink); }
 /* 서버: 검정, 저장 형태(PostGIS·COG): 회색 바탕, 파일: 점선 */
@@ -330,23 +332,14 @@ a:focus-visible .cat, a:hover .cat { text-decoration: underline; }
 .chip.engine rect { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .chip.engine text { font-weight: 600; }.arrow { font-size: 15px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .cells:hover .chip rect { stroke-width: 2; }
-/* 다른 노선에 마우스 → 흐리게. .cells는 나타나기 애니메이션이 opacity를 쥐고 있어 자식에 준다 */
+/* 다른 노선에 마우스 → 흐리게. 과정 칩도 같은 노선만 또렷하게 표시한다 */
 a.dim, .packets .dim, .cells.dim > * { opacity: 0.12; transition: opacity 0.15s; }
-/* 노선이 다 그려진 뒤 알갱이가 나타난다 */
-.packets { pointer-events: none; opacity: 0; animation: appear 0.6s ease-out 1.5s forwards; }
+/* OS 설정과 관계없이 처음부터 흐름을 표시한다. 끄기는 사용자가 직접 선택한다 */
+.packets { pointer-events: none; }
 .packet { stroke: var(--surface); stroke-width: 2.5; }
 .trail {
   fill: none; stroke: var(--surface); stroke-width: 3; stroke-linecap: round; opacity: 0.7;
-  stroke-dasharray: 0.07 0.93; animation: run var(--flow-duration) linear infinite var(--flow-delay);
+  stroke-dasharray: 0.07 0.93; animation: run var(--flow-duration) linear infinite var(--flow-delay) !important;
 }
-@keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes run { from { stroke-dashoffset: 0.07; } to { stroke-dashoffset: -0.93; } }
-@keyframes appear { to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-  .line { animation: none; stroke-dashoffset: 0; }
-  .cells { animation: none; opacity: 1; }
-  .packets { display: none; }
-  .route-map-shell:has(option[value="on"]:checked) .packets { display: inline; opacity: 1; }
-  .route-map-shell:has(option[value="on"]:checked) .trail { animation: run var(--flow-duration) linear infinite var(--flow-delay) !important; }
-}
 </style>

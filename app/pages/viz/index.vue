@@ -172,7 +172,6 @@ const glyphs: Record<string, string> = {
 .exts { display: flex; flex-wrap: wrap; align-content: end; gap: 4px; padding: 4px 16px 0; }
 .exts .pill { padding: 0 7px; font-size: 0.72rem; }
 @media (max-width: 720px) {
-  .map { display: none; }
   /* 휴대폰: 두 줄로 그림 위주, 설명은 확장자 선택 창에 */
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .summary, .glyph { display: none; }
