@@ -41,7 +41,7 @@ const viz = vizProject
       <div class="extra">
         <slot />
         <NuxtLink to="/ai" class="mcp" :aria-current="route.path === '/ai' ? 'page' : undefined">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z" /></svg>AI 연결 (MCP)
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z" /></svg>AI 연결 (MCP) <small class="status">베타</small>
         </NuxtLink>
         <NuxtLink v-if="route.path !== '/'" to="/" class="home" title="소개로" aria-label="소개로">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6" /></svg>

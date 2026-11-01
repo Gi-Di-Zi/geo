@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
-<title>공간 데이터 시각화 도구</title>
+<title>공간 데이터 시각화 도구 · MCP Apps 베타</title>
 <!--
   MCP App (server/routes/mcp.ts의 ui://geo/app.html). Claude 대화 안에서:
   업로드(인자 없는 geo_identify) → 형식·방식·도구 고르기(geo_identify 결과) → 변환 진행(geo_convert → geo_status) → 결과 지도·주소.
@@ -21,6 +21,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; font: 14px/1.6 system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: var(--ink); background: transparent; }
   main { padding: 14px 16px; display: grid; gap: 10px; }
+  .beta-note { padding: 10px 16px; border-bottom: 1px solid var(--rule); color: var(--ink-2); font-size: 12.5px; }
   h2 { font-size: 15px; margin: 0; }
   h3 { font-size: 13px; margin: 6px 0 0; color: var(--ink-2); }
   p, ul { margin: 0; }
@@ -59,6 +60,7 @@
 </style>
 </head>
 <body>
+<header class="beta-note"><strong>MCP Apps · 베타</strong><p>대화 안 화면과 내려받기는 호스트에 따라 다릅니다. 연결이 원활하지 않으면 <a id="web-upload" href="__ORIGIN__/viz/upload" target="_blank" rel="noopener noreferrer">웹 업로드</a>를 이용하세요.</p></header>
 <main id="root"><p class="muted small">불러오는 중…</p></main>
 <script type="module">__MCP_APPS_SDK__</script>
 <script type="module">
@@ -116,6 +118,7 @@
     if (r?.isError) flash(btn, (await copy(url)) ? '열기 막힘 → 주소 복사됨, 브라우저에 붙여넣기' : '열기 막힘 — 주소를 직접 복사', 4000)
   }
   const linkBtn = (text, url) => h('button', { class: 'btn', type: 'button', onclick: e => open(url, e.currentTarget) }, text)
+  document.getElementById('web-upload').addEventListener('click', e => { e.preventDefault(); open(`${ORIGIN}/viz/upload`, e.currentTarget) })
 
   // ponytail: 화면이 받아 호스트에 통째로 넘기는 크기 상한. 넘으면 호스트가 직접 받게(resource_link) 맡긴다
   const INLINE_MAX = 100 * 1024 ** 2

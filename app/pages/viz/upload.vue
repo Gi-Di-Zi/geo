@@ -135,7 +135,7 @@ function drop(e: DragEvent) {
     <main class="wrap body">
       <header class="head">
         <h1>내 파일로 해 보기</h1>
-        <p class="lead">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 최대 200MB, 한 번에 한 파일을 변환합니다. 원본과 결과는 운영자가 정리할 때까지 보관되며 결과 링크를 아는 사용자가 열 수 있습니다. Claude·ChatGPT 대화 안에서도 같은 처리: <NuxtLink to="/ai">AI 연결(MCP)</NuxtLink>.</p>
+        <p class="lead">파일을 넣으면 형식 판별 → 형식·방식·도구 고르기 → 변환 과정 실시간 표시 → 지도. 최대 200MB, 한 번에 한 파일을 변환합니다. 원본과 결과는 운영자가 정리할 때까지 보관되며 결과 링크를 아는 사용자가 열 수 있습니다. 지원하는 대화 호스트에서도 사용할 수 있습니다: <NuxtLink to="/ai">MCP Apps 연결 (베타)</NuxtLink>.</p>
       </header>
 
       <ol class="flow">

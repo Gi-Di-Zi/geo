@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useHead({ title: 'AI 연결 (MCP Apps)' })
+useHead({ title: 'AI 연결 (MCP Apps · 베타)' })
 
 const origin = ref('https://geospatial.kro.kr')
 
@@ -30,8 +30,9 @@ const tools = [
   <div>
     <FlowSteps />
     <main class="wrap page">
-      <h1>AI 연결 (MCP Apps)</h1>
+      <h1>AI 연결 (MCP Apps) <small class="beta">베타</small></h1>
       <p class="prose lead">대화 안에서 파일 업로드 → 형식·도구 선택 → 변환 진행 → 지도·결과 파일 확인을 이어갑니다.</p>
+      <p class="prose beta-note">MCP Apps 연동은 베타 기능입니다. 대화 안 화면과 파일 내려받기 지원은 호스트에 따라 달라집니다. 연결이 원활하지 않으면 <NuxtLink to="/viz/upload">웹 업로드</NuxtLink>를 이용하세요.</p>
       <p class="addr">연결 주소 <code>{{ endpoint }}</code> <button class="btn" type="button" @click="copy('endpoint', endpoint)">{{ copied === 'endpoint' ? '복사됨' : '복사' }}</button></p>
 
       <section class="part" aria-labelledby="connect">
@@ -42,7 +43,7 @@ const tools = [
           <li>새 대화에서 geo를 활성화한 뒤 “공간 데이터 업로드 화면을 열어 줘”라고 요청합니다.</li>
           <li>화면에 파일을 올리고 형식·도구를 선택한 뒤 변환을 시작합니다. 채팅 첨부 파일을 서버가 자동으로 읽지는 않습니다.</li>
         </ol>
-        <p class="prose small muted">화면 리소스는 <code>ui://geo/app.html</code>입니다. 대화 안 화면의 지원 여부와 커넥터 추가 메뉴·권한은 호스트에 따라 다릅니다. 실제 계정의 Claude·ChatGPT 연결 결과와 서버 프로토콜·브리지 검증은 구분합니다.</p>
+        <p class="prose small muted">화면 리소스는 <code>ui://geo/app.html</code>입니다. 공식 SDK 브리지로 업로드·변환·지도·내려받기를 확인했습니다. 실제 Claude·ChatGPT 계정에서의 연결은 아직 확인하지 않았습니다.</p>
       </section>
 
       <section class="part" aria-labelledby="terminal">
@@ -79,6 +80,8 @@ const tools = [
 
 <style scoped>
 .page { padding-top: 40px; }
+.beta { display: inline-block; vertical-align: middle; padding: 3px 8px; border: 1px solid var(--rule); border-radius: var(--r-control); font-size: var(--fs-0); font-weight: 500; }
+.beta-note { margin-top: 12px; padding: 12px 16px; border-left: 3px solid var(--rule); background: var(--surface); }
 .lead { margin-top: 8px; font-size: var(--fs-2); color: var(--ink-2); line-height: 1.55; }
 .addr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
 .addr code { padding: 3px 8px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-control); word-break: break-all; }

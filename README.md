@@ -4,7 +4,7 @@
 
 **공개 사이트:** [geospatial.kro.kr](https://geospatial.kro.kr) · [데이터 시각화](https://geospatial.kro.kr/viz) · [내 파일 업로드](https://geospatial.kro.kr/viz/upload) · [AI 연결 안내](https://geospatial.kro.kr/ai)
 
-[작업 범위](#scope) · [MCP Apps 연결 방법](#mcp-apps) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
+[작업 범위](#scope) · [MCP Apps 연결 방법(베타)](#mcp-apps) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
 
 <a id="scope"></a>
 ## 작업 범위
@@ -42,7 +42,9 @@
 실제 기준은 [형식별 카탈로그](shared/catalog), [뷰어별 출력 종류](shared/viewers.ts), [업로드 판별](shared/sniff.ts)입니다. [결과 화면 예시](docs/images/view-citygml.jpg)와 [점군 화면 예시](docs/images/view-las.jpg)도 볼 수 있습니다.
 
 <a id="mcp-apps"></a>
-## MCP Apps 연결 방법
+## MCP Apps 연결 방법(베타)
+
+**MCP Apps 연동은 베타 기능입니다.** 공식 SDK의 AppBridge를 통해 파일 업로드·변환·결과 지도·내려받기를 확인했으며, 실제 Claude·ChatGPT 계정의 호스트 연결은 아직 검증하지 않았습니다. [웹 업로드 화면](https://geospatial.kro.kr/viz/upload)은 별도로 제공하며, 이 베타 표시는 MCP Apps 연동에 적용됩니다.
 
 | 항목 | 값 |
 |---|---|
@@ -79,7 +81,8 @@ MCP Apps는 MCP 도구에 업로드·선택·진행·결과 화면을 붙이는 
 | 웹 화면·4종 웹 뷰어 | [geospatial.kro.kr](https://geospatial.kro.kr)에서 제공 |
 | 예시 데이터 | 26개 형식·71개 샘플 처리 경로 준비 완료 |
 | 흐름도 | Windows/OS 움직임 줄이기 설정과 관계없이 기본 재생, 직접 끄기 가능 |
-| MCP Apps·파일 업로드 | 공개 MCP 연결·파일 업로드·파일 방식 변환·진행 확인·지도·다운로드 지원 |
+| 웹 파일 업로드 | 파일 업로드·파일 방식 변환·진행 확인·지도·다운로드 제공 |
+| MCP Apps 연동 | **베타**. 공개 `/mcp` 연결과 앱 화면 제공. 실제 Claude·ChatGPT 계정의 호스트 연결은 미검증 |
 | 기존 GeoServer·Martin 예시 | 준비된 레이어의 읽기 전용 조회 제공 |
 | Cesium for Unreal | 서버에 설치·실행하지 않으며 화면 전환 비활성화 |
 | 국내 주소·코드 연계(`/link`) | 개발 중인 화면. 공개 완료 기능에서 제외 |
@@ -132,4 +135,4 @@ flowchart LR
 | 업로드 범위 확장 | 현재 표의 파일 변환 방식을 기준으로 제공합니다. 새 서버 레이어 발행, 단독 타일의 위치 복원, 추가 확장자는 공개 업로드 지원에서 제외합니다. |
 | 모델의 원위치 배치 | glTF·IFC의 위치 입력·지리참조 개선이 남아 있습니다. 현재 지정 위치의 미리보기와 원래 좌표를 이용한 배치를 구분합니다. |
 | Cesium for Unreal 화면 | 웹 CesiumJS와 다른 실행 환경입니다. 실제 엔진·플러그인·GPU와 화면 송출 구성이 필요합니다. 저장소의 자동 실행기는 Windows 전용이므로 Linux 서버에 적용하려면 별도 이식이 필요하며, 현재 엔진 실행·외부 스트리밍 연결은 비활성 상태입니다. |
-| MCP 호스트별 앱 연동 | 서버의 프로토콜·앱 리소스 응답과 대화 안 앱 표시는 별개입니다. 호스트별 앱 표시·도구 승인·파일 내려받기는 해당 클라이언트에서 추가 확인이 필요합니다. |
+| MCP Apps 베타·호스트별 앱 연동 | 공식 SDK AppBridge로 업로드부터 결과 지도·내려받기까지 확인했습니다. 실제 Claude·ChatGPT 계정의 호스트 연결과 호스트별 앱 표시·도구 승인·파일 내려받기는 추가 검증이 필요합니다. |

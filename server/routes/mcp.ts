@@ -13,6 +13,7 @@ import { mcpLinkOwner } from '../services/link/mcp-access'
 const APP = 'ui://geo/app.html'
 
 const INSTRUCTIONS = `공간 데이터 파일을 웹 지도용 파일로 변환하고 결과 화면·다운로드 주소를 준다.
+MCP Apps 연동은 베타 기능이다. 대화 안 앱 화면과 내려받기 지원은 호스트에 따라 다르다.
 geo_identify를 인자 없이 호출해 MCP Apps 업로드 화면을 연다 → 사용자가 파일을 올리고 형식·도구를 선택 → geo_convert → geo_status로 진행과 결과 확인. 같은 파일을 다시 처리하려면 geo_convert의 stage에 이전 작업 id를 쓴다. 받는 형식은 geo_formats.
 공개 서버는 파일 업로드만 받는다. 채팅 첨부 파일을 자동으로 읽지 않으며 URL 가져오기·서버 로컬 경로·공유 공간 서버 발행은 제공하지 않는다. 최대 200MB, 한 번에 한 변환. 원본·결과는 운영자가 정리할 때까지 보관하며 결과 링크를 아는 사용자가 열 수 있다.
 MCP Apps를 지원하지 않는 클라이언트는 웹 업로드 화면과 도구 결과의 view 주소를 이용한다.`
@@ -170,7 +171,7 @@ function buildServer(origin: string, owner: string) {
     return { content: [{ type: 'text', text: identifyText(info) }], structuredContent: { mode: 'choose', origin, upload: r.upload, ...info } }
   })
 
-  registerAppResource(server, '공간 데이터 시각화 도구', APP, { description: '업로드·형식 고르기·변환 진행·결과 지도' }, async () => {
+  registerAppResource(server, '공간 데이터 시각화 도구 (MCP Apps 베타)', APP, { description: '베타: 업로드·형식 고르기·변환 진행·결과 지도. 호스트별 앱 지원 필요.' }, async () => {
     const code = await appSdk()
 
     return { contents: [{
