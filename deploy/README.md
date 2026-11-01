@@ -19,3 +19,5 @@ geo-data-docker.service는 /srv/storage/sda/apps/geo/docker-data를 사용한다
 원본·작업 결과는 /srv/storage/sda/apps/geo/runtime-data에 보존하며 자동 삭제하지 않는다. 입력200MiB, 동시변환1개, ZIP해제2GiB/50000항목, 작업공간4GiB감시(파일시스템 hard quota 아님), 전체저장공간/디스크여유입장검사를 적용한다. 런타임도2CPU/3GiB로 제한하고 각 변환 컨테이너는 별도rootless엔진에서메모리/CPU/시간을 제한한다. 커널잠금과상속FD가재시작중중복변환을막고, UUID라벨/원본마운트로소유가확인된중단리소스만정리한다.
 
 nginx의 request/response buffering을 끄고201MiB요청한도를설정하므로200MiB입력을읽기전용컨테이너의32MiB임시공간에spool하지않는다. MCP요청은앱SDK리소스/프로토콜검증, 실제업로드는공식브리지·웹UI·파일결과로따로확인한다. 실제Claude/ChatGPT계정호스트연결은별도범위다.
+
+사용자 systemd의 PrivateTmp는 이 Ubuntu 호스트에서 별도 사용자 네임스페이스/AppArmor 경계로 rootless Docker 소켓 연결을 막으므로 사용하지 않는다. 대신 mode700의 전용 runtime-data/tmp를 TMPDIR로 지정하고 NoNewPrivileges·작업자 인증·비공개 바인딩·자원 제한은 유지한다.
