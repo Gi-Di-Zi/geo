@@ -51,7 +51,7 @@ export function pointSpec(f: PointFormat): FormatSpec {
     {
       title: f.colorize ? '웹 메르카토르 변환 + 높이별 색' : '좌표계 지정 + 웹 메르카토르 변환',
       why: [
-        f.srs ? `readers.las.spatialreference=${f.srs}: 파일에 좌표계 없음 → 배포처 명시값 지정.` : '좌표계: 파일 내장값 사용.',
+        f.srs ? `readers.las.spatialreference=${f.srs}: 원본 CRS 메타데이터 사용 불가 → 샘플 검사에서 판단한 좌표계 지정.` : '좌표계: 파일 내장값 사용.',
         'reprojection: EPSG:3857로 통일 (두 변환 도구 공통 입력). range: 분류 7·18(노이즈) 제외.',
         f.colorize ? 'colorinterp: RGB 없음 → 높이(Z)별 색. assign: 0~255 → LAS 규격 16비트(0~65535), 미적용 시 매우 어둡게 표시.' : 'RGB: 원본값 유지.',
         f.decimate ? `decimation: 점 과다 → ${f.decimate}개 중 1개만 유지.` : '',

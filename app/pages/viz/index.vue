@@ -1,6 +1,8 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
+useHead({ title: '공간 데이터 시각화 도구 | geo' })
+const base = useRuntimeConfig().app.baseURL
 
 // 확장자 선택 창은 주소(?type=)로 연다. 뒤로 가기로 창이 다시 열리고, 다른 화면에서 이 창으로 바로 올 수 있다.
 // 정적으로 미리 그린 화면과 어긋나지 않게 브라우저에 붙은 뒤에만 읽는다
@@ -55,12 +57,25 @@ const glyphs: Record<string, string> = {
     <FlowSteps />
     <section class="wrap hero">
       <h1>공간 데이터 시각화 도구</h1>
+      <p class="muted intro">공개 원본에서 웹 지도·3D까지. 처리 명령과 이유를 따라가며 파일·서버 방식과 뷰어별 결과를 비교합니다.</p>
       <nav class="acts" aria-label="바로 가기">
         <NuxtLink v-for="a in actions" :key="a.to" :to="a.to" class="act">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="a.icon" /></svg>
           <span><b>{{ a.label }}</b><small>{{ a.hint }}</small></span>
         </NuxtLink>
       </nav>
+      <section id="examples" aria-labelledby="examples-title">
+        <h2 id="examples-title">대표 예시로 시작하기</h2>
+        <ul class="examples">
+          <li v-for="e in vizExamples" :key="e.id">
+            <NuxtLink :to="e.to" class="example">
+              <img :src="`${base}${e.thumb}`" :alt="e.alt" width="640" height="400" loading="lazy">
+              <span><b>{{ e.name }} →</b><small>{{ e.summary }}</small></span>
+            </NuxtLink>
+          </li>
+        </ul>
+        <p class="small muted">썸네일은 기존 변환 결과 촬영본입니다. 결과 지도를 열려면 해당 샘플을 로컬에서 준비해야 합니다.</p>
+      </section>
       <header class="eg-head">
         <h2>예시 {{ openCount }}개 — 원본부터 결과 화면까지</h2>
         <p class="muted">유형을 고르면 실제 공개 데이터의 처리 과정과 웹 지도·엔진 결과 화면. 처리 방법 {{ recipeCount }}가지.</p>
@@ -96,6 +111,15 @@ const glyphs: Record<string, string> = {
 <style scoped>
 .hero { padding-top: 28px; }
 .hero h1 { font-size: var(--fs-4); }
+.intro { margin-top: 8px; max-width: 46rem; }
+#examples { margin-top: 36px; }
+#examples h2 { font-size: var(--fs-3); }
+.examples { list-style: none; padding: 0; margin: 14px 0 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 14px; }
+.example { display: grid; height: 100%; overflow: hidden; color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-panel); }
+.example:hover, .example:focus-visible { border-color: var(--ink-2); }
+.example img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: cover; border-bottom: 1px solid var(--rule); }
+.example span { display: grid; gap: 4px; padding: 14px 16px; }
+.example small { color: var(--ink-2); font-size: var(--fs-0); }
 .acts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 12px; margin-top: 18px; }
 .act {
   display: flex; align-items: center; gap: 14px; padding: 14px 18px; text-decoration: none; color: var(--ink);

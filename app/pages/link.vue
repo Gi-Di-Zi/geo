@@ -2,7 +2,7 @@
 import type { LinkBatch, LinkOptions, LinkResult, LinkConversionKey } from '#shared/link/types'
 import { formatLocation, parseLocation, transformLocation } from '#shared/link/location'
 
-useHead({ title: '주소·코드 변환', meta: [{ name: 'description', content: '입력 한 번으로 주소·PNU·법정동코드·행정동코드·위치를 함께 확인하세요.' }, { name: 'referrer', content: 'no-referrer' }] })
+useHead({ title: '주소·코드 변환 · 개발 중', meta: [{ name: 'description', content: '개발 중인 국내 주소·코드 연계 도구. 기준자료와 외부 API 조회 결과를 검증하고 있습니다.' }, { name: 'referrer', content: 'no-referrer' }] })
 type InputType = 'pnu_legal' | 'administrative' | 'address' | 'location'
 type SearchAddress = { address: string; jibunAddress: string; legalCode: string }
 const inputTypes = [
@@ -131,7 +131,12 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
   <div>
     <FlowSteps />
     <div class="wrap link-page">
-      <header><p class="eyebrow">국내 주소·코드 연계</p><h1>주소·코드 변환</h1><p class="lead">입력 한 번으로 주소·코드·위치를 함께 확인하세요.</p></header>
+      <header>
+        <p class="eyebrow">국내 주소·코드 연계 · 개발 중</p>
+        <h1>주소·코드 변환</h1>
+        <p class="lead">입력 한 번으로 주소·코드·위치를 함께 확인하세요.</p>
+        <p class="development-note" role="note"><strong>개발 중인 기능입니다.</strong> 기준자료와 외부 API 조회 결과를 검증하고 있습니다.</p>
+      </header>
       <form class="converter" @submit.prevent="run">
         <fieldset :disabled="busy"><legend>1. 무엇을 입력하나요?</legend><div class="type-options">
           <label v-for="kind in inputTypes" :key="kind.id" class="type-option" :class="{ selected: inputType === kind.id }"><input v-model="inputType" type="radio" name="inputType" :value="kind.id" :aria-label="kind.name"><span><strong>{{ kind.name }}</strong><small>{{ kind.hint }}</small></span></label>
@@ -185,6 +190,7 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
 
 <style scoped>
 .link-page { max-width: 960px; padding-top: 44px; padding-bottom: 64px; }.eyebrow { color: var(--ink-2); font-size: var(--fs-0); font-weight: 600; }h1 { margin-top: 6px; font-size: var(--fs-5); }.lead { margin-top: 10px; color: var(--ink-2); }
+.development-note { margin-top: 16px; padding: 12px 16px; font-size: var(--fs-0); color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-control); }
 .converter { margin-top: 28px; padding: 26px; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); }fieldset { border: 0; padding: 0; margin: 0 0 22px; min-width: 0; }legend, .input-label, .actions label { font-weight: 600; font-size: var(--fs-0); }.input-label { display: block; margin-bottom: 10px; }
 .type-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }.type-option { display: flex; align-items: flex-start; gap: 8px; padding: 14px 12px; border: 1px solid var(--rule); border-radius: var(--r-control); cursor: pointer; }.type-option.selected { border-color: var(--ink); background: var(--paper); }.type-option input { margin-top: 5px; accent-color: var(--ink); }.type-option strong { display: block; }.type-option small { display: block; margin-top: 3px; color: var(--ink-2); font-size: .75rem; }
 textarea, select, .xy-fields input { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-control); color: var(--ink); background: var(--surface); font: inherit; }.xy-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }.xy-fields label { display: grid; gap: 6px; }textarea { display: block; margin-top: 10px; line-height: 1.7; resize: vertical; }.input-hint { margin-top: 7px; color: var(--ink-2); font-size: var(--fs-0); }.result small.input-hint { display: block; }

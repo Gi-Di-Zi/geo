@@ -17,6 +17,7 @@
     "services": "docker compose up -d --wait",
     "check": "node scripts/check.ts",
     "thumbs": "node scripts/thumbs.ts",
+    "test:viz": "node --test tests/viz/portfolio.test.ts",
     "link:reference": "node --env-file-if-exists=.env scripts/link-reference.ts",
     "link:administrative": "node --env-file-if-exists=.env scripts/link-administrative.ts",
     "link:maintenance": "node --env-file-if-exists=.env scripts/link-maintenance.ts",

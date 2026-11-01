@@ -33,7 +33,7 @@ const viz = vizProject
       </template>
       <ul v-else class="projects">
         <li v-for="p in projects" :key="p.id">
-          <NuxtLink v-if="p.base" :to="p.base" class="project" :aria-current="route.path.startsWith(p.base) ? 'page' : undefined">{{ p.name }}</NuxtLink>
+          <NuxtLink v-if="p.base" :to="p.base" class="project" :class="{ developing: p.status }" :aria-current="route.path.startsWith(p.base) ? 'page' : undefined">{{ p.name }}<small v-if="p.status" class="status">{{ p.status }}</small></NuxtLink>
           <span v-else class="project soon" :title="p.summary">{{ p.name }}</span>
         </li>
       </ul>
@@ -74,6 +74,8 @@ const viz = vizProject
 .project:hover { color: var(--ink); }
 .project[aria-current='page'] { color: var(--ink); border-bottom-color: var(--ink); }
 .project.soon { font-weight: 500; color: var(--no); cursor: default; }
+.project.developing { font-weight: 500; }
+.status { margin-left: 6px; font-size: 0.75rem; font-weight: 500; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 4px; }
 .steps a:hover { background: var(--surface); color: var(--ink); }
 .no {
   width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none;

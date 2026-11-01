@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ path: '/link/reference' })
-useHead({ title: '주소·코드 기준자료' })
+useHead({ title: '주소·코드 기준자료 · 개발 중' })
 type Source = { id: string; label: string; available: boolean; source: string; sourceUrl: string; version: string; count: number; relationCount?: number; sourceDate?: string | null; publishedAt?: string | null; checkedAt?: string | null; activatedAt?: string | null; ingestedAt?: string | null; warning?: string; state: string; message?: string }
 type Status = { day: string; state: 'ready' | 'checking' | 'done' | 'failed'; canUpdate: boolean; retryAt?: string; message: string; sources: Source[] }
 const data = ref<Status>(), busy = ref(false), error = ref('')
@@ -38,7 +38,7 @@ onBeforeUnmount(() => { live = false; clearTimeout(timer) })
     <FlowSteps />
     <div class="wrap reference-page">
       <NuxtLink to="/link" class="back">← 주소·코드 변환</NuxtLink>
-      <header><p class="eyebrow">공식 자료와 업데이트</p><h1>기준자료</h1><p class="lead">주소와 코드를 연결할 때 사용한 자료입니다.</p></header>
+      <header><p class="eyebrow">공식 자료와 업데이트 · 개발 중</p><h1>기준자료</h1><p class="lead">개발 중인 주소·코드 연계 기능의 기준자료와 업데이트 상태입니다.</p></header>
       <section class="update-panel" aria-labelledby="update-heading" :aria-busy="busy || data?.state === 'checking'">
         <div class="update-top"><h2 id="update-heading">기준자료 업데이트</h2><button class="btn primary" type="button" :disabled="busy || !data?.canUpdate" @click="update">{{ busy || data?.state === 'checking' ? '확인 중…' : data?.state === 'done' ? '오늘 확인 완료' : '업데이트' }}</button></div>
         <p v-if="data" role="status">{{ data.message }}</p><p v-else>기준자료 상태를 읽고 있습니다.</p>

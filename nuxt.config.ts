@@ -9,14 +9,14 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'ko' },
-      title: 'geo · 공간 데이터와 주소·코드',
+      title: 'geo · 공간 데이터 시각화',
       meta: [
-        { name: 'description', content: '공간 데이터 시각화와 국내 주소·코드 연계. 공개 공간 파일의 웹 지도 변환, PNU·법정동코드·행정동코드·주소·위치 변환과 법정구역 경계 출력.' },
+        { name: 'description', content: '실제 공개 공간데이터의 수집·전처리·웹 변환 과정과 지도·3D 결과를 비교하는 공간 데이터 시각화 도구.' },
         // 링크 공유 미리보기. og:image는 공개 주소(절대 URL)가 생기면
         { property: 'og:type', content: 'website' },
         { property: 'og:locale', content: 'ko_KR' },
-        { property: 'og:title', content: 'geo · 공간 데이터와 주소·코드' },
-        { property: 'og:description', content: '공간 데이터를 웹 지도·3D로 보고, 국내 PNU·법정동코드·행정동코드·주소·위치를 연결합니다.' },
+        { property: 'og:title', content: 'geo · 공간 데이터 시각화' },
+        { property: 'og:description', content: 'CityGML·LAS·CSV의 처리 방식과 웹 지도·3D 결과를 실제 공개 데이터로 비교합니다.' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -56,6 +56,8 @@ export default defineNuxtConfig({
     },
   ],
   nitro: {
+    // SDK 자산의 raw import를 외부 패키지 경로로 바꾸면 Nitro가 파일을 읽지 못한다.
+    externals: { inline: ['@modelcontextprotocol/ext-apps'] },
     prerender: { crawlLinks: true, routes: ['/'] },
     // MCP App 화면에 SDK를 통째로 넣는다 (CDN 없이 뜨게). 설치된 버전 그대로 → useStorage('assets:mcp-sdk')
     serverAssets: [{ baseName: 'mcp-sdk', dir: fileURLToPath(new URL('./node_modules/@modelcontextprotocol/ext-apps/dist/src', import.meta.url)), pattern: 'app-with-deps.js' }],
