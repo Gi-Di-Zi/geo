@@ -3,52 +3,66 @@ import type { LinkBatch, LinkOptions, LinkResult, LinkConversionKey } from '#sha
 import { formatLocation, parseLocation, transformLocation } from '#shared/link/location'
 
 useHead({ title: '주소·코드 변환 · 개발 중', meta: [{ name: 'description', content: '개발 중인 국내 주소·코드 연계 도구. 기준자료와 외부 API 조회 결과를 검증하고 있습니다.' }, { name: 'referrer', content: 'no-referrer' }] })
-type InputType = 'pnu_legal' | 'administrative' | 'address' | 'location'
 type SearchAddress = { address: string; jibunAddress: string; legalCode: string }
-const inputTypes = [
-  { id: 'pnu_legal' as const, name: 'PNU·법정동코드', hint: '토지번호와 그 앞부분' },
-  { id: 'administrative' as const, name: '행정동코드', hint: '주민센터 관할 · 10자리' },
-  { id: 'address' as const, name: '주소', hint: '주소 검색 또는 직접 입력' },
-  { id: 'location' as const, name: '위치', hint: '위경도 또는 EPSG X·Y' },
-]
+const detectedNames: Record<LinkResult['inputType'], string> = { pnu: 'PNU', code: '법정동코드', administrative: '행정동코드', address: '주소', location: '좌표', postcode: '우편번호' }
 const resultKinds: { id: LinkConversionKey; name: string }[] = [
-  { id: 'address', name: '주소' }, { id: 'pnu', name: 'PNU' }, { id: 'legal_region', name: '법정동코드' },
+  { id: 'address', name: '주소' }, { id: 'postcode', name: '우편번호' }, { id: 'pnu', name: 'PNU' }, { id: 'legal_region', name: '법정동코드' },
   { id: 'administrative_region', name: '행정동코드' }, { id: 'location', name: '위치' },
 ]
 const regionLevels = [['sido', '시도'], ['sigungu', '시군구'], ['eupmyeondong', '읍면동'], ['ri', '리']] as const
-const inputType = ref<InputType | null>(null), text = ref(''), searchedAddress = ref<SearchAddress>()
+const mode = ref<'search' | 'location'>('search'), text = ref(''), searchedAddress = ref<SearchAddress>()
 const sourceCrs = ref<NonNullable<LinkOptions['sourceCrs']>>('EPSG:4326'), x = ref(''), y = ref('')
 const coordinateSystems = [['EPSG:4326', '위경도 (WGS84)'], ['EPSG:3857', '웹 메르카토르'], ['EPSG:5179', 'UTM-K'], ['EPSG:5186', '중부원점 2010'], ['EPSG:5181', '중부원점']] as const
-const addressSearchWidget = ref<{ open: () => Promise<void> }>(), route = useRoute()
-watch(addressSearchWidget, widget => { if (widget && route.query.search === '1') void widget.open() })
+const addressSearchWidget = ref<{ open: (q?: string) => Promise<boolean> }>(), route = useRoute()
+watch(addressSearchWidget, widget => {
+  if (!widget || route.query.search !== '1') return
+  const q = typeof route.query.q === 'string' ? route.query.q.trim().slice(0, 200) : ''
+  if (q) text.value = q
+  // 위젯이 막 붙은 시점에는 dialog가 아직 열리지 않으므로 화면 갱신 뒤에 연다.
+  void nextTick(() => widget.open(q))
+})
 const batch = shallowRef<LinkBatch>(), busy = ref(false), error = ref(''), notice = ref('')
 const selections = ref<NonNullable<LinkOptions['conversionSelections']>>({})
 const legalSelections = ref<Record<string, string>>({})
 const downloads = ref<Record<string, { busy: boolean; error: string; message: string }>>({})
 const locationViews = ref<Record<string, { crs: string; value: string; error: string }>>({})
 let generation = 0, linkedTimer: ReturnType<typeof setTimeout> | undefined, live = true
-const inputName = computed(() => inputTypes.find(item => item.id === inputType.value)?.name || '')
-const placeholder = computed(() => ({ pnu_legal: '1111010100100010000 또는 1111010100', administrative: '1111051500', address: '서울특별시 종로구 청운동 1', location: '' })[inputType.value || 'pnu_legal'])
-const canRun = computed(() => !!inputType.value && (inputType.value === 'location' ? !!x.value.trim() && !!y.value.trim() : !!text.value.trim()) && !busy.value)
+const canRun = computed(() => (mode.value === 'location' ? !!x.value.trim() && !!y.value.trim() : !!text.value.trim()) && !busy.value)
 function clearResult() { generation++; batch.value = undefined; error.value = ''; notice.value = ''; selections.value = {}; legalSelections.value = {}; downloads.value = {}; locationViews.value = {} }
-watch(inputType, () => { text.value = ''; x.value = ''; y.value = ''; searchedAddress.value = undefined; clearResult() })
 watch(text, () => { searchedAddress.value = undefined; clearResult() })
-watch([sourceCrs, x, y], clearResult)
-async function selectAddress(value: SearchAddress) { text.value = value.address; await nextTick(); searchedAddress.value = value }
+watch([mode, sourceCrs, x, y], clearResult)
+async function selectAddress(value: SearchAddress) { text.value = value.address; await nextTick(); searchedAddress.value = value; await run() }
+// 코드와 여러 줄은 입력 그대로 찾고, 주소 한 줄은 그 검색어로 주소 검색을 열어 후보에서 고르게 한다.
+async function submit() {
+  if (!canRun.value) return
+  const query = text.value.trim()
+  if (mode.value === 'location' || searchedAddress.value || /[\r\n]/.test(query) || !addressSearchWidget.value) return run()
+  if (/^\d+$/.test(query)) {
+    await run()
+    // 시군구로 없는 5자리는 우편번호다. 그 번호로 주소 검색을 열어 주소를 고르게 한다.
+    if (batch.value?.rows[0]?.inputType === 'postcode') await addressSearchWidget.value.open(query)
+    return
+  }
+  if (await addressSearchWidget.value.open(query)) return
+  await run()
+  if (batch.value) notice.value = '주소 검색에 연결하지 못해 입력한 그대로 찾았습니다.'
+}
+// Enter는 검색, Shift+Enter는 줄바꿈. 한글 조합 중 Enter는 글자 확정이므로 무시한다.
+function enter(event: KeyboardEvent) { if (event.isComposing || event.keyCode === 229) return; event.preventDefault(); void submit() }
 const messageOf = (value: unknown) => {
   const e = value as { data?: { data?: { message?: string }; message?: string }; message?: string }
   return e.data?.data?.message || e.data?.message || e.message || '변환하지 못했습니다. 입력을 확인해 주세요.'
 }
 async function run() {
-  if (!canRun.value || !inputType.value) return
-  const inputText = inputType.value === 'location' ? x.value + ', ' + y.value : text.value
+  if (!canRun.value) return
+  const inputText = mode.value === 'location' ? x.value + ', ' + y.value : text.value
   if (inputText.includes('\t')) { error.value = '한 줄에 값 하나씩 입력해 주세요. 표나 파일 붙여넣기는 현재 지원하지 않습니다.'; return }
   const me = ++generation
   busy.value = true; error.value = ''; notice.value = ''; downloads.value = {}
-  const options: Partial<LinkOptions> = { inputType: inputType.value, target: 'all', sourceCrs: sourceCrs.value, outputCrs: 'EPSG:4326', selections: legalSelections.value, conversionSelections: selections.value }
+  const selected = mode.value === 'search' ? searchedAddress.value : undefined
+  const inputType = mode.value === 'location' ? 'location' : !selected ? 'auto' : selected.jibunAddress ? 'address' : 'code'
+  const options: Partial<LinkOptions> = { inputType, target: 'all', sourceCrs: sourceCrs.value, outputCrs: 'EPSG:4326', selections: legalSelections.value, conversionSelections: selections.value }
   try {
-    const selected = searchedAddress.value
-    if (selected && !selected.jibunAddress) options.inputType = 'code'
     const input = selected ? { rows: [{ id: '입력:1', value: selected.jibunAddress || selected.legalCode, original: { 주소: selected.address, 지번주소: selected.jibunAddress } }] } : { text: inputText }
     const result = await $fetch<LinkBatch>('/api/link/resolve', { method: 'POST', body: { ...input, options } })
     if (me !== generation || !live) return
@@ -114,7 +128,6 @@ async function loadLinked(id: string, current: number) {
   if (job.total > job.result.rows.length) notice.value = '이전 작업의 처음 ' + job.result.rows.length + '행을 표시합니다.'
 }
 onMounted(async () => {
-  if (route.query.input === 'address') inputType.value = 'address'
   const fragment = new URLSearchParams(location.hash.slice(1)), id = fragment.get('job'), token = fragment.get('token'), current = generation
   if (id || token) history.replaceState(null, '', location.pathname + location.search)
   try {
@@ -134,32 +147,32 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
       <header>
         <p class="eyebrow">국내 주소·코드 연계 · 개발 중</p>
         <h1>주소·코드 변환</h1>
-        <p class="lead">입력 한 번으로 주소·코드·위치를 함께 확인하세요.</p>
+        <p class="lead">주소나 코드를 넣으면 주소·우편번호·PNU·법정동·행정동·위치를 한 번에 보여줍니다.</p>
         <p class="development-note" role="note"><strong>개발 중인 기능입니다.</strong> 기준자료와 외부 API 조회 결과를 검증하고 있습니다.</p>
       </header>
-      <form class="converter" @submit.prevent="run">
-        <fieldset :disabled="busy"><legend>1. 무엇을 입력하나요?</legend><div class="type-options">
-          <label v-for="kind in inputTypes" :key="kind.id" class="type-option" :class="{ selected: inputType === kind.id }"><input v-model="inputType" type="radio" name="inputType" :value="kind.id" :aria-label="kind.name"><span><strong>{{ kind.name }}</strong><small>{{ kind.hint }}</small></span></label>
-        </div></fieldset>
-        <template v-if="inputType">
-          <label class="input-label" :for="inputType === 'location' ? 'link-x' : 'link-input'">2. {{ inputName }} 입력</label>
-          <ClientOnly v-if="inputType === 'address'"><AddressSearch ref="addressSearchWidget" :disabled="busy" @select="selectAddress" /></ClientOnly>
-          <template v-if="inputType === 'location'">
-            <label>입력 좌표계<select v-model="sourceCrs" aria-label="입력 좌표계" :disabled="busy"><option v-for="[code, name] in coordinateSystems" :key="code" :value="code">{{ name }} · {{ code }}</option></select></label>
-            <div class="xy-fields"><label>{{ sourceCrs === 'EPSG:4326' ? '경도(X)' : 'X' }}<input id="link-x" v-model="x" :aria-label="sourceCrs === 'EPSG:4326' ? '경도(X)' : 'X'" inputmode="decimal" :disabled="busy"></label><label>{{ sourceCrs === 'EPSG:4326' ? '위도(Y)' : 'Y' }}<input v-model="y" :aria-label="sourceCrs === 'EPSG:4326' ? '위도(Y)' : 'Y'" inputmode="decimal" :disabled="busy"></label></div>
-            <p class="input-hint">X는 동쪽값·경도, Y는 북쪽값·위도입니다.</p>
-          </template>
-          <template v-else><textarea id="link-input" v-model="text" :aria-label="inputName + ' 입력'" :placeholder="placeholder" :disabled="busy" rows="4" spellcheck="false" /><p class="input-hint">한 줄에 하나씩, 최대 20개까지 입력할 수 있습니다.</p></template>
+      <form class="converter" @submit.prevent="submit">
+        <template v-if="mode === 'search'">
+          <div class="search-row">
+            <textarea id="link-input" v-model="text" aria-label="주소·코드 입력" placeholder="주소, PNU, 법정동·행정동 코드, 우편번호" :disabled="busy" rows="1" spellcheck="false" @keydown.enter.exact="enter" />
+            <button class="btn primary" type="submit" :disabled="!canRun">{{ busy ? '검색 중…' : '검색' }}</button>
+          </div>
+          <p class="input-hint">코드는 바로 찾고, 주소와 우편번호는 주소 검색 후보에서 고릅니다. 여러 개는 Shift+Enter로 줄을 나눠 최대 20개까지 입력한 그대로 찾습니다.</p>
           <p v-if="searchedAddress?.jibunAddress && searchedAddress.address !== searchedAddress.jibunAddress" class="input-hint">선택한 주소에 연결된 지번: {{ searchedAddress.jibunAddress }}</p>
+          <div class="tools"><button class="btn" type="button" :disabled="busy" @click="mode = 'location'">좌표로 찾기</button></div>
         </template>
-        <p v-else class="input-hint">입력 유형을 선택하면 입력란이 열립니다.</p>
-        <div class="actions"><button class="btn primary" type="submit" :disabled="!canRun">{{ busy ? '변환 중…' : '변환하기' }}</button></div>
+        <template v-else>
+          <label>입력 좌표계<select v-model="sourceCrs" aria-label="입력 좌표계" :disabled="busy"><option v-for="[code, name] in coordinateSystems" :key="code" :value="code">{{ name }} · {{ code }}</option></select></label>
+          <div class="xy-fields"><label>{{ sourceCrs === 'EPSG:4326' ? '경도(X)' : 'X' }}<input id="link-x" v-model="x" :aria-label="sourceCrs === 'EPSG:4326' ? '경도(X)' : 'X'" inputmode="decimal" :disabled="busy"></label><label>{{ sourceCrs === 'EPSG:4326' ? '위도(Y)' : 'Y' }}<input v-model="y" :aria-label="sourceCrs === 'EPSG:4326' ? '위도(Y)' : 'Y'" inputmode="decimal" :disabled="busy"></label></div>
+          <p class="input-hint">X는 동쪽값·경도, Y는 북쪽값·위도입니다.</p>
+          <div class="tools"><button class="btn primary" type="submit" :disabled="!canRun">{{ busy ? '검색 중…' : '검색' }}</button><button class="btn" type="button" :disabled="busy" @click="mode = 'search'">주소·코드로 찾기</button></div>
+        </template>
       </form>
+      <ClientOnly><AddressSearch ref="addressSearchWidget" @select="selectAddress" /></ClientOnly>
       <p v-if="error" class="error" role="alert">{{ error }}</p><p v-if="notice" class="notice" role="status">{{ notice }}</p>
       <section v-if="batch" class="result" aria-labelledby="result-heading">
-        <div class="result-heading"><h2 id="result-heading">변환 결과</h2><button class="btn" type="button" @click="copy">결과 복사</button></div>
-        <div class="table-scroll"><table aria-label="변환 결과"><thead><tr><th scope="col">입력</th><th scope="col">변환 결과 전체</th></tr></thead><tbody>
-          <tr v-for="row in batch.rows" :key="row.id"><td class="original">{{ row.original.주소 || row.value || '(빈 값)' }}</td><td>
+        <div class="result-heading"><h2 id="result-heading">검색 결과</h2><button class="btn" type="button" @click="copy">결과 복사</button></div>
+        <div class="table-scroll"><table aria-label="검색 결과"><thead><tr><th scope="col">입력</th><th scope="col">결과</th></tr></thead><tbody>
+          <tr v-for="row in batch.rows" :key="row.id"><td class="original">{{ row.original.주소 || row.value || '(빈 값)' }}<small v-if="batch.options.inputType === 'auto' && row.value.trim()" class="detected">{{ detectedNames[row.inputType] }}로 인식</small></td><td>
             <dl v-if="row.conversions" class="result-fields">
               <div v-for="kind in resultKinds" :key="kind.id" class="result-field" :data-conversion="kind.id">
                 <dt>{{ kind.name }}</dt><dd>
@@ -191,11 +204,10 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
 <style scoped>
 .link-page { max-width: 960px; padding-top: 44px; padding-bottom: 64px; }.eyebrow { color: var(--ink-2); font-size: var(--fs-0); font-weight: 600; }h1 { margin-top: 6px; font-size: var(--fs-5); }.lead { margin-top: 10px; color: var(--ink-2); }
 .development-note { margin-top: 16px; padding: 12px 16px; font-size: var(--fs-0); color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-control); }
-.converter { margin-top: 28px; padding: 26px; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); }fieldset { border: 0; padding: 0; margin: 0 0 22px; min-width: 0; }legend, .input-label, .actions label { font-weight: 600; font-size: var(--fs-0); }.input-label { display: block; margin-bottom: 10px; }
-.type-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }.type-option { display: flex; align-items: flex-start; gap: 8px; padding: 14px 12px; border: 1px solid var(--rule); border-radius: var(--r-control); cursor: pointer; }.type-option.selected { border-color: var(--ink); background: var(--paper); }.type-option input { margin-top: 5px; accent-color: var(--ink); }.type-option strong { display: block; }.type-option small { display: block; margin-top: 3px; color: var(--ink-2); font-size: .75rem; }
-textarea, select, .xy-fields input { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-control); color: var(--ink); background: var(--surface); font: inherit; }.xy-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }.xy-fields label { display: grid; gap: 6px; }textarea { display: block; margin-top: 10px; line-height: 1.7; resize: vertical; }.input-hint { margin-top: 7px; color: var(--ink-2); font-size: var(--fs-0); }.result small.input-hint { display: block; }
-.actions { display: flex; align-items: end; gap: 16px; margin-top: 22px; }.actions label { display: grid; gap: 8px; flex: 1; }.primary { min-height: 44px; padding-inline: 24px; background: var(--ink); color: white; font-weight: 600; }.btn:disabled { opacity: .5; cursor: default; }
+.converter { margin-top: 28px; padding: 26px; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); }
+textarea, select, .xy-fields input { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-control); color: var(--ink); background: var(--surface); font: inherit; }.xy-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }.xy-fields label { display: grid; gap: 6px; }textarea { display: block; line-height: 1.7; resize: vertical; field-sizing: content; min-height: 46px; max-height: 14em; }.input-hint { margin-top: 7px; color: var(--ink-2); font-size: var(--fs-0); }.result small.input-hint { display: block; }
+.search-row { display: flex; gap: 10px; align-items: flex-start; }.search-row textarea { flex: 1; min-width: 0; }.search-row .primary { flex: none; }.tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }.detected { display: block; margin-top: 4px; color: var(--ink-2); font-family: var(--font); font-size: .75rem; }.primary { min-height: 44px; padding-inline: 24px; background: var(--ink); color: white; font-weight: 600; }.btn:disabled { opacity: .5; cursor: default; }
 .error, .notice { margin-top: 18px; padding: 10px 14px; border-radius: var(--r-control); }.error { background: #fff1ef; color: #a3251b; }.notice { background: #eef9f2; color: #236339; }.result { margin-top: 30px; }.result-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }.result-heading h2 { font-size: var(--fs-2); }.table-scroll { overflow: auto; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); }table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--fs-0); table-layout: fixed; }th, td { padding: 16px; border-bottom: 1px solid var(--rule); vertical-align: top; overflow-wrap: anywhere; }th { background: var(--paper); }th:first-child { width: 31%; }tbody tr:last-child td { border-bottom: 0; }.original, .identifier { font-family: var(--mono); }.original, .value { white-space: pre-wrap; }.result-fields { margin: 0; display: grid; gap: 14px; }.result-field { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 12px; }.result-field + .result-field { padding-top: 14px; border-top: 1px solid var(--rule); }dt { color: var(--ink-2); font-weight: 600; }dd { margin: 0; min-width: 0; }.row-issue { color: #865209; }.row-error { color: #a3251b; margin-top: 8px; }.boundary { margin-top: 10px; font-size: .8rem; }.region-levels { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }.region-levels li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }.region-levels code { font-size: .85em; }.candidates { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }.candidates li { display: flex; align-items: center; gap: 10px; justify-content: space-between; }.candidates small { display: block; color: var(--ink-2); }.candidates button { flex: none; }.support-note { margin-top: 24px; font-size: .8rem; color: var(--ink-2); }
 .location-crs { display: grid; gap: 6px; max-width: 280px; margin-top: 10px; color: var(--ink-2); font-size: .8rem; }
-@media (max-width: 580px) { .link-page { padding-top: 28px; }.converter { padding: 18px; }.type-options { grid-template-columns: 1fr; gap: 8px; }.type-option { align-items: center; }.type-option span { display: flex; gap: 8px; align-items: center; }.type-option small { margin: 0; }.type-option input { margin-top: 0; }.actions { align-items: stretch; flex-direction: column; }th, td { padding: 12px; }th:first-child { width: 30%; }.result-field { grid-template-columns: 1fr; gap: 5px; } }
+@media (max-width: 580px) { .link-page { padding-top: 28px; }.converter { padding: 18px; }th, td { padding: 12px; }th:first-child { width: 30%; }.result-field { grid-template-columns: 1fr; gap: 5px; } }
 </style>

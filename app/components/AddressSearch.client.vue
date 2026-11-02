@@ -1,25 +1,24 @@
 <script setup lang="ts">
-const props = defineProps<{ disabled?: boolean }>()
 const emit = defineEmits<{ select: [value: { address: string; jibunAddress: string; legalCode: string }] }>()
-type Postcode = new (options: { oncomplete: (data: unknown) => void; autoMapping: boolean; width: string; height: string }) => { embed: (container: HTMLElement) => void }
-const trigger = ref<HTMLButtonElement>(), dialog = ref<HTMLDialogElement>(), container = ref<HTMLDivElement>()
+type Postcode = new (options: { oncomplete: (data: unknown) => void; autoMapping: boolean; width: string; height: string }) => { embed: (container: HTMLElement, options?: { q?: string }) => void }
+const dialog = ref<HTMLDialogElement>(), container = ref<HTMLDivElement>()
 const loading = ref(false), error = ref('')
-let live = true
+let live = true, opener: HTMLElement | null = null
 const postcode = () => (window as unknown as { kakao?: { Postcode?: Postcode } }).kakao?.Postcode
 function load(): Promise<Postcode> {
   const ready = postcode()
   if (ready) return Promise.resolve(ready)
   return new Promise((resolve, reject) => {
     const script = document.createElement('script')
-    const finish = (failure?: string) => {
+    const finish = (failed?: boolean) => {
       clearTimeout(timer); script.onload = null; script.onerror = null
       const constructor = postcode()
-      if (failure || !constructor) { script.remove(); reject(new Error(failure || '주소 검색을 불러오지 못했습니다. 다시 시도해 주세요.')) }
+      if (failed || !constructor) { script.remove(); reject(new Error('주소 검색을 불러오지 못했습니다.')) }
       else resolve(constructor)
     }
-    const timer = setTimeout(() => finish('주소 검색 연결이 지연되고 있습니다. 다시 시도해 주세요.'), 15_000)
+    const timer = setTimeout(() => finish(true), 15_000)
     script.src = 'https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
-    script.async = true; script.onload = () => finish(); script.onerror = () => finish('주소 검색에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.')
+    script.async = true; script.onload = () => finish(); script.onerror = () => finish(true)
     document.head.append(script)
   })
 }
@@ -33,29 +32,30 @@ function selected(value: unknown) {
   emit('select', { address, jibunAddress, legalCode })
   dialog.value.close()
 }
-async function open() {
-  if (props.disabled || loading.value) return
-  error.value = ''; loading.value = true
+/** 검색어를 채운 카카오 주소 검색을 연다. 불러오지 못하면 창을 닫고 false를 돌려준다. */
+async function open(q = '') {
+  if (loading.value) return true
+  error.value = ''; loading.value = true; opener = document.activeElement as HTMLElement | null
   if (!dialog.value?.open) dialog.value?.showModal()
   container.value?.replaceChildren()
   try {
     const Constructor = await load()
-    if (live && dialog.value?.open && container.value) new Constructor({ oncomplete: selected, autoMapping: false, width: '100%', height: '100%' }).embed(container.value)
-  } catch (value) { if (live && dialog.value?.open) error.value = (value as Error).message }
+    if (live && dialog.value?.open && container.value) new Constructor({ oncomplete: selected, autoMapping: false, width: '100%', height: '100%' }).embed(container.value, { q })
+    return true
+  } catch { dialog.value?.close(); return false }
   finally { if (live) loading.value = false }
 }
-function closed() { if (live) trigger.value?.focus() }
+function closed() { if (live) opener?.focus() }
 defineExpose({ open })
 onBeforeUnmount(() => { live = false; dialog.value?.close() })
 </script>
 
 <template>
-  <button ref="trigger" type="button" class="btn" :disabled="disabled || loading" @click="open">주소 검색</button>
   <dialog ref="dialog" aria-label="주소 검색" @close="closed">
     <div class="search-heading"><h2>주소 검색</h2><button type="button" class="btn" aria-label="검색 닫기" @click="dialog?.close()">닫기</button></div>
-    <p class="note">카카오 주소 검색에서 주소를 찾아 선택하세요.</p>
+    <p class="note">찾는 주소를 선택하세요. 검색어는 이 창에서 고칠 수 있습니다.</p>
     <p v-if="loading" role="status" class="note">주소 검색을 불러오는 중…</p>
-    <p v-if="error" role="alert" class="search-error">{{ error }} <button type="button" class="btn" @click="open">다시 시도</button></p>
+    <p v-if="error" role="alert" class="search-error">{{ error }}</p>
     <div ref="container" class="search-container" />
   </dialog>
 </template>

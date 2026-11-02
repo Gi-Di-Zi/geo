@@ -87,7 +87,7 @@ const rejects = (code: string) => (error: unknown) => !!error && typeof error ==
 
 test('Polygon·구멍·MultiPolygon을 실제 SHP/SHX/DBF ZIP으로 출력하고 독립적으로 해독', async () => {
   await mocked(async ({ calls, privateValue }) => {
-    const result = await exportLegalBoundary(['1111010100'], 'EPSG:4326', reference), files = entries(result.data), stem = 'legal-boundary-11110101'
+    const result = await exportLegalBoundary(['1111010100'], 'EPSG:4326', reference), files = entries(result.data), stem = 'legal-boundary-1111010100'
     assert.deepEqual(Object.keys(files).sort(), ['metadata.json', ...['.shp', '.shx', '.dbf', '.prj', '.cpg'].map(ext => stem + ext)].sort())
     const records = shapeRecords(files[stem + '.shp']!, files[stem + '.shx']!)
     assert.deepEqual(records.map(r => r.length), [2, 3]); assert.ok(area(records[0]![0]!) < 0); assert.ok(area(records[0]![1]!) > 0)

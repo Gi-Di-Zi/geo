@@ -14,11 +14,16 @@ const errors: Record<string, string> = {
   SOURCE_UNAVAILABLE: '운영 법정구역 기준 자료가 준비되지 않았습니다. 형식 분해만 확인할 수 있습니다.',
   SELECTION_INVALID: '선택한 후보가 현재 입력·기준 버전의 후보에 없습니다.',
   MISSING_RI: '리가 필요한 읍·면입니다. 공식 하위 리를 선택하세요.',
-  AMBIGUOUS_CODE_SYSTEM: '5자리 입력은 우편번호와 법정구역 접두 코드가 모호합니다. 입력 유형에서 법정구역 코드를 선택하세요.',
+  AMBIGUOUS_CODE_SYSTEM: '5자리 입력은 우편번호와 시군구코드가 모호합니다. 시군구코드라면 입력 유형을 PNU·법정동코드(pnu_legal)로 지정하세요.',
   OUT_OF_COVERAGE: '부분 확보한 기준 자료의 지원 범위 밖이거나 미수집 구역입니다.',
 }
 const error = (code: string) => ({ code, message: errors[code] ?? code })
 const plainNumber = (value: string) => value.replace(/^0+(?=\d)/, '')
+
+/** 단계 코드 표기: 시도 2·시군구 5자리, 읍면동·리는 법정동코드 10자리. 아래에 리가 있는 읍·면만 8자리 앞부분. */
+export function levelCode(code: string, level: RegionLevel, hasRi: boolean) {
+  return code.slice(0, { sido: 2, sigungu: 5, eupmyeondong: hasRi ? 8 : 10, ri: 10 }[level])
+}
 
 export function suggestInputType(value: string): 'pnu' | 'code' | 'address' {
   const s = value.trim()
@@ -114,7 +119,8 @@ function outputOf(result: LinkResult, region: LinkRegion | undefined, parts: Pnu
   if (options.output === 'columns' || options.addressStyle === 'columns') {
     for (const level of ['sido', 'sigungu', 'eupmyeondong', 'ri'] as RegionLevel[]) {
       output[`${level}_name`] = levels[level].map(r => r.name).join(' ')
-      output[`${level}_code`] = levels[level].at(-1)?.code ?? ''
+      const entry = levels[level].at(-1)
+      output[`${level}_code`] = entry ? levelCode(entry.code, level, levels.ri.length > 0) : ''
     }
     output.land_type = parts?.landType ?? ''; output.main = parts ? plainNumber(parts.main) : ''; output.sub = parts ? plainNumber(parts.sub) : ''
   }

@@ -21,13 +21,15 @@
 
 공식 원천은 [VWorld 2D 데이터 읍면동 안내](https://www.vworld.kr/dev/v4dv_2ddataguide2_s002.do?svcIde=ademd)와 [VWorld 공식 API 샘플 저장소](https://github.com/V-world/V-world_API_sample)다. 2026-10-30 공식 안내 HTTP 200 및 `emd_cd` 속성·도메인 전달 요건을 확인했다. 소스는 고정된 `https://api.vworld.kr/req/data`의 `GetFeature`만 호출한다. WFS SHAPE-ZIP은 기존 키로 권한이 확인되지 않아 의존하지 않는다.
 
-실제 기존 서버·공개 키를 각각 사용한 경계 데이터 API 조회는 `INCORRECT_KEY`로 거절되었다. 같은 키로 주소 지오코더가 동작해도 경계 API 권한까지 검증된 것은 아니다. **실제 전국 경계 다운로드 성공은 아직 검증되지 않았다.** 인증을 우회하거나 공개 예제 키를 사용하지 않았다.
+**2026-11-02 실제 조회 확인:** 이전의 `INCORRECT_KEY`는 키 권한이 아니라 `domain` 값 불일치였다. 현재 키는 `domain=http://localhost`일 때 정상 응답하고, `domain`이 없거나 `http://localhost:3000`이면 `INCORRECT_KEY`다. `VWORLD_DOMAIN=http://localhost`로 읍면동(청운동 1111010100)·시군구(종로구 11110)·리(여수시 돌산읍 군내리 1213025021) 경계 SHP ZIP을 실제로 만들었다. 키를 다른 URL로 다시 등록하면 그 URL을 글자 그대로 넣는다.
 
 서버 환경변수 `VWORLD_KEY`(기존 `NUXT_PUBLIC_VWORLD_KEY` 대체 읽기 지원)와 키에 등록한 서비스 URL `VWORLD_DOMAIN`을 설정해야 한다. `PUBLIC_URL`도 기존 서버 URL 설정으로 읽는다. 새 서버 키는 공개 접두어가 없는 `VWORLD_KEY`에 둔다. 데이터 API 사용 권한·일일 호출량·서비스 URL은 VWorld 신청 설정에서 확인한다. 키·요청 URL·원천 오류 본문은 응답·로그·ZIP에 남기지 않는다.
 
 `boundaryCapabilities()`는 설정 존재(`configured`)와 실제 조회 상태(`sourceAccess`)를 구분한다. 조회 전은 `not_checked`, 성공은 `available`, 인증 거절은 `source_unavailable`이며 미설정은 `setup_required`다. 조회 정상 미일치는 `BOUNDARY_NO_MATCH`, 원천 미설정은 `BOUNDARY_SETUP_REQUIRED`, 통신 장애는 `BOUNDARY_SOURCE_UNAVAILABLE`다.
 
 원천이 자료 기준일을 제공하지 않아 `sourceDate: null`로 보존한다. ZIP의 `checkedAt`은 실제 조회·출력 확인 시각이며 자료 유효일을 뜻하지 않는다. 지역 명칭은 작업 시작 시 고정한 법정구역 사전의 버전과 확보 범위를 함께 기록한다. 경계 데이터의 재배포·상용 이용 조건은 해당 VWorld 데이터의 이용약관·저작권정책을 별도로 확인해야 하며 이 구현으로 이용권을 부여하지 않는다.
+
+ZIP 파일 이름은 단계 코드 규칙을 따른다: 시도 2·시군구 5자리, 읍면동·리 10자리(예: `legal-boundary-11110.zip`, `legal-boundary-1111010100.zip`). DBF의 `area_code`는 VWorld 레이어 키(시도 2·시군구 5·읍면동 8·리 10자리)이고 `legal_cd`가 10자리 법정동코드다.
 
 ## 제한과 재현
 

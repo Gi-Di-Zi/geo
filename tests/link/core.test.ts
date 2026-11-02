@@ -25,6 +25,7 @@ test('코드 단계와 주소 전체·최하위 표시가 독립', () => {
 test('리 없는 동은 동 10자리만 출력하고 리 열은 비움', () => {
   const result = resolve(pnu, { level: 'ri', output: 'columns' })
   assert.equal(result.output.code, '1111010100'); assert.equal(result.output.ri_name, ''); assert.equal(result.output.ri_code, '')
+  assert.equal(result.output.sido_code, '11'); assert.equal(result.output.sigungu_code, '11110'); assert.equal(result.output.eupmyeondong_code, '1111010100')
 })
 test('사용자 문자열 추출은 공식 확인을 수행하지 않음', () => {
   const result = resolve('ABC000123', { level: 'custom', prefixLength: 5 })

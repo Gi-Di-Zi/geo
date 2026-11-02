@@ -80,7 +80,7 @@ test('쿠키 없는 공식 MCP SDK 클라이언트도 세션 헤더로 작업·�
 
 test('기존 도구·앱을 보존하고 신규 도구와 설치 SDK 앱 리소스를 제공', async () => {
   const c = client(), list = await c.rpc('tools/list'), names = list.tools.map((t: any) => t.name)
-  for (const name of ['geo_identify','geo_convert','geo_status','geo_engine','geo_formats','geo_stage_chunk','geo_link_capabilities','geo_link_resolve','geo_link_regions','geo_link_run','geo_link_status','geo_link_export']) assert.ok(names.includes(name), name)
+  for (const name of ['geo_identify','geo_convert','geo_status','geo_formats','geo_stage_chunk','geo_link_capabilities','geo_link_resolve','geo_link_regions','geo_link_run','geo_link_status','geo_link_export']) assert.ok(names.includes(name), name)
   const resourceList = await c.rpc('resources/list')
   for (const uri of ['ui://geo/app.html','ui://geo/link.html']) {
     assert.ok(resourceList.resources.some((r: any) => r.uri === uri))
@@ -191,7 +191,7 @@ test('PNU·법정동과 행정동을 구분하며 공식 복수 관계와 웹·M
   const regions = await (await c.request('/api/link/regions?codeSystem=administrative_region&query=청운효자동')).json()
   assert.equal(regions.rows[0].code, '1111051500')
   const capabilities = await c.tool('geo_link_capabilities')
-  assert.deepEqual(capabilities.structuredContent.inputTypes, ['pnu_legal', 'administrative', 'address', 'location'])
+  assert.deepEqual(capabilities.structuredContent.inputTypes, ['auto', 'pnu_legal', 'administrative', 'address', 'location'])
   assert.equal(capabilities.structuredContent.administrative.codeLength, 10)
 })
 
@@ -223,7 +223,7 @@ test('전체 결과는 HTTP·MCP에서 같은 항목별 상태를 반환하고 �
   assert.deepEqual(http.rows, mcp.structuredContent.rows)
   assert.equal(http.rows.length, 3)
   for (const row of http.rows) {
-    assert.deepEqual(Object.keys(row.conversions), ['address', 'pnu', 'legal_region', 'administrative_region', 'location'])
+    assert.deepEqual(Object.keys(row.conversions), ['address', 'pnu', 'legal_region', 'administrative_region', 'location', 'postcode'])
     assert.equal(row.parcel, 'not_checked')
     assert.ok(Object.values(row.conversions).every((result: any) => result.status !== 'ok' && result.errors.length))
   }

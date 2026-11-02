@@ -1,7 +1,8 @@
 import { z } from 'zod'
 
 export const linkConversionKeys = ['address', 'pnu', 'legal_region', 'administrative_region', 'location'] as const
-export type LinkConversionKey = typeof linkConversionKeys[number]
+// 우편번호는 위치 결과를 역조회해 정하므로 해석 단계 목록(linkConversionKeys)에는 없고 결과에만 있다.
+export type LinkConversionKey = typeof linkConversionKeys[number] | 'postcode'
 export const linkOptionsSchema = z.object({
   inputType: z.enum(['auto', 'pnu', 'code', 'pnu_legal', 'administrative', 'address', 'location']).default('auto'),
   target: z.enum(['pnu', 'legal_region', 'administrative_region', 'address', 'location', 'legal_boundary', 'all']).optional(),
@@ -62,8 +63,8 @@ export interface LinkResult {
   inputId: string
   original: Record<string, string>
   value: string
-  inputType: 'pnu' | 'code' | 'administrative' | 'address' | 'location'
-  codeSystem: 'pnu' | 'legal_region' | 'administrative_region' | 'location'
+  inputType: 'pnu' | 'code' | 'administrative' | 'address' | 'location' | 'postcode'
+  codeSystem: 'pnu' | 'legal_region' | 'administrative_region' | 'location' | 'postcode'
   status: LinkStatus
   format: 'valid' | 'invalid' | 'not_applicable'
   code: 'active' | 'retired' | 'unknown' | 'not_checked'

@@ -62,8 +62,8 @@ onBeforeUnmount(() => { live = false; clearTimeout(timer) })
       </section>
       <section class="source-card" aria-labelledby="live-sources-heading">
         <h2 id="live-sources-heading">주소 검색·위치·경계</h2>
-        <p>주소 검색은 카카오 주소 검색, 위치와 법정구역 경계는 VWorld 원천을 요청할 때 조회합니다.</p>
-        <p class="small muted">위 업데이트 버튼은 법정동·행정동 코드 사전만 확인합니다. 외부 서비스의 원천 자료를 갱신하지 않습니다. 위치는 주소 대표점이며, SHP 다운로드에는 별도의 VWorld 경계 API 권한이 필요합니다.</p>
+        <p>주소 검색은 카카오 주소 검색, 위치·우편번호와 법정구역 경계는 VWorld 원천을 요청할 때 조회합니다.</p>
+        <p class="small muted">위 업데이트 버튼은 법정동·행정동 코드 사전만 확인합니다. 외부 서비스의 원천 자료를 갱신하지 않습니다. 위치는 주소 대표점이며, SHP 다운로드는 VWorld 2D 데이터 API로 공식 경계를 조회합니다.</p>
       </section>
       <p class="small muted">코드 사전·관할 관계 확인과 실제 필지 존재 확인은 다릅니다. 자료 갱신에 실패하면 이전 정상 자료로 계속 변환합니다.</p>
     </div>

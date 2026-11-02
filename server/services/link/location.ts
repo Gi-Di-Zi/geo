@@ -10,7 +10,7 @@ const key = () => process.env.VWORLD_KEY?.trim() || process.env.NUXT_PUBLIC_VWOR
 const metadata = (method: 'address_point' | 'region_representative' | 'reverse_geocoded', checkedAt: string) => ({ source: LOCATION_SOURCE, sourceUrl: LOCATION_SOURCE_URL, sourceDate: null, checkedAt, method })
 type Meta = ReturnType<typeof metadata>
 export type ForwardLocation = Meta & { x: number; y: number; lon: number; lat: number; crs: 'EPSG:4326'; warning: string }
-export type ReverseLocation = ForwardLocation & { address: string; parcelAddress: string; roadAddress: string; addressType: 'parcel' | 'road'; legalCode?: string; administrativeCode?: string }
+export type ReverseLocation = ForwardLocation & { address: string; parcelAddress: string; roadAddress: string; addressType: 'parcel' | 'road'; legalCode?: string; administrativeCode?: string; postcode?: string; parcelNumber?: string }
 const cache = new Map<string, { expires: number; data: unknown }>(), pending = new Map<string, Promise<unknown>>()
 let active = 0
 const waiting: Array<() => void> = []
@@ -63,6 +63,7 @@ async function request(parameters: Record<string, string>): Promise<Record<strin
 }
 const text = (value: unknown) => typeof value === 'string' && value.length <= 2000 ? value.trim() : ''
 const code = (value: unknown) => typeof value === 'string' && /^\d{10}$/.test(value) ? value : undefined
+const zip = (value: unknown) => typeof value === 'string' && /^\d{5}$/.test(value) ? value : undefined
 function korea(point: { lon: number; lat: number }) {
   if (point.lon < 122 || point.lon > 135 || point.lat < 28 || point.lat > 41) throw new LocationError('OUT_OF_COVERAGE', '국내 주소 조회 범위 밖의 위치입니다. 좌표계와 X·Y 순서를 확인하세요.', 'unavailable')
   return point
@@ -90,5 +91,7 @@ export async function reverseLocation(input: LocationPoint): Promise<ReverseLoca
   const addressType = parcel ? 'parcel' : 'road'
   return { ...point, ...metadata('reverse_geocoded', data.checkedAt), address: text(parcel?.text) || text(road?.text), parcelAddress: text(parcel?.text), roadAddress: text(road?.text), addressType,
     // 도로명 응답의 level4LC는 도로명코드이므로 법정동코드로 사용하지 않는다.
-    legalCode: code(parcel?.structure?.level4LC), administrativeCode: code(parcel?.structure?.level4AC) || code(road?.structure?.level4AC), warning: '원천의 역지오코딩 주소·관할 코드입니다. 경계선의 포함 관계나 실제 필지 존재를 확정하지 않습니다.' }
+    legalCode: code(parcel?.structure?.level4LC), administrativeCode: code(parcel?.structure?.level4AC) || code(road?.structure?.level4AC),
+    // 원천이 지번 뒤에 지목 약자(학·대 등)를 붙이는 경우가 있어 지번만 남긴다.
+    postcode: zip(road?.zipcode) || zip(parcel?.zipcode), parcelNumber: text(parcel?.structure?.level5).replace(/[가-힣]+$/, ''), warning: '원천의 역지오코딩 주소·관할 코드입니다. 경계선의 포함 관계나 실제 필지 존재를 확정하지 않습니다.' }
 }

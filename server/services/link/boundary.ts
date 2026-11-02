@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import archiver from 'archiver'
 import { write as writeShape } from '@mapbox/shp-write'
 import type { ReferenceSnapshot, RegionLevel } from '../../../shared/link/types.ts'
+import { levelCode } from '../../../shared/link/core.ts'
 import { getReference } from './reference.ts'
 import { LinkServiceError } from './files.ts'
 
@@ -148,7 +149,7 @@ export async function exportLegalBoundary(codes: string[], crs = 'EPSG:4326', re
     try { writeShape(rows, 'POLYGON', features.map(feature => feature.rings), (failure, data) => failure ? reject(error('BOUNDARY_EXPORT_FAILED', '경계 SHP를 만들지 못했습니다.')) : resolve(data)) }
     catch { reject(error('BOUNDARY_EXPORT_FAILED', '경계 SHP를 만들지 못했습니다.')) }
   })
-  const checkedAt = new Date().toISOString(), stem = selections.length === 1 ? 'legal-boundary-' + selections[0]!.code : 'legal-boundaries'
+  const checkedAt = new Date().toISOString(), stem = selections.length === 1 ? 'legal-boundary-' + levelCode(selections[0]!.fullCode, selections[0]!.level, false) : 'legal-boundaries'
   const metadata = { source: 'VWorld 2D Data API 법정 행정구역 경계', sourceUrl: BOUNDARY_SOURCE_URL, sourceDate: null, checkedAt, crs,
     referenceVersion: reference.version, referenceCoverage: reference.coverage, records: features.length, selections: selections.map(({ data, field, ...selection }) => ({ ...selection, layer: data })),
     warning: '법정구역 경계이며 개별 필지 경계·행정동 경계가 아닙니다. 원천은 기준일을 제공하지 않아 확인 시각과 구분합니다. DBF는 ASCII 코드·원천 ID만 담고 한글 명칭은 이 JSON에 보존합니다.' }

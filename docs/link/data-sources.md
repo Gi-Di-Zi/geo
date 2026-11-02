@@ -10,7 +10,8 @@
 | 행정동·관할 관계 | 행정안전부 2026-10-12 시행본을 별도 로컬 사전으로 활성화 | 코드 3,925건, 관계 21,837건 중 21,830건 검증 |
 | 주소 검색 | 카카오 우편번호 서비스에서 사용자가 실제 주소를 선택 | 실제 Chrome 검색·선택·PNU 변환 확인 |
 | 주소↔위치 | VWorld Geocoder 2.0 정·역지오코딩 | 실제 주소·좌표·관할 코드 응답 확인 |
-| 법정동 경계 | VWorld 2D Data API 공식 다각형을 SHP ZIP으로 출력 | 실제 조회는 `INCORRECT_KEY`로 실패. 합성 원천의 바이너리 출력 검사는 별개로 통과 |
+| 우편번호 | VWorld 역지오코딩 `zipcode`. 같은 필지·도로명주소·위치일 때만 사용 | 2026-11-02 PNU·지번·지목 약자 필지·도로명주소 실제 확인. 우편번호 입력은 주소 검색 |
+| 법정동 경계 | VWorld 2D Data API 공식 다각형을 SHP ZIP으로 출력 | 2026-11-02 `VWORLD_DOMAIN=http://localhost`로 읍면동·시군구·리 실제 조회·ZIP 생성 확인 |
 
 ## 실제 확보한 법정동 사전
 
@@ -38,9 +39,11 @@
 
 [VWorld Geocoder 2.0](https://www.vworld.kr/dev/v4dv_geocoderguide2_s001.do)은 주소→위치와 위치→주소·법정동/행정동 코드를 실제 조회한다. 서버 `VWORLD_KEY` 또는 기존 `NUXT_PUBLIC_VWORLD_KEY`를 사용하며 문서·로그에 키를 기록하지 않는다. 실제 정지오코딩 ‘서울 종로구 사직로 161’과 역지오코딩 `126.9769, 37.5759`의 응답을 `.data/link-location-smoke.json`에 남겼다. 지역코드→위치는 지역명을 조회한 대표 위치이며 도형 중심점(centroid)·필지 좌표·관할 경계 확정값이 아니다. 원천은 기준일을 제공하지 않아 `sourceDate: null`과 실제 `checkedAt`을 구분한다.
 
+우편번호(기초구역번호)는 VWorld 역지오코딩 응답의 `zipcode`로 정한다. 지번이 있으면 대표점 역조회 결과가 같은 법정동코드·지번일 때만, 도로명주소는 원천이 붙인 괄호(동·건물명)를 뺀 도로명주소가 같을 때만 쓰고, 좌표 입력은 그 위치의 결과를 쓴다. 법정동·행정동·시군구처럼 구역만 있으면 우편번호가 여러 개라 정하지 않는다. 원천이 지번 뒤에 붙이는 지목 약자(`171-1학`)는 비교 전에 뗀다. 시군구로 없는 5자리 숫자는 우편번호 입력으로 보고, 우편번호로 주소 목록을 찾는 자료는 없으므로 웹에서는 그 번호로 카카오 주소 검색을 열고 MCP에서는 웹 주소 검색으로 안내한다. 우편구역 경계는 제공하지 않는다.
+
 좌표계 변환은 Proj4js `2.22.0`으로 EPSG:4326·3857·5179·5186·5181을 지원한다. 입력·출력은 X=경도/동쪽값, Y=위도/북쪽값이다. 위치→위치의 순수 좌표계 변환은 주소·관할 서비스를 호출하지 않는다.
 
-[VWorld 2D Data API 법정구역 경계](https://www.vworld.kr/dev/v4dv_2ddataguide2_s002.do?svcIde=ademd)는 시도 `LT_C_ADSIDO_INFO`, 시군구 `LT_C_ADSIGG_INFO`, 읍면동 `LT_C_ADEMD_INFO`, 리 `LT_C_ADRI_INFO`를 법정구역 코드로 조회한다. `VWORLD_KEY`와 키에 등록한 서비스 URL `VWORLD_DOMAIN`이 필요하다. **현재 실제 요청은 `INCORRECT_KEY`로 거절되었다. 2D 데이터 API 권한·등록 도메인 확인 전에는 실경계 다운로드 성공으로 보고하지 않는다.** SHP 출력은 EPSG:4326만 지원하고, `sourceDate: null`·조회 시각·출처·사전 버전을 메타데이터에 남긴다. 합성 Polygon·구멍·MultiPolygon 원천 응답으로 만든 ZIP의 SHP/SHX/DBF 독립 해독 등 18개 검증은 통과했다. 이는 실제 원천 접근 검증과 별개다.
+[VWorld 2D Data API 법정구역 경계](https://www.vworld.kr/dev/v4dv_2ddataguide2_s002.do?svcIde=ademd)는 시도 `LT_C_ADSIDO_INFO`, 시군구 `LT_C_ADSIGG_INFO`, 읍면동 `LT_C_ADEMD_INFO`, 리 `LT_C_ADRI_INFO`를 법정구역 코드로 조회한다. `VWORLD_KEY`와 키에 등록한 서비스 URL `VWORLD_DOMAIN`이 필요하다. **2026-11-02 실제 조회 확인:** 이전의 `INCORRECT_KEY`는 키 권한이 아니라 `domain` 값 불일치였다. 현재 키는 `domain=http://localhost`일 때 정상 응답하고, `domain`이 없거나 `http://localhost:3000`이면 `INCORRECT_KEY`다. `VWORLD_DOMAIN=http://localhost`로 읍면동(청운동 1111010100)·시군구(종로구 11110)·리(여수시 돌산읍 군내리 1213025021) 경계 SHP ZIP을 실제로 만들었다. 키를 다른 URL로 다시 등록하면 그 URL을 글자 그대로 넣는다. SHP 출력은 EPSG:4326만 지원하고, `sourceDate: null`·조회 시각·출처·사전 버전을 메타데이터에 남긴다.
 
 우편번호·필지/건물 전체 목록·공공 속성은 추가 원천 검증 범위다. [주소기반산업지원서비스 자료 안내](https://business.juso.go.kr/jst/jstAddressDownload?menu=7)는 후속 연결 대상으로 남긴다. 건물관리번호를 필수 허브로 사용하지 않는다.
 

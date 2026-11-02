@@ -48,10 +48,10 @@ export function registerLinkTools(server: McpServer, origin: string, owner: stri
   const access = (token?: string) => ({ owner, token })
   server.registerTool('geo_link_capabilities', { title: '주소·코드 지원 범위', description: '실제 기준자료 버전·지원 기능·한도·보관 및 미지원 범위를 확인한다.', annotations: { readOnlyHint: true } }, safe(async () => {
     const info = await capabilities()
-    return answer({ ...info, web: `${origin}/link`, referenceWeb: `${origin}/link/reference`, app: LINK_APP, modelPreviewRows: 10 }, `입력·출력: PNU·법정동코드 / 행정동코드 / 주소 / 위치. 경계 SHP는 출력 전용이며 원천 권한이 필요합니다. PNU 앞 2·5·8·10자리는 법정구역 코드이며 행정동과 다릅니다. 법정동 기준 ${info.reference.version}, 행정동 기준 ${info.administrative.version}. 웹 ${origin}/link`)
+    return answer({ ...info, web: `${origin}/link`, referenceWeb: `${origin}/link/reference`, app: LINK_APP, modelPreviewRows: 10 }, `입력·출력: PNU·법정동코드 / 행정동코드 / 주소 / 위치 / 우편번호(출력. 입력은 웹 주소 검색). 경계 SHP는 출력 전용이며 VWorld 키와 등록 서비스 URL(VWORLD_DOMAIN) 설정이 필요합니다. PNU 앞 2·5·8·10자리는 법정구역 코드이며 행정동과 다릅니다. 법정동 기준 ${info.reference.version}, 행정동 기준 ${info.administrative.version}. 웹 ${origin}/link`)
   }))
-  registerAppTool(server, 'geo_link_resolve', { title: '주소·코드 변환', description: '입력은 pnu_legal(PNU·법정동코드), administrative(행정동코드), address(주소), location(X,Y). target=all로 주소·PNU·법정동 단계코드·행정동·위치를 한 번에 조회한다(최대 20행). 각 conversions 항목의 상태·후보·오류는 독립적이다. conversionSelections에 결과 항목별 후보를 지정한다. sourceCrs·outputCrs로 EPSG 지정. SHP는 변환 시 조회하지 않고 앱·웹의 별도 다운로드 버튼으로 받는다. 기존 단일 target도 유지한다. 입력이 없으면 화면. 모델 미리보기 최대 10행.', inputSchema: input, _meta: ui }, safe(async args => {
-    if (args.text === undefined && args.rows === undefined && !args.uploadId) return answer({ mode: 'input', origin, web: `${origin}/link` }, `입력 유형과 값을 지정하면 주소·PNU·법정동·행정동·위치를 한 번에 확인합니다. SHP는 별도 다운로드 버튼을 사용하세요. 화면 미지원 환경은 text와 options={inputType,target:"all"}로 호출하거나 ${origin}/link 를 이용하세요.`, { ownerSession: true })
+  registerAppTool(server, 'geo_link_resolve', { title: '주소·코드 변환', description: '입력은 auto(기본: 줄마다 PNU·법정동·행정동·주소 자동 판별), pnu_legal(PNU·법정동코드), administrative(행정동코드), address(주소), location(X,Y). target=all로 주소·PNU·법정동 단계코드·행정동·위치·우편번호를 한 번에 조회한다. 5자리 숫자는 실제 시군구코드가 아니면 우편번호로 보며, 우편번호로 주소를 찾는 것은 웹 주소 검색에서 한다(최대 20행). 각 conversions 항목의 상태·후보·오류는 독립적이다. conversionSelections에 결과 항목별 후보를 지정한다. sourceCrs·outputCrs로 EPSG 지정. SHP는 변환 시 조회하지 않고 앱·웹의 별도 다운로드 버튼으로 받는다. 기존 단일 target도 유지한다. 입력이 없으면 화면. 모델 미리보기 최대 10행.', inputSchema: input, _meta: ui }, safe(async args => {
+    if (args.text === undefined && args.rows === undefined && !args.uploadId) return answer({ mode: 'input', origin, web: `${origin}/link` }, `주소나 코드를 넣으면 유형을 자동으로 판별해 주소·PNU·법정동·행정동·위치를 한 번에 확인합니다. SHP는 별도 다운로드 버튼을 사용하세요. 화면 미지원 환경은 text와 options={target:"all"}로 호출하거나(좌표는 inputType:"location") ${origin}/link 를 이용하세요.`, { ownerSession: true })
     const batch = await resolveInput(args, access(args.uploadToken))
     return answer({ mode: 'result', origin, ...preview(batch) }, `입력 ${batch.summary.input}행: 정상 ${batch.summary.ok}, 후보 ${batch.summary.needs_selection}, 실패 행 ${batch.summary.invalid + batch.summary.not_found + batch.summary.unavailable}. ${batch.options.target === 'all' ? '주소·PNU·법정동·행정동·위치의 상태와 오류는 conversions에서 각각 확인하세요. ' : ''}기준 ${batch.version}. 모델 미리보기 최대 10행.`, { linkResult: batch })
   }))
@@ -95,7 +95,7 @@ export function registerLinkTools(server: McpServer, origin: string, owner: stri
     const file = await exportLegalBoundary(codes, crs)
     return answer({ filename: file.filename, bytes: file.data.length, codes, crs, sourceDate: file.sourceDate, checkedAt: file.checkedAt }, '공식 법정구역 경계 SHP 묶음입니다.', { resource: { type: 'resource', resource: { uri: 'geo-link://boundary/' + file.filename, mimeType: file.mime, blob: file.data.toString('base64') } } })
   }))
-  registerAppResource(server, '국내 주소·코드 연계 도구', LINK_APP, { description: '입력 유형 선택·직접 입력·출력 유형 선택·바로 변환' }, async () => {
+  registerAppResource(server, '국내 주소·코드 연계 도구', LINK_APP, { description: '주소·코드 검색(유형 자동 판별)·좌표 검색·경계 SHP 다운로드' }, async () => {
     const code = await appSdk()
     return { contents: [{
     uri: LINK_APP, mimeType: RESOURCE_MIME_TYPE,

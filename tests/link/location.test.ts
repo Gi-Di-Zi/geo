@@ -73,14 +73,16 @@ test('역지오코딩은 지번의 법정동코드와 별도 행정동코드를 
   await withProvider(async input => {
     const url = new URL(String(input)); assert.equal(url.searchParams.get('request'), 'getAddress')
     return json({ status: 'OK', result: [
-      { type: 'parcel', text: '서울특별시 종로구 세종로 1-58', structure: { level4LC: '1111011900', level4AC: '1111051500' } },
-      { type: 'road', text: '서울특별시 종로구 사직로 161', structure: { level4LC: '3100005', level4AC: '1111051500' } },
+      { type: 'parcel', text: '서울특별시 종로구 세종로 1-58', zipcode: '03045', structure: { level4LC: '1111011900', level4AC: '1111051500', level5: '1-58대' } },
+      { type: 'road', text: '서울특별시 종로구 사직로 161', zipcode: '03045', structure: { level4LC: '3100005', level4AC: '1111051500' } },
     ] })
   }, async () => {
     const result = await reverseLocation({ x: 126.9769, y: 37.5759, crs: 'EPSG:4326' })
     assert.equal(result.legalCode, '1111011900'); assert.equal(result.administrativeCode, '1111051500')
     assert.equal(result.addressType, 'parcel'); assert.match(result.parcelAddress, /세종로 1-58/)
     assert.equal(result.method, 'reverse_geocoded')
+    // 우편번호는 5자리만, 지번 뒤 지목 약자는 뗀다.
+    assert.equal(result.postcode, '03045'); assert.equal(result.parcelNumber, '1-58')
   })
 })
 test('도로명 결과의 level4LC를 법정동으로 오인하거나 지번을 만들지 않는다', async () => {
