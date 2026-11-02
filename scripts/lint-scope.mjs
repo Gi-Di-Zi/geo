@@ -14,6 +14,7 @@ const files = [
   'server/utils/job-files.ts',
   'server/middleware/conversion-worker.ts',
   'server/services/link/reference-updates.ts',
+  'server/services/link/jobs.ts',
   'server/api/jobs.post.ts',
   'server/api/stage.ts',
   'server/api/jobs/[id]/files/[...path].get.ts',
@@ -36,6 +37,7 @@ const files = [
   'tests/viz/recommend.test.ts',
   'tests/viz/delivery.test.ts',
   'tests/link/reference-updates.test.ts',
+  'tests/link/jobs.test.ts',
 ]
 
 const options = process.argv.slice(2)
