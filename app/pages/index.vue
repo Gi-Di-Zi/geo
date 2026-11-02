@@ -19,7 +19,7 @@ const stats = [
 const uses = [
   { to: '/viz', title: '예시 둘러보기', text: '확장자마다 실제 공개 원본 → 처리 명령·로그 → 웹 지도·엔진 결과 화면' },
   { to: '/viz/upload', title: '내 파일로 해 보기', text: '형식 자동 판별, 방식·도구 고르기, 변환 과정 실시간 → 지도' },
-  { to: '/ai', title: 'AI 대화에서 쓰기', text: 'Claude·ChatGPT에 MCP로 연결, 대화 안에서 업로드·변환·결과' },
+  { to: '/ai', title: 'AI 대화에서 쓰기', text: 'Claude·ChatGPT에 MCP로 연결, 쓸 지도 라이브러리를 말하면 맞는 변환 추천·실행·결과' },
   { to: '/viz/why', title: '처음이라면', text: '왜 전처리·변환이 필요한지 그림으로 3분' },
 ]
 
