@@ -152,7 +152,7 @@ test('공식 MCP Apps bridge: AI가 고른 뷰어로 열리고, 사용자가 바
   const client = await connect()
 
   t.after(() => client.close())
-  assert.equal(client.getServerVersion()?.name, 'geo-web')
+  assert.equal(client.getServerVersion()?.name, 'geo-web-bridge')
   const names = (await client.listTools()).tools.map(tool => tool.name)
 
   for (const name of ['geo_identify', 'geo_recommend', 'geo_convert', 'geo_status', 'geo_formats']) assert.ok(names.includes(name), name)

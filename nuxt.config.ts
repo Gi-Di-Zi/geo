@@ -8,13 +8,13 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'ko' },
-      title: 'geo · 공간 데이터 시각화',
+      title: 'geo-web-bridge · 공간 데이터 시각화',
       meta: [
         { name: 'description', content: '실제 공개 공간데이터의 수집·전처리·웹 변환 과정과 지도·3D 결과를 비교하는 공간 데이터 시각화 도구.' },
         // 링크 공유 미리보기. og:image는 공개 주소(절대 URL)가 생기면
         { property: 'og:type', content: 'website' },
         { property: 'og:locale', content: 'ko_KR' },
-        { property: 'og:title', content: 'geo · 공간 데이터 시각화' },
+        { property: 'og:title', content: 'geo-web-bridge · 공간 데이터 시각화' },
         { property: 'og:description', content: 'CityGML·LAS·CSV의 처리 방식과 웹 지도·3D 결과를 실제 공개 데이터로 비교합니다.' },
       ],
       link: [

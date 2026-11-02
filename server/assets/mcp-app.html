@@ -101,7 +101,7 @@
   const FIT = { recommended: '추천', alternative: '대안', limited: '제약 있음', unsupported: '미지원' }
   const STATE = { active: '이용 가능', expired: '만료', deleting: '정리 중', deleted: '정리 완료', failed: '실패' }
   const root = document.getElementById('root')
-  const app = new App({ name: 'geo-web', version: '1.1.0' })
+  const app = new App({ name: 'geo-web-bridge', version: '1.1.0' })
   const nameOf = v => VIEWERS.find(x => x[0] === v)?.[1] ?? v
 
   /** 조건: 대상 라이브러리·목적·결과 형식·제공 방식. touched = 사용자가 화면에서 바꿈 → AI 쪽 값으로 다시 덮지 않음 */

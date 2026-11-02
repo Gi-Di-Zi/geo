@@ -181,7 +181,7 @@ async function planFor(stage: string, format: string | undefined, intent: Intent
 }
 
 function buildServer(origin: string, owner: string) {
-  const server = new McpServer({ name: 'geo-web', version: '1.1.0' }, { instructions: INSTRUCTIONS, capabilities: { extensions: { [EXTENSION_ID]: {} } } })
+  const server = new McpServer({ name: 'geo-web-bridge', version: '1.1.0' }, { instructions: INSTRUCTIONS, capabilities: { extensions: { [EXTENSION_ID]: {} } } })
   const ui = { ui: { resourceUri: APP } }
   const service = { enabled: serviceEnabled(), hours: SERVICE_HOURS, deliveries }
 

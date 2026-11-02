@@ -14,8 +14,8 @@ async function copy(key: string, text: string) {
 }
 
 const clients = computed(() => [
-  { name: 'Claude Code', command: `claude mcp add --transport http geo ${endpoint.value}`, check: '/mcp에서 연결 확인' },
-  { name: 'Codex CLI', command: `codex mcp add geo --url ${endpoint.value}`, check: 'codex mcp list에서 연결 확인' },
+  { name: 'Claude Code', command: `claude mcp add --transport http geo-web-bridge ${endpoint.value}`, check: '/mcp에서 연결 확인' },
+  { name: 'Codex CLI', command: `codex mcp add geo-web-bridge --url ${endpoint.value}`, check: 'codex mcp list에서 연결 확인' },
 ])
 
 // 요청 → 모델이 도구에 넘기는 조건 → 서버 추천 (shared/recommend.ts, 시험 파일 기준)
@@ -49,8 +49,8 @@ const tools = [
       <section class="part" aria-labelledby="connect">
         <h2 id="connect">연결과 사용</h2>
         <ol class="flow prose">
-          <li>MCP Apps와 Streamable HTTP를 지원하는 호스트의 사용자 지정 MCP 서버·커넥터 추가 화면을 엽니다. 이름은 <strong>geo</strong>, 서버 URL은 위 연결 주소, 인증 방식은 <strong>인증 없음</strong>으로 등록합니다.</li>
-          <li>새 대화에서 geo를 켜고 원하는 결과를 말합니다. 예: “이 SHP를 MapLibre에서 대용량으로 쓰게 변환해 줘”. 모델이 대상 라이브러리·목적·결과 형식·제공 방식을 읽어 넘기면, 그 조건이 미리 선택된 업로드 화면이 열립니다.</li>
+          <li>MCP Apps와 Streamable HTTP를 지원하는 호스트의 사용자 지정 MCP 서버·커넥터 추가 화면을 엽니다. 이름은 <strong>geo-web-bridge</strong>, 서버 URL은 위 연결 주소, 인증 방식은 <strong>인증 없음</strong>으로 등록합니다.</li>
+          <li>새 대화에서 geo-web-bridge를 켜고 원하는 결과를 말합니다. 예: “이 SHP를 MapLibre에서 대용량으로 쓰게 변환해 줘”. 모델이 대상 라이브러리·목적·결과 형식·제공 방식을 읽어 넘기면, 그 조건이 미리 선택된 업로드 화면이 열립니다.</li>
           <li>화면에 파일을 올리면 추천 카드가 나옵니다: 변환 방식 → 대상 라이브러리용 주력 결과물 → 추천 이유 → 주의사항(손실·배치 제약). 라이브러리·목적을 바꾸면 다시 계산되고, <strong>다른 방식 보기</strong>에서 직접 고를 수도 있습니다. 화면에서 바꾼 조건이 그대로 변환에 쓰입니다.</li>
           <li>변환이 끝나면 주력 결과물·내려받기·리소스 URL·적용 코드·호스팅 조건·결과 파일 검사와 결과 지도를 확인합니다. 결과 지도의 <strong>선택</strong> 버튼을 켜고 누르면 피처 속성, 모델·타일셋, 래스터·지형 레이어 정보가 보입니다.</li>
         </ol>

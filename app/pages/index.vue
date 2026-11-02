@@ -3,7 +3,7 @@
 import { tools } from '#shared/catalog/tools'
 import { viewers } from '#shared/viewers'
 
-useHead({ title: 'geo · 공간 데이터 시각화' })
+useHead({ title: 'geo-web-bridge · 공간 데이터 시각화' })
 const base = useRuntimeConfig().app.baseURL
 
 // 숫자는 카탈로그에서 센다 → 확장자·레시피가 늘면 같이 바뀐다
