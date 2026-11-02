@@ -28,4 +28,20 @@ jobs:
       - run: npm run lint
       - run: npm run test:lint
       - run: npm run test:reference-updates
+      - name: Test offline address and code logic
+        run: >-
+          node --test
+          tests/link/core.test.ts
+          tests/link/reference.test.ts
+          tests/link/administrative.test.ts
+          tests/link/location.test.ts
+          tests/link/location-resolve.test.ts
+          tests/link/all.test.ts
+          tests/link/boundary.test.ts
+          tests/link/files.test.ts
+          tests/link/jobs.test.ts
+          tests/link/chunks.test.ts
+      - run: npm run test:recommend
+      - name: Test Linux upload worker isolation
+        run: python3 tests/viz/upload-runner.test.py
       - run: npm run build
