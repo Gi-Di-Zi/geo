@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { kindLabels, viewers } from '#shared/viewers'
+import { snippet } from '#shared/snippets'
 import type { CollectReport, FormatSpec, Output, Recipe, Report, ViewerId } from '#shared/types'
 
 /** 한 단계(수집·전처리·웹 형태 변환)의 내용. upload: 올린 파일로 돌린 경우라 수집 대신 올린 파일을 보여 준다 */

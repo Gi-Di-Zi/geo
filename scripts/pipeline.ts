@@ -9,6 +9,7 @@ import { cpus, release } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { UPLOAD_LAYER } from '../shared/catalog/_server.ts'
+import { serviceTtlMs } from '../shared/conversion.ts'
 import { sources } from '../shared/catalog/sources.ts'
 import { tools } from '../shared/catalog/tools.ts'
 import type { CollectReport, EngineReport, FormatSpec, Job, Output, Recipe, Report, StatusEntry, Step } from '../shared/types.ts'
@@ -548,10 +549,21 @@ async function runJob(dir: string) {
     const recipe: Recipe = JSON.parse(JSON.stringify({ ...chosen, id: 'upload' }).replaceAll(UPLOAD_LAYER, layer))
     await runRecipe(spec, recipe, join(dir, 'raw'), dir, { id: job.id, dir, input: `/raw/${input}`, name: `geo-job-${job.id}`, work, log: join(dir, 'live.log'), srs: job.srs })
     job.recipe = fillView(recipe, join(dir, recipe.id))
+
+    // 발행 완료 = 서비스 확인 요청(runRecipe의 probe)까지 성공한 지금. 이때부터 48시간 (server/middleware/service-gate.ts가 요청마다 검사)
+    if (job.layer) {
+      const now = Date.now()
+
+      job.service = { layer: job.layer, publishedAt: new Date(now).toISOString(), expiresAt: new Date(now + serviceTtlMs(process.env)).toISOString(), status: 'active' }
+    }
+
     job.state = 'done'
   } catch (e) {
     job.state = 'failed'
     job.error = (e instanceof Error ? e.message : '변환 실패').replace(/^실패: (.+)$/, '"$1" 단계에서 중단.')
+
+    // 발행 도중 실패: 만들다 만 표·레이어는 서버 정리 작업이 지운다 (공개하지 않음)
+    if (job.layer) job.service = { layer: job.layer, status: 'failed' }
   } finally {
     rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 })
     saveJob()
@@ -600,12 +612,17 @@ export async function writeStatus() {
  */
 function dropLayer(name: string) {
   if (!/^up_[0-9a-f]{8}$/.test(name)) throw new Error(`업로드 레이어 이름 아님: ${name}`)
-  const exec = (...args: string[]) => spawnSync('docker', ['compose', '-f', join(root, 'compose.yaml'), 'exec', '-T', ...args], { stdio: 'ignore' })
-  exec('db', 'psql', '-U', 'postgres', '-d', 'gis', '-c', `DROP TABLE IF EXISTS ${name}`)
+  const exec = (...args: string[]) => spawnSync('docker', ['compose', '-f', join(root, 'compose.yaml'), 'exec', '-T', ...args], { encoding: 'utf8' })
+  // 실패를 숨기지 않는다: 서버 정리 작업(server/plugins/service-sweep.ts)이 종료 코드를 보고 다시 시도한다. 이미 없는 것(404, IF EXISTS)은 성공
+  const db = exec('db', 'psql', '-U', 'postgres', '-d', 'gis', '-v', 'ON_ERROR_STOP=1', '-c', `DROP TABLE IF EXISTS ${name}`)
+
+  if (db.status !== 0) throw new Error(`DB 표 삭제 실패: ${(db.stderr || db.error?.message || '').trim()}`)
   const auth = `admin:${process.env.GEOSERVER_ADMIN_PASSWORD || 'geoserver'}`
 
   for (const path of [`datastores/gis/featuretypes/${name}?recurse=true`, `coveragestores/${name}?recurse=true`, `styles/${name}?purge=true`]) {
-    exec('geoserver', 'curl', '-s', '-o', '/dev/null', '-u', auth, '-XDELETE', `http://localhost:8080/geoserver/rest/workspaces/geo/${path}`)
+    const r = exec('geoserver', 'curl', '-s', '-o', '/dev/null', '-w', '%{http_code}', '-u', auth, '-XDELETE', `http://localhost:8080/geoserver/rest/workspaces/geo/${path}`)
+
+    if (r.status !== 0 || !['200', '404'].includes(r.stdout.trim())) throw new Error(`GeoServer ${path.split('?')[0]} 삭제 실패 (${r.stdout.trim() || r.stderr.trim() || r.status})`)
   }
 
   rmSync(join(root, 'pipeline/serve/upload', `${name}.tif`), { force: true })

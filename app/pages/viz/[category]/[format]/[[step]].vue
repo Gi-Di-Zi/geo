@@ -114,8 +114,34 @@ onBeforeUnmount(() => clearTimeout(timer))
 // 내 파일: 업로드 때 고른 방식·도구(레시피). 끝나면 범위·시점을 채운 작업의 레시피
 const uploadRecipes = 'recipes' in spec.upload ? spec.upload.recipes : []
 const uploadRecipe = computed(() => uploadRecipes.find(r => r.id === job.value?.job.method) ?? uploadRecipes[0])
-const shown = computed<Recipe>(() => (mine.value && uploadRecipe.value ? job.value?.job.recipe ?? uploadRecipe.value : recipe.value))
+
+const shown = computed<Recipe>(() => {
+  if (!mine.value || !uploadRecipe.value) return recipe.value
+  const r = job.value?.job.recipe ?? uploadRecipe.value
+  const intent = job.value?.job.intent
+
+  if (!intent?.viewer || !intent.primary) return r
+  const use = r.viewers[intent.viewer]
+
+  // 고른 뷰어는 추천한 주력 결과물로 그린다 (레시피 기본과 다를 수 있음: 작은 CSV → MVT 대신 GeoJSON)
+  return 'output' in use && use.output !== intent.primary ? { ...r, viewers: { ...r.viewers, [intent.viewer]: { output: intent.primary } } } : r
+})
+
 const shownReport = computed(() => (mine.value ? job.value?.report : report.value) ?? null)
+
+// 내 파일 결과: 파일은 내려받기, 서버 방식은 48시간 임시 서비스 (만료 시각은 서버 기준 UTC → 이 브라우저의 현지 시각으로 표시)
+const downloads = computed(() => job.value?.job.recipe?.outputs.filter(o => !o.path.startsWith('/svc/')) ?? [])
+
+const service = computed(() => {
+  const s = job.value?.job.service
+
+  if (!s) return null
+  const left = s.expiresAt ? Date.parse(s.expiresAt) - (job.value?.now ?? 0) : 0
+  const state = s.status === 'active' && left <= 0 ? 'expired' : s.status
+
+  return { state, live: state === 'active', expires: s.expiresAt ? new Date(s.expiresAt).toLocaleString() : '-', hours: Math.max(0, Math.floor(left / 3600000)), minutes: Math.max(0, Math.floor((left % 3600000) / 60000)) }
+})
+
 const stepLink = (id: FlowStep) => ({ path: stepPath(spec, id), query: route.query })
 
 useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!.name} | 공간 데이터 시각화 도구` }))
@@ -137,16 +163,18 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
     <template v-else-if="step === 'view'">
       <section v-if="!embed && mine && mapReady && job?.job.recipe" class="job-results" aria-label="내 파일 결과 내려받기">
         <strong>변환 결과</strong>
-        <a v-for="output in job.job.recipe.outputs" :key="output.id" class="btn" :href="`/api/jobs/${job.job.id}/download/${encodeURIComponent(output.id)}`" download>{{ output.label }} 내려받기</a>
+        <span v-if="service" class="small" :class="{ gone: !service.live }">{{ service.live ? `임시 서비스 · 만료 ${service.expires} (남은 ${service.hours}시간 ${service.minutes}분)` : `임시 서비스 이용 기간 종료 (${service.state}) — 서비스 URL 이용 불가` }}</span>
+        <a v-for="output in downloads" :key="output.id" class="btn" :href="`/api/jobs/${job.job.id}/download/${encodeURIComponent(output.id)}`" download>{{ output.label }} 내려받기</a>
         <NuxtLink to="/viz/upload" class="btn">다른 파일 올리기</NuxtLink>
       </section>
       <CompareStage
-        v-if="!mine || mapReady"
+        v-if="!mine || (mapReady && service?.live !== false)"
         :spec :recipe="shown" :color="cat.color" :base="mine ? `/api/jobs/${jobId}/files/` : undefined"
         @select="recipeId = $event"
       />
       <section v-else class="pending">
-        <JobProgress v-if="job" :spec :job="job.job" :report="job.report" :live="job.live" :now="job.now" />
+        <p v-if="service && !service.live" class="prose">임시 공간 서비스의 이용 기간(발행 후 48시간)이 끝나 지도를 그릴 수 없음. 내려받은 파일은 영향 없음 — 계속 쓰려면 파일 방식으로 다시 변환.</p>
+        <JobProgress v-else-if="job" :spec :job="job.job" :report="job.report" :live="job.live" :now="job.now" />
         <p v-else-if="jobError" class="prose">{{ jobError }}</p>
         <p v-else class="small muted">작업 불러오는 중…</p>
         <p class="small"><NuxtLink to="/viz/upload">다른 파일 올리기</NuxtLink> · <NuxtLink :to="{ query: {} }">샘플 보기</NuxtLink></p>
@@ -191,6 +219,7 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 .back { text-decoration: none; white-space: nowrap; }
 .job-results { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px var(--gutter); background: var(--surface); border-bottom: 1px solid var(--rule); }
 .job-results .btn { text-decoration: none; }
+.job-results .gone { color: #B42318; }
 .pre-pick { display: grid; gap: 8px; justify-items: start; margin-bottom: 28px; }
 .pre-pick h2 { font-size: var(--fs-2); }
 .pending { flex: 1; min-height: 0; overflow: auto; display: grid; justify-items: center; align-content: start; gap: 12px; padding: 32px var(--gutter); background: var(--stage); }

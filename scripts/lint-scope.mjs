@@ -19,6 +19,12 @@ const files = [
   'server/api/jobs/[id]/files/[...path].get.ts',
   'server/api/jobs/[id]/download/[output].ts',
   'shared/conversion.ts',
+  'shared/recommend.ts',
+  'server/utils/service-expiry.ts',
+  'server/utils/bundle-check.ts',
+  'server/routes/svc/[...path].ts',
+  'server/plugins/service-sweep.ts',
+  'server/api/jobs/capabilities.get.ts',
   'app/pages/ai.vue',
   'app/pages/viz/upload.vue',
   'app/pages/viz/[category]/[format]/[[step]].vue',
@@ -27,6 +33,8 @@ const files = [
   'scripts/lint-scope.test.mjs',
   'tests/viz/mcp-app.test.ts',
   'tests/viz/mcp-app-host.ts',
+  'tests/viz/recommend.test.ts',
+  'tests/viz/delivery.test.ts',
   'tests/link/reference-updates.test.ts',
 ]
 

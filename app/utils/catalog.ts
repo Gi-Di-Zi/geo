@@ -1,3 +1,4 @@
+import { viewerApi } from '#shared/snippets'
 import { categories } from '#shared/catalog/categories'
 import { ways } from '#shared/catalog/delivery'
 import { originLabels, origins } from '#shared/catalog/origins'
@@ -20,45 +21,8 @@ export const flow = [
 ] as const
 export type FlowStep = (typeof flow)[number]['id']
 
-/** 뷰어가 결과물 종류마다 쓰는 API (components/viewers의 실제 코드와 같다) */
-export const viewerApi: Record<ViewerId, Partial<Record<OutputKind, string>>> = {
-  ol: {
-    'geojson': 'VectorLayer + VectorSource(GeoJSON)',
-    'mvt': 'VectorTileLayer + VectorTileSource(MVT)',
-    'pmtiles': 'VectorTileLayer + PMTilesVectorSource (ol-pmtiles)',
-    'cog': 'WebGLTileLayer + GeoTIFF 소스 — 블록 Range 요청',
-    'xyz-raster': 'TileLayer + XYZ',
-    'image': 'ImageLayer + ImageStatic — 네 모서리 범위',
-    'wms': 'ImageLayer + ImageWMS — 화면 범위 GetMap',
-  },
-  maplibre: {
-    'geojson': 'geojson 소스 + fill·line·circle (높이 있으면 fill-extrusion)',
-    'mvt': 'vector 소스 + fill·line·circle',
-    'pmtiles': 'pmtiles:// 프로토콜 + vector 소스',
-    'xyz-raster': 'raster 소스',
-    'image': 'image 소스 — 네 모서리 좌표',
-    'terrain-rgb': 'raster-dem 소스 + setTerrain + hillshade',
-  },
-  deck: {
-    'geojson': 'GeoJsonLayer (높이 있으면 extruded)',
-    'mvt': 'MVTLayer',
-    'pmtiles': 'MVTLayer + PMTiles getZxy (fetch 교체)',
-    'xyz-raster': 'TileLayer + BitmapLayer',
-    'image': 'BitmapLayer — 네 모서리 범위',
-    'terrain-rgb': 'TerrainLayer — RGB → 높이 디코딩',
-    '3dtiles': 'Tile3DLayer (loaders.gl Tiles3DLoader)',
-    'glb': 'ScenegraphLayer',
-  },
-  cesium: {
-    'geojson': 'GeoJsonDataSource',
-    'xyz-raster': 'UrlTemplateImageryProvider',
-    'image': 'SingleTileImageryProvider',
-    'quantized-mesh': 'CesiumTerrainProvider',
-    '3dtiles': 'Cesium3DTileset',
-    'glb': 'Model.fromGltfAsync',
-    'wms': 'WebMapServiceImageryProvider — 타일 단위 GetMap',
-  },
-}
+/** 뷰어가 결과물 종류마다 쓰는 API (shared/snippets.ts, 서버 결과 안내와 같이 쓴다) */
+export { viewerApi }
 
 /** 서비스 레시피: 떠 있는 서버(GeoServer·martin 등)에 발행하고 서버 주소를 결과물로 쓴다 */
 export const isService = (r?: Recipe) => !!r?.convert.some(s => toolOf(s.tool)?.type === 'server')

@@ -81,6 +81,10 @@ export async function identify(s: Staged) {
     warns: r.warns,
     srs: r.srs ?? null,
     note: r.note ?? null,
+    /** 머리글로 확인한 피처·점·행 수 (추정 없음), 형식은 맞지만 변환이 실패할 이유 */
+    count: r.count ?? null,
+    blocked: r.blocked ?? null,
+    schema: r.schema ?? null,
     formats: r.picks.map((f, i) => ({ ...describeFormat(f), best: i === 0 })),
   }
 }

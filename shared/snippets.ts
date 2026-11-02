@@ -1,5 +1,5 @@
 // 코드 서랍에 보여 줄 최소 코드. 각 뷰어 컴포넌트(components/viewers)가 실제로 하는 일을 줄인 것이다
-import type { Output, ViewerId } from '#shared/types'
+import type { Output, OutputKind, ViewerId } from './types.ts'
 
 const j = (v: unknown) => JSON.stringify(v)
 
@@ -62,3 +62,83 @@ function cesium(o: Output, url: string) {
 }
 
 export const snippet = (viewer: ViewerId, o: Output, url: string) => ({ ol, maplibre, deck, cesium })[viewer](o, url)
+
+/** 뷰어가 결과물 종류마다 쓰는 API (components/viewers의 실제 코드와 같다) */
+export const viewerApi: Record<ViewerId, Partial<Record<OutputKind, string>>> = {
+  ol: {
+    'geojson': 'VectorLayer + VectorSource(GeoJSON)',
+    'mvt': 'VectorTileLayer + VectorTileSource(MVT)',
+    'pmtiles': 'VectorTileLayer + PMTilesVectorSource (ol-pmtiles)',
+    'cog': 'WebGLTileLayer + GeoTIFF 소스 — 블록 Range 요청',
+    'xyz-raster': 'TileLayer + XYZ',
+    'image': 'ImageLayer + ImageStatic — 네 모서리 범위',
+    'wms': 'ImageLayer + ImageWMS — 화면 범위 GetMap',
+  },
+  maplibre: {
+    'geojson': 'geojson 소스 + fill·line·circle (높이 있으면 fill-extrusion)',
+    'mvt': 'vector 소스 + fill·line·circle',
+    'pmtiles': 'pmtiles:// 프로토콜 + vector 소스',
+    'xyz-raster': 'raster 소스',
+    'image': 'image 소스 — 네 모서리 좌표',
+    'terrain-rgb': 'raster-dem 소스 + setTerrain + hillshade',
+  },
+  deck: {
+    'geojson': 'GeoJsonLayer (높이 있으면 extruded)',
+    'mvt': 'MVTLayer',
+    'pmtiles': 'MVTLayer + PMTiles getZxy (fetch 교체)',
+    'xyz-raster': 'TileLayer + BitmapLayer',
+    'image': 'BitmapLayer — 네 모서리 범위',
+    'terrain-rgb': 'TerrainLayer — RGB → 높이 디코딩',
+    '3dtiles': 'Tile3DLayer (loaders.gl Tiles3DLoader)',
+    'glb': 'ScenegraphLayer',
+  },
+  cesium: {
+    'geojson': 'GeoJsonDataSource',
+    'xyz-raster': 'UrlTemplateImageryProvider',
+    'image': 'SingleTileImageryProvider',
+    'quantized-mesh': 'CesiumTerrainProvider',
+    '3dtiles': 'Cesium3DTileset',
+    'glb': 'Model.fromGltfAsync',
+    'wms': 'WebMapServiceImageryProvider — 타일 단위 GetMap',
+  },
+}
+
+/** 결과물의 좌표계·형태 (업로드 레시피가 만드는 것 기준) */
+export const kindCrs: Record<OutputKind, string> = {
+  'geojson': 'EPSG:4326 위경도 (RFC 7946)',
+  'mvt': 'EPSG:3857 타일 격자 z/x/y (타일 안 좌표는 4096칸 정수)',
+  'pmtiles': 'EPSG:3857 타일 격자 (MVT 타일을 한 파일에)',
+  'image': 'EPSG:3857 재투영 그림 + 네 모서리 위경도(bounds)',
+  'cog': 'EPSG:3857 (GoogleMapsCompatible 블록)',
+  'xyz-raster': 'EPSG:3857 타일 격자 z/x/y',
+  'terrain-rgb': 'EPSG:3857 타일 격자 z/x/y, 높이 = -10000 + (R×65536 + G×256 + B) × 0.1',
+  'quantized-mesh': 'EPSG:4326 지리 타일(TMS) + layer.json',
+  '3dtiles': '지구 중심 좌표 EPSG:4978 (tileset.json 변환 행렬·경계 볼륨)',
+  'glb': '모델 좌표(m, Y 위) — 지도 위치는 별도 지정(anchor)',
+  'wms': '요청 때 지정 (EPSG:3857·4326 등)',
+}
+
+/** 정적 호스팅 조건: 내려받아 자기 웹 서버에 올릴 때 필요한 것 (모든 형식 공통: 다른 도메인 페이지에서 읽으면 CORS 허용) */
+export const kindHosting: Record<OutputKind, string> = {
+  'geojson': '파일 하나. Content-Type application/geo+json 또는 application/json',
+  'mvt': 'z/x/y 폴더 구조 그대로. .pbf → application/x-protobuf (gzip으로 저장된 타일이면 Content-Encoding: gzip)',
+  'pmtiles': '파일 하나. HTTP Range 요청(206) 지원 필수, CORS에 Range 요청 헤더 허용 + Content-Range·ETag 노출',
+  'image': '파일 하나. 이미지 MIME. 위치(네 모서리)는 코드에서 지정',
+  'cog': '파일 하나. HTTP Range 요청(206) 지원 필수, CORS에 Range 허용',
+  'xyz-raster': 'z/x/y 폴더 구조 그대로. 타일 확장자 MIME (WebP: image/webp)',
+  'terrain-rgb': 'z/x/y 폴더 구조 그대로. image/png',
+  'quantized-mesh': 'layer.json과 타일 폴더 구조 그대로. .terrain → application/vnd.quantized-mesh (gzip으로 저장된 타일이면 Content-Encoding: gzip)',
+  '3dtiles': 'tileset.json과 타일(b3dm·pnts·glb) 폴더 구조 그대로 (상대 경로 참조). JSON·바이너리 MIME',
+  'glb': '파일 하나. model/gltf-binary',
+  'wms': '서버 서비스 — 정적 호스팅 대상 아님',
+}
+
+/**
+ * 결과 하나를 뷰어에 붙이는 코드 + 시점 값. url = 결과 주소(내려받아 올린 곳 주소로 바꾸면 그대로 동작), view = 결과 시점
+ * ponytail: 배경지도(basemap·baseStyle)는 자리만 둔다 — 쓰는 곳의 배경지도가 다 달라서
+ */
+export function usage(viewer: ViewerId, o: Output, url: string, view?: { center: [number, number]; zoom: number }) {
+  const at = view ? `// 결과 위치 (이 변환 결과의 시점)\nconst [lon, lat] = ${JSON.stringify(view.center.map(v => Math.round(v * 1e6) / 1e6))}\nconst zoom = ${Math.round(view.zoom * 10) / 10}\n\n` : ''
+
+  return { api: viewerApi[viewer][o.kind] ?? '', code: at + snippet(viewer, o, url), hosting: kindHosting[o.kind], crs: kindCrs[o.kind] }
+}

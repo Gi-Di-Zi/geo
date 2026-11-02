@@ -158,6 +158,36 @@ export interface Job {
   layer?: string
   /** 실행 뒤 출력 범위·줌과 시점을 채운 레시피 */
   recipe?: Recipe
+  /** 변환을 시작할 때의 사용 목적과 추천 (shared/recommend.ts). 없으면 목적 없이 시작한 예전 작업 */
+  intent?: JobIntent
+  /** 서버 방식: 이 작업이 발행한 임시 서비스 (최대 48시간). 결과 파일 보관과 별개 */
+  service?: ServiceRecord
+}
+
+/**
+ * 업로드 작업 하나가 발행한 임시 공간 서비스. 시각은 UTC ISO 문자열.
+ * status는 저장한 상태이고 만료(expired)는 expiresAt으로 판정한다 → 정리 작업이 아직 안 돌았어도, 서버를 다시 켜도 만료 뒤에는 막힌다.
+ * failed = 발행 실패(publishedAt 없음) 또는 정리 실패(cleanup.error). cleanup.next = 다음 정리 시도 시각, stop = 소유를 확인할 수 없어 지우지 않음
+ */
+export interface ServiceRecord {
+  layer: string
+  publishedAt?: string
+  expiresAt?: string
+  status: 'active' | 'deleting' | 'deleted' | 'failed'
+  cleanup?: { attempts: number; at: string; error?: string; next?: string; stop?: boolean }
+}
+
+/** 사용 목적: 일반, 빠른 미리보기, 대용량 웹 표출, 원본 정보·정밀도 보존 */
+export type Priority = 'balanced' | 'fast_preview' | 'large_data' | 'fidelity'
+
+/** 작업에 남기는 목적. recommended = 시작할 때 서버가 계산한 추천 방식, primary = 대상 뷰어에서 쓸 주력 결과물 id */
+export interface JobIntent {
+  viewer?: ViewerId
+  priority: Priority
+  output?: OutputKind
+  recommended?: string
+  primary?: string
+  reason?: string
 }
 
 /** pipeline이 레시피마다 쓰는 실측 기록 (public/data/<cat>/<fmt>/<recipe>/report.json) */

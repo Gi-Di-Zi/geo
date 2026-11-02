@@ -1,6 +1,5 @@
 import { readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { tools } from './shared/catalog/tools'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-10-01',
@@ -62,7 +61,5 @@ export default defineNuxtConfig({
     // MCP App 화면에 SDK를 통째로 넣는다 (CDN 없이 뜨게). 설치된 버전 그대로 → useStorage('assets:mcp-sdk')
     serverAssets: [{ baseName: 'mcp-sdk', dir: fileURLToPath(new URL('./node_modules/@modelcontextprotocol/ext-apps/dist/src', import.meta.url)), pattern: 'app-with-deps.js' }],
   },
-  // 서비스 레시피의 서버(compose.yaml)를 같은 주소 아래로 연다: /svc/<도구 id>/** → endpoint
-  // ponytail: 주소는 빌드 때 고정 (127.0.0.1). 서버를 다른 호스트에 두면 endpoint를 환경 변수로
-  routeRules: Object.fromEntries(tools.filter(t => t.endpoint).map(t => [`/svc/${t.id}/**`, { proxy: `${t.endpoint}/**` }])),
+  // 서비스 레시피의 서버(compose.yaml)는 /svc/<도구 id>/** 로 연다: server/routes/svc/[...path].ts (업로드 임시 서비스 만료 검사 뒤 프록시)
 })

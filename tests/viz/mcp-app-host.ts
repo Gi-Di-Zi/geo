@@ -14,7 +14,7 @@ declare global {
     geoMcpCallTool: (params: CallToolRequest['params']) => Promise<CallToolResult>
     geoMcpHost: {
       observation: HostObservation
-      mount: (html: string, initialResult: CallToolResult) => Promise<void>
+      mount: (html: string, initialResult: CallToolResult, args?: Record<string, string>) => Promise<void>
     }
   }
 }
@@ -41,7 +41,7 @@ document.body.append(frame)
 
 window.geoMcpHost = {
   observation,
-  async mount(html, initialResult) {
+  async mount(html, initialResult, args = {}) {
     const target = frame.contentWindow
 
     if (!target) throw new Error('MCP App iframe window is missing')
@@ -104,7 +104,8 @@ window.geoMcpHost = {
     await bridge.connect(new PostMessageTransport(target, target))
     frame.srcdoc = html
     await ready
-    await bridge.sendToolInput({ arguments: {} })
+    // 모델이 도구를 부른 인자 그대로 (화면이 대상 뷰어·목적을 미리 고르는지 본다)
+    await bridge.sendToolInput({ arguments: args })
     await bridge.sendToolResult(initialResult)
   },
 }

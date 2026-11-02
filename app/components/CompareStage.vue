@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { engine, engineOutput, engineTarget, kindLabels, streamId, viewers } from '#shared/viewers'
+import { snippet } from '#shared/snippets'
 import type { EngineReport, FormatSpec, Output, Recipe, ViewerId } from '#shared/types'
 
 /** base: 결과 폴더 URL. 없으면 미리 변환해 둔 샘플(public/data) */
@@ -15,7 +16,9 @@ const root = ref<HTMLElement>()
 const active = ref(false)
 
 // 뷰어 하나씩. 한 번이라도 고른 뷰어만 띄우고, 다른 뷰어로 바꿔도 숨겨 둔 뷰어의 상태는 지킨다
-const current = ref<ViewerId>('deck')
+// ?viewer= 로 처음 뷰어 지정 (업로드 화면·MCP 결과 주소가 고른 라이브러리로 연다). 그 뷰어가 못 그리면 아래 규칙으로
+const asked = viewers.find(v => v.id === useRoute().query.viewer)?.id
+const current = ref<ViewerId>(asked ?? 'deck')
 const seen = reactive(new Set<ViewerId>())
 watch(current, id => seen.add(id), { immediate: true })
 const mounted = (id: ViewerId) => active.value && seen.has(id)
