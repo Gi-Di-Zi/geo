@@ -4,9 +4,10 @@
 //     --missing: 성공 기록이 있는 레시피는 건너뜀
 //   node scripts/unreal.ts stream <유형>/<확장자>[/<레시피>]  실시간 보기: 시그널링 서버 + 언리얼(창 없음, 조작 가능)을 띄워 브라우저로 보냄 (Pixel Streaming 2). Ctrl+C로 종료
 //   node scripts/unreal.ts stream --job <작업 폴더>          업로드 작업 결과 실시간 보기 (MCP geo_engine). 보는 사람이 ENGINE_IDLE_MIN(10)분 없으면 종료
-// 언리얼 위치: .env UE_ROOT (기본 C:/Program Files/Epic Games/UE_5.8). 패키징 없이 에디터 실행 파일의 -game 모드로 돈다
+// 언리얼 위치: .env UE_ROOT (Windows 기본 C:/Program Files/Epic Games/UE_5.8, Linux 기본 /opt/UnrealEngine = Epic Linux 빌드본을 푼 곳). 패키징 없이 에디터 실행 파일의 -game 모드로 돈다
+// Windows(개발 PC)와 Linux(설치 서버)를 같이 지원: 실행 파일·빌드 결과 폴더(Win64·Linux), 빌드 스크립트(Build.bat·Build.sh), zip 풀기(tar.exe·python3)만 다르다
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { engine, engineOutput, engineTarget, streamId } from '../shared/viewers.ts'
@@ -24,8 +25,11 @@ const psServer = join(psDir, 'SignallingWebServer')
 const STREAMER_PORT = 8888 // 언리얼 → 시그널링 서버 (127.0.0.1만)
 const streamReady = () => existsSync(join(psServer, 'dist/index.js')) && existsSync(join(psServer, 'www/player.html'))
 try { process.loadEnvFile(join(root, '.env')) } catch {}
-export const UE_ROOT = process.env.UE_ROOT || 'C:/Program Files/Epic Games/UE_5.8'
-const editor = join(UE_ROOT, 'Engine/Binaries/Win64/UnrealEditor.exe')
+const win = process.platform === 'win32'
+/** 엔진·프로젝트 바이너리 폴더 이름 (Windows = Win64, Linux = Linux) */
+const BIN = win ? 'Win64' : 'Linux'
+export const UE_ROOT = process.env.UE_ROOT || (win ? 'C:/Program Files/Epic Games/UE_5.8' : '/opt/UnrealEngine')
+const editor = join(UE_ROOT, `Engine/Binaries/${BIN}/UnrealEditor${win ? '.exe' : ''}`)
 // 화면 크기. 웹 뷰어 시점(줌)을 같은 범위가 보이는 카메라 거리로 바꿀 때도 쓴다
 const RES = [1280, 720] as const
 const TIMEOUT_S = 900 // 첫 실행은 Cesium 재질 셰이더 컴파일 포함 (이후 캐시)
@@ -37,7 +41,7 @@ export function unrealState() {
   return {
     engine: existsSync(editor),
     plugin: existsSync(join(project, 'Plugins/CesiumForUnreal/CesiumForUnreal.uplugin')),
-    built: existsSync(join(project, 'Binaries/Win64/UnrealEditor-GeoRender.dll')),
+    built: existsSync(join(project, `Binaries/${BIN}/${win ? 'UnrealEditor-GeoRender.dll' : 'libUnrealEditor-GeoRender.so'}`)),
   }
 }
 
@@ -49,9 +53,26 @@ function run(cmd: string, args: string[], bat = false, cwd?: string) {
   if (r.status !== 0) throw new Error(`실패 (${r.status}): ${basename(cmd)} ${args.join(' ')}`)
 }
 
+/** zip 풀기. Windows 기본 tar(bsdtar)는 zip을 풀지만 Linux의 GNU tar는 못 푼다 → python3 zipfile (업로드 작업자도 python3 사용). strip = 최상위 폴더 하나를 벗김 */
+function unzip(zip: string, dest: string, strip = false) {
+  if (win) return run('C:/Windows/System32/tar.exe', ['-xf', zip, '-C', dest, ...(strip ? ['--strip-components=1'] : [])])
+  const into = strip ? `${dest}.unzip` : dest
+
+  rmSync(`${dest}.unzip`, { recursive: true, force: true })
+  run('python3', ['-m', 'zipfile', '-e', zip, into])
+
+  if (!strip) return
+  const [top, ...rest] = readdirSync(into)
+
+  if (!top || rest.length) throw new Error(`zip 최상위 폴더가 하나가 아님: ${zip}`)
+
+  for (const name of readdirSync(join(into, top))) renameSync(join(into, top, name), join(dest, name))
+  rmSync(into, { recursive: true, force: true })
+}
+
 export function setup() {
-  if (process.platform !== 'win32') throw new Error('언리얼 렌더러는 Windows 전용 (UnrealEditor.exe)')
-  if (!existsSync(editor)) throw new Error(`언리얼 없음: ${editor}\n  Epic Games Launcher → 언리얼 엔진 5.8 설치 (또는 .env UE_ROOT 지정)`)
+  if (process.platform !== 'win32' && process.platform !== 'linux') throw new Error('언리얼 렌더러는 Windows·Linux만 (UnrealEditor)')
+  if (!existsSync(editor)) throw new Error(`언리얼 없음: ${editor}\n  ${win ? 'Epic Games Launcher → 언리얼 엔진 5.8 설치' : 'Epic Linux 빌드본(UE 5.8)을 풀어 둔 폴더'} (또는 .env UE_ROOT 지정)`)
   const { MajorVersion, MinorVersion } = JSON.parse(readFileSync(join(UE_ROOT, 'Engine/Build/Build.version'), 'utf8'))
   // 1) 플러그인: 엔진 버전별 빌드본 zip(최상위 CesiumForUnreal/)을 프로젝트 Plugins/에 푼다. Fab 로그인 불필요
   if (!unrealState().plugin) {
@@ -62,12 +83,12 @@ export function setup() {
       run('curl', ['-fSL', '--create-dirs', '-o', zip, `https://github.com/CesiumGS/cesium-unreal/releases/download/${CESIUM}/${name}`])
     }
     mkdirSync(join(project, 'Plugins'), { recursive: true })
-    // Windows 기본 tar(bsdtar)만 zip을 푼다. Git Bash의 GNU tar는 못 푼다
-    run('C:/Windows/System32/tar.exe', ['-xf', zip, '-C', join(project, 'Plugins')])
+    unzip(zip, join(project, 'Plugins'))
   }
   // 2) 에디터 타깃 빌드: -game을 에디터 실행 파일로 돌리므로 이 모듈 DLL만 있으면 된다
   console.log(`  · GeoRender 빌드 (언리얼 ${MajorVersion}.${MinorVersion})`)
-  run(join(UE_ROOT, 'Engine/Build/BatchFiles/Build.bat'), ['GeoRenderEditor', 'Win64', 'Development', `-Project=${uproject}`, '-WaitMutex', '-NoHotReloadFromIDE'], true)
+  if (win) run(join(UE_ROOT, 'Engine/Build/BatchFiles/Build.bat'), ['GeoRenderEditor', 'Win64', 'Development', `-Project=${uproject}`, '-WaitMutex', '-NoHotReloadFromIDE'], true)
+  else run(join(UE_ROOT, 'Engine/Build/BatchFiles/Linux/Build.sh'), ['GeoRenderEditor', 'Linux', 'Development', `-Project=${uproject}`, '-WaitMutex'])
   // 3) 실시간 보기 서버 (Node만 필요)
   if (!streamReady()) buildStreamServer()
 }
@@ -130,7 +151,7 @@ function buildStreamServer() {
   }
   rmSync(psDir, { recursive: true, force: true })
   mkdirSync(psDir, { recursive: true })
-  run('C:/Windows/System32/tar.exe', ['-xf', zip, '-C', psDir, '--strip-components=1'])
+  unzip(zip, psDir, true)
   const ws = ['Common', 'Signalling', 'SignallingWebServer', 'Frontend/library', 'Frontend/ui-library', 'Frontend/implementations/typescript']
   run('npm', ['install', '--no-audit', '--no-fund', ...ws.flatMap(w => ['-w', w])], true, psDir)
   // 의존 순서대로. 웹 플레이어는 SignallingWebServer/www로 나온다
@@ -176,7 +197,9 @@ function startStream(id: string, args: string[], idle?: number) {
   const stop = () => { clearInterval(timer); server.kill(); ue.kill() }
   server.on('exit', stop)
   ue.on('exit', code => { console.log(`  · 언리얼 종료 (${code ?? '중지'}). 로그: pipeline/unreal/GeoRender/Saved/Logs/GeoRender.log`); stop() })
+  // Ctrl+C(SIGINT)와 서버의 끄기(Linux: SIGTERM) 모두 → 시그널링 서버·언리얼도 같이 끈다
   process.on('SIGINT', stop)
+  process.on('SIGTERM', stop)
   if (!idle) return
   // 플레이어(웹 페이지)가 하나도 안 붙은 채 idle분이 지나면 끈다. 언리얼이 준비되기 전(셰이더 컴파일)에도 페이지만 열려 있으면 기다린다
   let seen = Date.now()

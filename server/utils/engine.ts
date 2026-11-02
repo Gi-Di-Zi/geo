@@ -45,7 +45,8 @@ export async function engineStart(id: string, host: string) {
     }
     if (live) engineStop(live.job)
     const log = createWriteStream(join(dir, 'engine.log'))
-    const child = spawn(process.execPath, ['scripts/unreal.ts', 'stream', '--job', dir], { stdio: ['ignore', 'pipe', 'pipe'] })
+    // Linux: 새 프로세스 그룹으로 띄워 끌 때 그룹째(시그널링 서버·언리얼·셰이더 컴파일러까지) 끈다
+    const child = spawn(process.execPath, ['scripts/unreal.ts', 'stream', '--job', dir], { stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' })
     child.stdout.pipe(log)
     child.stderr.pipe(log)
     child.on('exit', () => { if (live?.child === child) live = null })
@@ -56,11 +57,15 @@ export async function engineStart(id: string, host: string) {
   return engineInfo(id, host)
 }
 
-/** 끄기 (이 작업이 떠 있을 때만). Windows는 자식의 자식(시그널링 서버·언리얼)이 남으므로 트리째 */
+/** 끄기 (이 작업이 떠 있을 때만). 자식의 자식(시그널링 서버·언리얼)이 남지 않게 Windows는 트리째, Linux는 프로세스 그룹째 */
 export function engineStop(id: string) {
   if (live?.job !== id) return
-  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(live.child.pid), '/T', '/F'], { stdio: 'ignore' })
-  else live.child.kill()
+  const pid = live.child.pid
+
+  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' })
+  else if (pid) {
+    try { process.kill(-pid, 'SIGTERM') } catch { live.child.kill() }
+  }
   live = null
   appendFileSync(join(jobDir(id), 'engine.log'), '  · 끔\n')
 }

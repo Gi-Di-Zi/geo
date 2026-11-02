@@ -64,7 +64,7 @@ const steps: Record<string, () => Promise<boolean> | boolean> = {
   unreal() {
     title('엔진 렌더러 (Cesium for Unreal)')
     if (!unrealState().engine) {
-      console.log(`  · 언리얼 없음 (${UE_ROOT}) → 건너뜀. 설치: scripts/setup.ps1 -Unreal`)
+      console.log(`  · 언리얼 없음 (${UE_ROOT}) → 건너뜀. 설치: ${process.platform === 'win32' ? 'scripts/setup.ps1 -Unreal' : 'Epic Linux 빌드본(UE 5.8)을 풀고 .env UE_ROOT'}`)
       return true
     }
     if (!unrealState().built) unrealSetup()
