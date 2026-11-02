@@ -20,9 +20,10 @@ import { Circle, Fill, Stroke, Style } from 'ol/style'
 import { fromLonLat, toLonLat, transformExtent } from 'ol/proj'
 import { PMTilesVectorSource } from 'ol-pmtiles'
 import type { Output } from '#shared/types'
+import type { Picked } from '~/utils/pick'
 
 const props = defineProps<{ output: Output; url: string; color: string }>()
-const emit = defineEmits<{ ready: []; pick: [Record<string, unknown> | null] }>()
+const emit = defineEmits<{ ready: []; pick: [Picked] }>()
 const el = ref<HTMLDivElement>()
 const { tiles } = useBasemap()
 const { camera, follow } = useCamera()
@@ -93,7 +94,7 @@ onMounted(() => {
   map.on('singleclick', e => {
     const f = map!.forEachFeatureAtPixel(e.pixel, f => f)
     const { geometry, ...rest } = (f?.getProperties() ?? {}) as Record<string, unknown>
-    emit('pick', f ? rest : null)
+    emit('pick', pickOf(props.output, f ? rest : null, false, toLonLat(e.coordinate)))
   })
   watch(tiles, t => { base.setUrl(t.url); base.setAttributions(t.attribution) })
 })

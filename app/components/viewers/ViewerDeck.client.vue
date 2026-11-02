@@ -19,9 +19,10 @@ import { parse } from '@loaders.gl/core'
 import { MVTLoader } from '@loaders.gl/mvt'
 import { PMTiles } from 'pmtiles'
 import type { Output } from '#shared/types'
+import type { Picked } from '~/utils/pick'
 
 const props = defineProps<{ output: Output; url: string; color: string }>()
-const emit = defineEmits<{ ready: []; pick: [Record<string, unknown> | null] }>()
+const emit = defineEmits<{ ready: []; pick: [Picked] }>()
 const el = ref<HTMLDivElement>()
 const { tiles } = useBasemap()
 const { camera, follow } = useCamera()
@@ -45,7 +46,6 @@ function dataLayer() {
     pointRadiusMinPixels: 4,
     extruded: !!h,
     getElevation: (f: any) => (h ? Number(f.properties?.[h]) || 0 : 0),
-    onClick: (info: any) => { emit('pick', info.object?.properties ?? null) },
   }
   const range = { minZoom: o.minzoom, maxZoom: o.maxzoom, ...(o.bounds && { extent: o.bounds }) }
   switch (o.kind) {
@@ -85,11 +85,11 @@ function dataLayer() {
       })
     case '3dtiles':
       // 뷰어 타일이 작아(높이 ~300px) 기본 기준(8px)이면 거친 단계에서 멈춘다. 양자화된 점 좌표(16비트)는 풀어서 넘긴다
-      return new Tile3DLayer({ id: 'data', data: url, loader: Tiles3DLoader, pointSize: 2, onTilesetLoad: ready, loadOptions: { tileset: { maximumScreenSpaceError: 2 }, '3d-tiles': { decodeQuantizedPositions: true } } } as any)
+      return new Tile3DLayer({ id: 'data', pickable: true, data: url, loader: Tiles3DLoader, pointSize: 2, onTilesetLoad: ready, loadOptions: { tileset: { maximumScreenSpaceError: 2 }, '3d-tiles': { decodeQuantizedPositions: true } } } as any)
     case 'glb':
       // instances가 있으면 점마다 같은 모델을 세운다(Deck.gl 방식의 인스턴싱). glTF는 Y가 위라 X축으로 90° 세운다
       return new ScenegraphLayer({
-        id: 'data', scenegraph: url, sizeScale: 1, _lighting: 'pbr',
+        id: 'data', pickable: true, scenegraph: url, sizeScale: 1, _lighting: 'pbr',
         data: o.instances ? fetch(url.replace(o.path, o.instances)).then(r => r.json()).then(fc => fc.features) : [{ geometry: { coordinates: o.anchor } }],
         getPosition: (f: any) => f.geometry.coordinates,
         getOrientation: (f: any) => [0, -(f.properties?.heading ?? 0), 90],
@@ -105,7 +105,15 @@ const { emit: emitCamera, watchInput } = follow('deck', c => map && jumpTo(map, 
 onMounted(() => {
   const m = map = createBaseMap(el.value!, tiles.value, camera.value)
   m.on('load', () => {
-    const overlay = new MapLibreOverlay({ interleaved: true, layers: [dataLayer()] })
+    // 선택: 레이어가 아니라 Deck 전체의 클릭으로 받는다 → 아무것도 안 맞힌 곳(래스터·지형·빈 곳)도 위치와 함께. 모델·3D Tiles는 속성이 없으면 모델 선택
+    const overlay = new MapLibreOverlay({
+      interleaved: true, layers: [dataLayer()],
+      onClick: (info: any) => {
+        const attrs = info.object?.properties ?? null
+
+        emit('pick', pickOf(props.output, attrs, !!info.picked && !attrs && ['3dtiles', 'glb'].includes(props.output.kind), info.coordinate ?? null))
+      },
+    })
     m.addControl(overlay as any)
     // 타일·데이터 로드 콜백이 없는 레이어(이미지, 모델)는 지도가 한숨 돌릴 때를 표시 시점으로 본다
     if (['image', 'glb'].includes(props.output.kind)) m.once('idle', ready)

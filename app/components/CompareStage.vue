@@ -20,6 +20,8 @@ const active = ref(false)
 const asked = viewers.find(v => v.id === useRoute().query.viewer)?.id
 const current = ref<ViewerId>(asked ?? 'deck')
 const seen = reactive(new Set<ViewerId>())
+/** 지도 도구 "선택": 켜면 누른 모델·레이어·피처 정보를 띄운다 (끄면 클릭은 지도 조작만) */
+const selecting = ref(false)
 watch(current, id => seen.add(id), { immediate: true })
 const mounted = (id: ViewerId) => active.value && seen.has(id)
 
@@ -104,7 +106,7 @@ watch([showEngine, dir], async ([open]) => {
     <div class="viewer">
       <ViewerTile
         v-for="t in tiles" v-show="current === t.meta.id" :key="`${dir}-${t.meta.id}`"
-        v-bind="t" :color :active="mounted(t.meta.id)"
+        v-bind="t" :color :active="mounted(t.meta.id)" :selecting
       />
       <iframe v-if="live" class="live" :src="liveUrl" :title="`${engine.name} 실시간 화면`" allow="autoplay; fullscreen" />
     </div>
@@ -209,6 +211,13 @@ watch([showEngine, dir], async ([open]) => {
         <button type="button" title="이 뷰어 코드" aria-label="이 뷰어 코드" :disabled="!cur.output" @click="openCode(cur.meta.id, cur.output!, cur.path!)">
           <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 6 3 10l4 4M13 6l4 4-4 4" /></svg>
         </button>
+        <hr>
+        <button
+          type="button" :title="selecting ? '선택 끄기' : '선택 — 켠 뒤 모델·레이어를 누르면 정보 표시'" aria-label="선택"
+          :aria-pressed="selecting" :disabled="!cur.output" @click="selecting = !selecting"
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5 15 9.2l-4.4 1.2 2.6 4.7-1.9 1-2.6-4.7L5 14.3z" /></svg>
+        </button>
       </template>
       <button type="button" :title="full ? '전체 화면 끝내기' : '전체 화면'" :aria-label="full ? '전체 화면 끝내기' : '전체 화면'" @click="toggleFull">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path v-if="!full" d="M4 8V4h4M12 4h4v4M16 12v4h-4M8 16H4v-4" /><path v-else d="M8 4v4H4M16 8h-4V4M12 16v-4h4M4 12h4v4" /></svg>
@@ -283,6 +292,7 @@ watch([showEngine, dir], async ([open]) => {
 }
 .tools button:hover:not(:disabled) { background: var(--paper); }
 .tools button:disabled { opacity: 0.35; cursor: not-allowed; }
+.tools button[aria-pressed='true'] { background: var(--ink); color: var(--surface); }
 .tools svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tools svg .solid { fill: currentColor; }
 .tools hr { margin: 2px 4px; border: 0; border-top: 1px solid var(--rule); }

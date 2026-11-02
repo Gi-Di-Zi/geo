@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import type { Output } from '#shared/types'
+import type { Picked } from '~/utils/pick'
 
 const props = defineProps<{ output: Output; url: string; color: string }>()
-const emit = defineEmits<{ ready: []; pick: [Record<string, unknown> | null] }>()
+const emit = defineEmits<{ ready: []; pick: [Picked] }>()
 const el = ref<HTMLDivElement>()
 const { tiles } = useBasemap()
 const { camera, follow } = useCamera()
 const deg = Math.PI / 180
 let viewer: any
 let C: typeof import('cesium')
+let clicks: any
+
+/** 화면에서 내려갔는지. onMounted가 Cesium·데이터를 기다리는 사이에 내려가면 이어지는 단계를 멈춘다 (파괴된 viewer 접근 방지) */
+let gone = false
 
 function baseProvider(t: typeof tiles.value) {
   const vworld = t.url.includes('vworld')
@@ -119,6 +124,7 @@ onMounted(async () => {
   ;(window as any).CESIUM_BASE_URL = `${useRuntimeConfig().app.baseURL}cesium/`
   C = await import('cesium')
   await import('cesium/Build/Cesium/Widgets/widgets.css')
+  if (gone) return
   viewer = new C.Viewer(el.value!, {
     baseLayer: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
     navigationHelpButton: false, animation: false, timeline: false, fullscreenButton: false,
@@ -131,7 +137,9 @@ onMounted(async () => {
   viewer.scene.globe.maximumScreenSpaceError = 1
   viewer.imageryLayers.addImageryProvider(baseProvider(tiles.value)).saturation = 0.25
   lookAt(camera.value)
-  await addData()
+  // 불러오는 중에 내려가면 viewer가 없어져 실패한다 → 그때 오류는 무시
+  await addData().catch(e => { if (!gone) throw e })
+  if (gone) return
   viewer.scene.requestRender()
   viewer.scene.postRender.addEventListener(function once() {
     viewer.scene.postRender.removeEventListener(once)
@@ -155,17 +163,35 @@ onMounted(async () => {
     })
   })
 
-  new C.ScreenSpaceEventHandler(viewer.scene.canvas).setInputAction((m: any) => {
-    emit('pick', pickedProps(viewer.scene.pick(m.position)))
-  }, C.ScreenSpaceEventType.LEFT_CLICK)
+  // 선택: 맞힌 것(GeoJSON 피처·3D Tiles 피처·모델)과 누른 위치. 모델을 맞히면 그 표면, 아니면 지형(없으면 타원체) 위.
+  // 높이는 세로 과장(지형 보기)을 되돌린 값
+  clicks = new C.ScreenSpaceEventHandler(viewer.scene.canvas)
+  clicks.setInputAction((m: any) => {
+    const hit = viewer.scene.pick(m.position)
+    const attrs = pickedProps(hit)
+    const ray = viewer.camera.getPickRay(m.position)
+    const spot = (hit && viewer.scene.pickPositionSupported ? viewer.scene.pickPosition(m.position) : undefined) ?? (ray && viewer.scene.globe.pick(ray, viewer.scene))
+    const c = spot && C.Cartographic.fromCartesian(spot)
+    const at = c ? [c.longitude / deg, c.latitude / deg, c.height / (viewer.scene.verticalExaggeration || 1)] : null
 
-  watch(tiles, t => {
-    viewer.imageryLayers.remove(viewer.imageryLayers.get(0))
-    viewer.imageryLayers.addImageryProvider(baseProvider(t), 0).saturation = 0.25
-  })
+    emit('pick', pickOf(props.output, attrs, !!hit && !attrs && !(hit.id instanceof C.Entity), at))
+  }, C.ScreenSpaceEventType.LEFT_CLICK)
 })
 
-onBeforeUnmount(() => viewer?.destroy())
+// 배경지도 바꾸기. setup에서 만들어야 화면이 내려갈 때 같이 멈춘다 — onMounted의 await 뒤에 만든 감시는 컴포넌트에 묶이지 않아
+// 내려간 뒤 배경지도가 바뀌면 파괴된 viewer를 건드렸다 (Cannot read properties of undefined (reading 'scene'))
+watch(tiles, t => {
+  if (!viewer) return
+  viewer.imageryLayers.remove(viewer.imageryLayers.get(0))
+  viewer.imageryLayers.addImageryProvider(baseProvider(t), 0).saturation = 0.25
+})
+
+onBeforeUnmount(() => {
+  gone = true
+  clicks?.destroy()
+  viewer?.destroy()
+  viewer = undefined
+})
 </script>
 
 <template>

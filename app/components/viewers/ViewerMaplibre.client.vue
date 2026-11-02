@@ -2,9 +2,10 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type * as maplibregl from 'maplibre-gl'
 import type { Output } from '#shared/types'
+import type { Picked } from '~/utils/pick'
 
 const props = defineProps<{ output: Output; url: string; color: string }>()
-const emit = defineEmits<{ ready: []; pick: [Record<string, unknown> | null] }>()
+const emit = defineEmits<{ ready: []; pick: [Picked] }>()
 const el = ref<HTMLDivElement>()
 const { tiles } = useBasemap()
 const { camera, follow } = useCamera()
@@ -81,12 +82,12 @@ onMounted(() => {
   m.on('load', () => {
     const pickable = addData(m)
     m.once('idle', () => emit('ready'))
-    if (props.output.kind !== 'xyz-raster' && props.output.kind !== 'image' && props.output.kind !== 'terrain-rgb') {
-      m.on('click', e => {
-        const f = m.queryRenderedFeatures(e.point, { layers: pickable })[0]
-        emit('pick', f ? { ...f.properties } : null)
-      })
-    }
+    // 선택: 피처 레이어면 그 피처, 래스터·지형은 레이어와 누른 위치
+    m.on('click', e => {
+      const f = pickable.length ? m.queryRenderedFeatures(e.point, { layers: pickable })[0] : undefined
+
+      emit('pick', pickOf(props.output, f ? { ...f.properties } : null, false, [e.lngLat.lng, e.lngLat.lat]))
+    })
   })
   watchInput(el.value!)
   m.on('moveend', () => emitCamera(cameraOf(m)))
