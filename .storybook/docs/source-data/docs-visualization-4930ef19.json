@@ -1,0 +1,18 @@
+{
+  "path": "docs/visualization.md",
+  "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+  "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+  "heading": "시각화 개발·운영 상세",
+  "line": 1,
+  "title": "시각화 개발·운영 상세",
+  "classification": "mixed",
+  "approval": "unknown",
+  "markdown": "# 시각화 개발·운영 상세\n\n[프로젝트 소개와 대표 사례로 돌아가기](../README.md)\n\n기존 README의 상세 기술 기록입니다. 대표 사례의 측정값과 이번 제출 정비의 검증 범위는 [README](../README.md#validation)를 기준으로 구분합니다.\n",
+  "sourceSections": [
+    {
+      "heading": "시각화 개발·운영 상세",
+      "line": 1,
+      "endLine": 6
+    }
+  ]
+}

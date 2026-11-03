@@ -1,0 +1,66 @@
+{
+  "projectId": "geo",
+  "organizationKind": "personal",
+  "platform": "web",
+  "screenId": "GEO-WEB-VIZ-TOOLS-INDEX",
+  "title": "viz · tools · index",
+  "route": "/viz/tools",
+  "componentRefs": [
+    "app/pages/viz/tools/index.vue",
+    "app/components/FlowSteps.vue"
+  ],
+  "sourceDocs": [
+    {
+      "path": "README.md",
+      "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo-web-bridge — 공간 데이터 시각화",
+      "line": 1
+    },
+    {
+      "path": "docs/visualization.md",
+      "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "시각화 개발·운영 상세",
+      "line": 1
+    }
+  ],
+  "requirements": [
+    {
+      "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "README.md",
+        "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "geo-web-bridge — 공간 데이터 시각화",
+        "line": 1
+      },
+      "approval": "unknown"
+    },
+    {
+      "text": "시각화 개발·운영 상세 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "docs/visualization.md",
+        "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "시각화 개발·운영 상세",
+        "line": 1
+      },
+      "approval": "unknown"
+    }
+  ],
+  "states": [
+    "source-observed",
+    "desktop",
+    "mobile",
+    "not-live-rendered"
+  ],
+  "status": "documented",
+  "limitations": [
+    "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+    "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+  ],
+  "contradictions": []
+}

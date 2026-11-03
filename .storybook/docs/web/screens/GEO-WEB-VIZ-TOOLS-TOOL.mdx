@@ -1,0 +1,12 @@
+import { Meta, Source } from '@storybook/addon-docs/blocks'
+import screen from '../../screen-data/GEO-WEB-VIZ-TOOLS-TOOL.json'
+
+<Meta title="명세/Web/GEO-WEB-VIZ-TOOLS-TOOL viz · tools · tool" />
+
+<h1>{screen.title}</h1>
+
+<p><strong>Screen ID:</strong> {screen.screenId} · <strong>경로:</strong> <code>{screen.route}</code></p>
+
+원본 UI 소스를 기준으로 한 문서입니다. 요구의 사용자 승인과 전체 화면 동작은 미확인입니다.
+
+<Source code={JSON.stringify(screen, null, 2)} language="json" />

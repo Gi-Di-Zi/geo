@@ -18,3 +18,6 @@ pipeline/unreal/GeoRender/DerivedDataCache
 pipeline/unreal/GeoRender/Plugins
 pipeline/unreal/GeoRender/cesium-request-cache.sqlite*
 pipeline/unreal/PixelStreaming
+
+# Separate Storybook generated output
+/storybook-static/

@@ -1,0 +1,18 @@
+{
+  "path": "README.md",
+  "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+  "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+  "heading": "geo-web-bridge — 공간 데이터 시각화",
+  "line": 1,
+  "title": "geo-web-bridge — 공간 데이터 시각화",
+  "classification": "mixed",
+  "approval": "unknown",
+  "markdown": "### 배포 화면에서 현재 불가능한 사항\n\n- 업로드한 데이터를 PostGIS·GeoServer·Martin의 새 서비스로 발행하거나 관리 API를 호출할 수 없습니다. 공개 업로드는 결과 파일을 만드는 방식으로 제한합니다.\n- URL을 입력해 서버가 대신 내려받거나, 서버 PC의 파일 경로를 지정해 읽을 수 없습니다. 브라우저 또는 MCP Apps 업로드 화면으로 파일을 전달합니다.\n- 파일은 **최대 200MB**, 변환은 **서버 전체에서 동시에 1개**입니다. 다른 변환이 실행 중이면 대기열에 쌓지 않고 다시 시도하도록 알립니다. 처리 가능한 형식이어도 파일 크기·구조·도구의 처리 시간에 따라 실패할 수 있습니다.\n- 계정별 비공개 파일 보관함을 제공하지 않습니다. 업로드 원본과 결과는 운영자가 명시적으로 정리하기 전까지 보존합니다(보관 기간 보장 없음 — 계속 쓸 결과는 내려받기). 서비스 방식의 48시간 만료는 결과 파일 보관과 별개입니다.\n- Cesium for Unreal의 실제 엔진 화면·Pixel Streaming과 `geo_engine` 실행은 제공하지 않습니다. 웹 CesiumJS 지도는 별도로 사용할 수 있습니다.\n- 표에 없는 확장자, 단독 MVT/PNTS/i3dm/terrain 타일, 카탈로그가 지원하지 않는 모델 확장이나 참조 파일 누락을 자동으로 보완하지 않습니다.\n\n<a id=\"architecture\"></a>",
+  "sourceSections": [
+    {
+      "heading": "배포 화면에서 현재 불가능한 사항",
+      "line": 138,
+      "endLine": 147
+    }
+  ]
+}

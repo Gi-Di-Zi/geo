@@ -1,0 +1,12 @@
+import { Meta, Markdown, Source } from '@storybook/addon-docs/blocks'
+import document from '../../source-data/docs-visualization-4930ef19.json'
+
+<Meta title="원문/Web/시각화 개발·운영 상세 [docs/visualization.md]" />
+
+<h1>{document.title}</h1>
+
+원문은 보존하며 UI 관련 구간만 표시합니다. 저장소에 있다는 사실은 사용자 승인 증거가 아닙니다. 승인 상태: **미확인**.
+
+<Source code={JSON.stringify({ path: document.path, sha256: document.sha256, gitCommit: document.gitCommit, sections: document.sourceSections }, null, 2)} language="json" />
+
+<Markdown>{document.markdown}</Markdown>

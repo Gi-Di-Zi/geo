@@ -1,0 +1,125 @@
+{
+  "projectId": "geo",
+  "organizationKind": "personal",
+  "platform": "web",
+  "screenId": "GEO-WEB-VIZ-INDEX",
+  "title": "공간 데이터 시각화",
+  "route": "/viz",
+  "componentRefs": [
+    "app/pages/viz/index.vue",
+    "app/components/FlowSteps.vue",
+    "app/components/FormatPicker.vue",
+    "app/components/RouteMap.vue"
+  ],
+  "sourceDocs": [
+    {
+      "path": "README.md",
+      "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo-web-bridge — 공간 데이터 시각화",
+      "line": 1
+    },
+    {
+      "path": "docs/link/01_geo_link_overview.md",
+      "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo 주소·코드 연계 도구",
+      "line": 1
+    },
+    {
+      "path": "docs/link/02_geo_link_specification.md",
+      "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "02. 상세 기획 및 내부 처리 명세",
+      "line": 2
+    },
+    {
+      "path": "docs/link/03_geo_link_codex_prompt.md",
+      "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo 주소·코드 연계 도구",
+      "line": 1
+    },
+    {
+      "path": "docs/visualization.md",
+      "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "시각화 개발·운영 상세",
+      "line": 1
+    }
+  ],
+  "requirements": [
+    {
+      "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "README.md",
+        "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "geo-web-bridge — 공간 데이터 시각화",
+        "line": 1
+      },
+      "approval": "unknown"
+    },
+    {
+      "text": "geo 주소·코드 연계 도구 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "docs/link/01_geo_link_overview.md",
+        "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "geo 주소·코드 연계 도구",
+        "line": 1
+      },
+      "approval": "unknown"
+    },
+    {
+      "text": "02. 상세 기획 및 내부 처리 명세 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "docs/link/02_geo_link_specification.md",
+        "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "02. 상세 기획 및 내부 처리 명세",
+        "line": 2
+      },
+      "approval": "unknown"
+    },
+    {
+      "text": "geo 주소·코드 연계 도구 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "docs/link/03_geo_link_codex_prompt.md",
+        "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "geo 주소·코드 연계 도구",
+        "line": 1
+      },
+      "approval": "unknown"
+    },
+    {
+      "text": "시각화 개발·운영 상세 원문 참고",
+      "origin": {
+        "kind": "repository-document",
+        "path": "docs/visualization.md",
+        "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+        "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+        "heading": "시각화 개발·운영 상세",
+        "line": 1
+      },
+      "approval": "unknown"
+    }
+  ],
+  "states": [
+    "source-observed",
+    "desktop",
+    "mobile",
+    "not-live-rendered"
+  ],
+  "status": "documented",
+  "limitations": [
+    "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+    "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+  ],
+  "contradictions": []
+}

@@ -1,0 +1,2597 @@
+{
+  "schemaVersion": 1,
+  "projectId": "geo",
+  "organizationKind": "personal",
+  "sourceRevision": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+  "liveRevision": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+  "liveRevisionEvidence": "qualified Geo delivery receipt",
+  "platforms": [
+    "web"
+  ],
+  "screens": [
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-AI",
+      "title": "AI 연결",
+      "route": "/ai",
+      "componentRefs": [
+        "app/pages/ai.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/link/01_geo_link_overview.md",
+          "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/link/02_geo_link_specification.md",
+          "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "02. 상세 기획 및 내부 처리 명세",
+          "line": 2
+        },
+        {
+          "path": "docs/link/03_geo_link_codex_prompt.md",
+          "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/01_geo_link_overview.md",
+            "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "02. 상세 기획 및 내부 처리 명세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/02_geo_link_specification.md",
+            "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "02. 상세 기획 및 내부 처리 명세",
+            "line": 2
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/03_geo_link_codex_prompt.md",
+            "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-AI.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-INDEX",
+      "title": "소개",
+      "route": "/",
+      "componentRefs": [
+        "app/pages/index.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-INDEX.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-LINK-REFERENCE",
+      "title": "link-reference",
+      "route": "/link-reference",
+      "componentRefs": [
+        "app/pages/link-reference.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-LINK-REFERENCE.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-LINK",
+      "title": "주소·코드 연계",
+      "route": "/link",
+      "componentRefs": [
+        "app/pages/link.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/link/01_geo_link_overview.md",
+          "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/link/02_geo_link_specification.md",
+          "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "02. 상세 기획 및 내부 처리 명세",
+          "line": 2
+        },
+        {
+          "path": "docs/link/03_geo_link_codex_prompt.md",
+          "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/01_geo_link_overview.md",
+            "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "02. 상세 기획 및 내부 처리 명세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/02_geo_link_specification.md",
+            "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "02. 상세 기획 및 내부 처리 명세",
+            "line": 2
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/03_geo_link_codex_prompt.md",
+            "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-LINK.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-CATEGORY-FORMAT-STEP",
+      "title": "viz · category · format · step",
+      "route": "/viz/:category/:format/:step?",
+      "componentRefs": [
+        "app/pages/viz/[category]/[format]/[[step]].vue",
+        "app/components/CompareStage.vue",
+        "app/components/DeliveryGuide.vue",
+        "app/components/FlowSteps.vue",
+        "app/components/JobProgress.vue",
+        "app/components/StepRoute.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-CATEGORY-FORMAT-STEP.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-CONCEPTS",
+      "title": "viz · concepts",
+      "route": "/viz/concepts",
+      "componentRefs": [
+        "app/pages/viz/concepts.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-CONCEPTS.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-INDEX",
+      "title": "공간 데이터 시각화",
+      "route": "/viz",
+      "componentRefs": [
+        "app/pages/viz/index.vue",
+        "app/components/FlowSteps.vue",
+        "app/components/FormatPicker.vue",
+        "app/components/RouteMap.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/link/01_geo_link_overview.md",
+          "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/link/02_geo_link_specification.md",
+          "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "02. 상세 기획 및 내부 처리 명세",
+          "line": 2
+        },
+        {
+          "path": "docs/link/03_geo_link_codex_prompt.md",
+          "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/01_geo_link_overview.md",
+            "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "02. 상세 기획 및 내부 처리 명세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/02_geo_link_specification.md",
+            "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "02. 상세 기획 및 내부 처리 명세",
+            "line": 2
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/03_geo_link_codex_prompt.md",
+            "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-INDEX.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-SOURCES",
+      "title": "viz · sources",
+      "route": "/viz/sources",
+      "componentRefs": [
+        "app/pages/viz/sources.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-SOURCES.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-STATUS",
+      "title": "viz · status",
+      "route": "/viz/status",
+      "componentRefs": [
+        "app/pages/viz/status.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-STATUS.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-TOOLS-TOOL",
+      "title": "viz · tools · tool",
+      "route": "/viz/tools/:tool",
+      "componentRefs": [
+        "app/pages/viz/tools/[tool].vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-TOOLS-TOOL.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-TOOLS-INDEX",
+      "title": "viz · tools · index",
+      "route": "/viz/tools",
+      "componentRefs": [
+        "app/pages/viz/tools/index.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-TOOLS-INDEX.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-UPLOAD",
+      "title": "내 파일 변환",
+      "route": "/viz/upload",
+      "componentRefs": [
+        "app/pages/viz/upload.vue",
+        "app/components/DeliveryGuide.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/link/02_geo_link_specification.md",
+          "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "10. 파일 처리·출력·시각화 연결",
+          "line": 392
+        },
+        {
+          "path": "docs/link/03_geo_link_codex_prompt.md",
+          "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "10. 파일 처리·출력·시각화 연결 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/02_geo_link_specification.md",
+            "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "10. 파일 처리·출력·시각화 연결",
+            "line": 392
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "geo 주소·코드 연계 도구 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/link/03_geo_link_codex_prompt.md",
+            "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo 주소·코드 연계 도구",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-UPLOAD.mdx"
+    },
+    {
+      "projectId": "geo",
+      "organizationKind": "personal",
+      "platform": "web",
+      "screenId": "GEO-WEB-VIZ-WHY",
+      "title": "viz · why",
+      "route": "/viz/why",
+      "componentRefs": [
+        "app/pages/viz/why.vue",
+        "app/components/FlowSteps.vue"
+      ],
+      "sourceDocs": [
+        {
+          "path": "README.md",
+          "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1
+        },
+        {
+          "path": "docs/visualization.md",
+          "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+          "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+          "heading": "시각화 개발·운영 상세",
+          "line": 1
+        }
+      ],
+      "requirements": [
+        {
+          "text": "geo-web-bridge — 공간 데이터 시각화 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "README.md",
+            "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "geo-web-bridge — 공간 데이터 시각화",
+            "line": 1
+          },
+          "approval": "unknown"
+        },
+        {
+          "text": "시각화 개발·운영 상세 원문 참고",
+          "origin": {
+            "kind": "repository-document",
+            "path": "docs/visualization.md",
+            "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+            "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+            "heading": "시각화 개발·운영 상세",
+            "line": 1
+          },
+          "approval": "unknown"
+        }
+      ],
+      "states": [
+        "source-observed",
+        "desktop",
+        "mobile",
+        "not-live-rendered"
+      ],
+      "status": "documented",
+      "limitations": [
+        "Nuxt 페이지 전체의 SSR·라우팅·API 동작은 이 문서만으로 검증되지 않습니다.",
+        "Storybook은 별도 합성 데이터와 실제 공용 컴포넌트만 렌더링합니다."
+      ],
+      "contradictions": [],
+      "mdxPath": ".storybook/docs/web/screens/GEO-WEB-VIZ-WHY.mdx"
+    }
+  ],
+  "documents": [
+    {
+      "path": "README.md",
+      "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo-web-bridge — 공간 데이터 시각화",
+      "line": 1,
+      "classification": "mixed",
+      "sections": [
+        {
+          "heading": "geo-web-bridge — 공간 데이터 시각화",
+          "line": 1,
+          "level": 1,
+          "endLine": 186,
+          "classification": "ui"
+        },
+        {
+          "heading": "작업 범위",
+          "line": 10,
+          "level": 2,
+          "endLine": 44,
+          "classification": "context"
+        },
+        {
+          "heading": "MCP Apps 연결 방법(베타)",
+          "line": 45,
+          "level": 2,
+          "endLine": 122,
+          "classification": "implementation"
+        },
+        {
+          "heading": "연결과 사용",
+          "line": 59,
+          "level": 3,
+          "endLine": 65,
+          "classification": "context"
+        },
+        {
+          "heading": "요청 예시",
+          "line": 66,
+          "level": 3,
+          "endLine": 76,
+          "classification": "context"
+        },
+        {
+          "heading": "추천 기준",
+          "line": 77,
+          "level": 3,
+          "endLine": 97,
+          "classification": "context"
+        },
+        {
+          "heading": "결과 제공 방식",
+          "line": 98,
+          "level": 3,
+          "endLine": 111,
+          "classification": "context"
+        },
+        {
+          "heading": "검증 범위 (2026-11-02)",
+          "line": 112,
+          "level": 3,
+          "endLine": 122,
+          "classification": "implementation"
+        },
+        {
+          "heading": "배포 상태",
+          "line": 123,
+          "level": 2,
+          "endLine": 147,
+          "classification": "implementation"
+        },
+        {
+          "heading": "배포 화면에서 현재 불가능한 사항",
+          "line": 138,
+          "level": 3,
+          "endLine": 147,
+          "classification": "mixed"
+        },
+        {
+          "heading": "처리 구조",
+          "line": 148,
+          "level": 2,
+          "endLine": 162,
+          "classification": "context"
+        },
+        {
+          "heading": "라이선스",
+          "line": 163,
+          "level": 2,
+          "endLine": 177,
+          "classification": "context"
+        },
+        {
+          "heading": "개발 중인 사항",
+          "line": 178,
+          "level": 2,
+          "endLine": 186,
+          "classification": "context"
+        }
+      ],
+      "uiSections": [
+        {
+          "heading": "배포 화면에서 현재 불가능한 사항",
+          "line": 138,
+          "endLine": 147
+        }
+      ],
+      "mdxPath": ".storybook/docs/web/sources/readme-b3356305.mdx"
+    },
+    {
+      "path": "deploy/README.md",
+      "sha256": "b8ad24e882848b36dde030327dc4ec41b13a51e3bdee2756dd9b4fbcd35da396",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "서버 공개 배포",
+      "line": 1,
+      "classification": "operations-quality",
+      "sections": [
+        {
+          "heading": "서버 공개 배포",
+          "line": 1,
+          "level": 1,
+          "endLine": 23,
+          "classification": "implementation"
+        },
+        {
+          "heading": "업로드 작업자",
+          "line": 15,
+          "level": 2,
+          "endLine": 23,
+          "classification": "context"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/anti-slop.md",
+      "sha256": "1d81c09052027f793033a46a6caa63643f65befb2920df732c2daecae5658c57",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "MCP·업로드 변경의 anti-slop 검사",
+      "line": 1,
+      "classification": "operations-quality",
+      "sections": [
+        {
+          "heading": "MCP·업로드 변경의 anti-slop 검사",
+          "line": 1,
+          "level": 1,
+          "endLine": 61,
+          "classification": "implementation"
+        },
+        {
+          "heading": "원본과 의존성",
+          "line": 5,
+          "level": 2,
+          "endLine": 13,
+          "classification": "context"
+        },
+        {
+          "heading": "실제 검사 범위",
+          "line": 14,
+          "level": 2,
+          "endLine": 32,
+          "classification": "context"
+        },
+        {
+          "heading": "활성 기준과 진입점",
+          "line": 33,
+          "level": 2,
+          "endLine": 48,
+          "classification": "context"
+        },
+        {
+          "heading": "도입 검증과 초기 진단",
+          "line": 49,
+          "level": 2,
+          "endLine": 61,
+          "classification": "implementation"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/ci-cd.md",
+      "sha256": "f140e675da37c655eeb314fd586618099b055ade92924df8d59ce21d3a792f3a",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "CI/CD와 AI 복구의 연결",
+      "line": 1,
+      "classification": "operations-quality",
+      "sections": [
+        {
+          "heading": "CI/CD와 AI 복구의 연결",
+          "line": 1,
+          "level": 1,
+          "endLine": 37,
+          "classification": "implementation"
+        },
+        {
+          "heading": "자동 CI",
+          "line": 3,
+          "level": 2,
+          "endLine": 17,
+          "classification": "implementation"
+        },
+        {
+          "heading": "실행 환경이 필요한 검사",
+          "line": 18,
+          "level": 2,
+          "endLine": 28,
+          "classification": "context"
+        },
+        {
+          "heading": "배포와 AI 복구",
+          "line": 29,
+          "level": 2,
+          "endLine": 37,
+          "classification": "implementation"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/link/01_geo_link_overview.md",
+      "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo 주소·코드 연계 도구",
+      "line": 1,
+      "classification": "mixed",
+      "sections": [
+        {
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1,
+          "level": 1,
+          "endLine": 195,
+          "classification": "context"
+        },
+        {
+          "heading": "01. 쉽게 읽는 서비스 기획서",
+          "line": 2,
+          "level": 2,
+          "endLine": 12,
+          "classification": "context"
+        },
+        {
+          "heading": "1. 왜 만드는가",
+          "line": 13,
+          "level": 2,
+          "endLine": 22,
+          "classification": "context"
+        },
+        {
+          "heading": "2. 어떤 일을 할 수 있는가",
+          "line": 23,
+          "level": 2,
+          "endLine": 62,
+          "classification": "context"
+        },
+        {
+          "heading": "숫자로 된 코드를 읽을 수 있는 이름으로 바꾸기",
+          "line": 25,
+          "level": 3,
+          "endLine": 30,
+          "classification": "context"
+        },
+        {
+          "heading": "필요한 부분만 꺼내기",
+          "line": 31,
+          "level": 3,
+          "endLine": 40,
+          "classification": "context"
+        },
+        {
+          "heading": "특정 지역의 주소 목록 가져오기",
+          "line": 41,
+          "level": 3,
+          "endLine": 46,
+          "classification": "ui"
+        },
+        {
+          "heading": "위치·지도·공공정보 연결하기",
+          "line": 47,
+          "level": 3,
+          "endLine": 62,
+          "classification": "context"
+        },
+        {
+          "heading": "3. geo에는 어떻게 들어가는가",
+          "line": 63,
+          "level": 2,
+          "endLine": 79,
+          "classification": "context"
+        },
+        {
+          "heading": "4. 이용 방법은 두 가지다",
+          "line": 80,
+          "level": 2,
+          "endLine": 103,
+          "classification": "context"
+        },
+        {
+          "heading": "웹에서 직접 사용",
+          "line": 82,
+          "level": 3,
+          "endLine": 91,
+          "classification": "context"
+        },
+        {
+          "heading": "AI에 연결해서 사용",
+          "line": 92,
+          "level": 3,
+          "endLine": 103,
+          "classification": "context"
+        },
+        {
+          "heading": "5. 기본 화면은 어떻게 구성하는가",
+          "line": 104,
+          "level": 2,
+          "endLine": 115,
+          "classification": "ui"
+        },
+        {
+          "heading": "6. 국내 업무에 맞추어 지킬 기준",
+          "line": 116,
+          "level": 2,
+          "endLine": 137,
+          "classification": "context"
+        },
+        {
+          "heading": "국내 지역 체계를 기본으로 한다",
+          "line": 118,
+          "level": 3,
+          "endLine": 123,
+          "classification": "context"
+        },
+        {
+          "heading": "법정동과 행정동을 혼동하지 않는다",
+          "line": 124,
+          "level": 3,
+          "endLine": 127,
+          "classification": "context"
+        },
+        {
+          "heading": "코드의 원래 값을 지킨다",
+          "line": 128,
+          "level": 3,
+          "endLine": 131,
+          "classification": "context"
+        },
+        {
+          "heading": "‘변환’과 ‘확인’을 구분한다",
+          "line": 132,
+          "level": 3,
+          "endLine": 137,
+          "classification": "context"
+        },
+        {
+          "heading": "7. 첫 개발에서 완성할 것",
+          "line": 138,
+          "level": 2,
+          "endLine": 155,
+          "classification": "context"
+        },
+        {
+          "heading": "8. 매일 갱신한다는 뜻",
+          "line": 156,
+          "level": 2,
+          "endLine": 163,
+          "classification": "context"
+        },
+        {
+          "heading": "9. 하지 않는 것과 보호할 것",
+          "line": 164,
+          "level": 2,
+          "endLine": 171,
+          "classification": "context"
+        },
+        {
+          "heading": "10. 성공을 어떻게 판단하는가",
+          "line": 172,
+          "level": 2,
+          "endLine": 183,
+          "classification": "context"
+        },
+        {
+          "heading": "근거와 검토 범위",
+          "line": 184,
+          "level": 2,
+          "endLine": 195,
+          "classification": "context"
+        }
+      ],
+      "uiSections": [
+        {
+          "heading": "특정 지역의 주소 목록 가져오기",
+          "line": 41,
+          "endLine": 46
+        },
+        {
+          "heading": "5. 기본 화면은 어떻게 구성하는가",
+          "line": 104,
+          "endLine": 115
+        }
+      ],
+      "mdxPath": ".storybook/docs/web/sources/docs-link-01-geo-link-overview-5b3ee71f.mdx"
+    },
+    {
+      "path": "docs/link/02_geo_link_specification.md",
+      "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo 주소·코드 연계 도구",
+      "line": 1,
+      "classification": "mixed",
+      "sections": [
+        {
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1,
+          "level": 1,
+          "endLine": 605,
+          "classification": "context"
+        },
+        {
+          "heading": "02. 상세 기획 및 내부 처리 명세",
+          "line": 2,
+          "level": 2,
+          "endLine": 15,
+          "classification": "ui"
+        },
+        {
+          "heading": "1. 목표와 설계 경계",
+          "line": 16,
+          "level": 2,
+          "endLine": 37,
+          "classification": "context"
+        },
+        {
+          "heading": "1.1 사용자 요구",
+          "line": 18,
+          "level": 3,
+          "endLine": 25,
+          "classification": "ui"
+        },
+        {
+          "heading": "1.2 이번 문서가 고정하는 것",
+          "line": 26,
+          "level": 3,
+          "endLine": 29,
+          "classification": "context"
+        },
+        {
+          "heading": "1.3 개발 중 바꾸어도 되는 것",
+          "line": 30,
+          "level": 3,
+          "endLine": 37,
+          "classification": "context"
+        },
+        {
+          "heading": "2. 최신 저장소 확인 결과와 통합 판단",
+          "line": 38,
+          "level": 2,
+          "endLine": 73,
+          "classification": "context"
+        },
+        {
+          "heading": "2.1 확인 범위",
+          "line": 40,
+          "level": 3,
+          "endLine": 59,
+          "classification": "context"
+        },
+        {
+          "heading": "2.2 반드시 피할 잘못된 재사용",
+          "line": 60,
+          "level": 3,
+          "endLine": 65,
+          "classification": "context"
+        },
+        {
+          "heading": "2.3 현재 코드에서 확인한 공개 운영 점검 항목",
+          "line": 66,
+          "level": 3,
+          "endLine": 73,
+          "classification": "context"
+        },
+        {
+          "heading": "3. 사이트 구조와 사용자 흐름",
+          "line": 74,
+          "level": 2,
+          "endLine": 103,
+          "classification": "ui"
+        },
+        {
+          "heading": "3.1 경로와 메뉴",
+          "line": 76,
+          "level": 3,
+          "endLine": 83,
+          "classification": "ui"
+        },
+        {
+          "heading": "3.2 기본 작업 화면",
+          "line": 84,
+          "level": 3,
+          "endLine": 91,
+          "classification": "ui"
+        },
+        {
+          "heading": "3.3 핵심 시나리오",
+          "line": 92,
+          "level": 3,
+          "endLine": 103,
+          "classification": "context"
+        },
+        {
+          "heading": "4. 개발 범위와 기능 공개 조건",
+          "line": 104,
+          "level": 2,
+          "endLine": 125,
+          "classification": "context"
+        },
+        {
+          "heading": "4.1 A단계: 이번 개발에서 완결할 범위",
+          "line": 106,
+          "level": 3,
+          "endLine": 111,
+          "classification": "context"
+        },
+        {
+          "heading": "4.2 B단계: 자료가 검증된 기능부터 확장",
+          "line": 112,
+          "level": 3,
+          "endLine": 117,
+          "classification": "implementation"
+        },
+        {
+          "heading": "4.3 제공 상태 계약",
+          "line": 118,
+          "level": 3,
+          "endLine": 125,
+          "classification": "context"
+        },
+        {
+          "heading": "5. 국내 코드·주소 도메인 규칙",
+          "line": 126,
+          "level": 2,
+          "endLine": 157,
+          "classification": "context"
+        },
+        {
+          "heading": "5.1 코드 체계와 출력 표현",
+          "line": 128,
+          "level": 3,
+          "endLine": 141,
+          "classification": "context"
+        },
+        {
+          "heading": "5.2 계층과 국내 예외",
+          "line": 142,
+          "level": 3,
+          "endLine": 149,
+          "classification": "context"
+        },
+        {
+          "heading": "5.3 현재·과거 코드",
+          "line": 150,
+          "level": 3,
+          "endLine": 157,
+          "classification": "context"
+        },
+        {
+          "heading": "6. 내부 변환 로직",
+          "line": 158,
+          "level": 2,
+          "endLine": 233,
+          "classification": "context"
+        },
+        {
+          "heading": "6.1 공통 입력 처리",
+          "line": 160,
+          "level": 3,
+          "endLine": 167,
+          "classification": "context"
+        },
+        {
+          "heading": "6.2 PNU → 지번 표현·부분 코드",
+          "line": 168,
+          "level": 3,
+          "endLine": 191,
+          "classification": "context"
+        },
+        {
+          "heading": "6.3 지번주소 → PNU 형식 조합",
+          "line": 192,
+          "level": 3,
+          "endLine": 203,
+          "classification": "context"
+        },
+        {
+          "heading": "6.4 지역코드 ↔ 명칭",
+          "line": 204,
+          "level": 3,
+          "endLine": 209,
+          "classification": "context"
+        },
+        {
+          "heading": "6.5 도로명주소·우편번호·건물 연계",
+          "line": 210,
+          "level": 3,
+          "endLine": 217,
+          "classification": "context"
+        },
+        {
+          "heading": "6.6 공간·좌표·비공간 속성에서 시작하는 확장 로직",
+          "line": 218,
+          "level": 3,
+          "endLine": 233,
+          "classification": "context"
+        },
+        {
+          "heading": "7. 공통 결과 규격",
+          "line": 234,
+          "level": 2,
+          "endLine": 289,
+          "classification": "context"
+        },
+        {
+          "heading": "7.1 행 단위 결과",
+          "line": 236,
+          "level": 3,
+          "endLine": 273,
+          "classification": "context"
+        },
+        {
+          "heading": "7.2 실행 단위 메타데이터",
+          "line": 274,
+          "level": 3,
+          "endLine": 281,
+          "classification": "context"
+        },
+        {
+          "heading": "7.3 다대다 관계와 출력",
+          "line": 282,
+          "level": 3,
+          "endLine": 289,
+          "classification": "context"
+        },
+        {
+          "heading": "8. 내부 구조와 파일 배치 제안",
+          "line": 290,
+          "level": 2,
+          "endLine": 316,
+          "classification": "context"
+        },
+        {
+          "heading": "9. HTTP·MCP 인터페이스 제안",
+          "line": 317,
+          "level": 2,
+          "endLine": 391,
+          "classification": "implementation"
+        },
+        {
+          "heading": "9.1 공통 요청 예시",
+          "line": 319,
+          "level": 3,
+          "endLine": 342,
+          "classification": "context"
+        },
+        {
+          "heading": "9.2 HTTP 엔드포인트",
+          "line": 343,
+          "level": 3,
+          "endLine": 360,
+          "classification": "context"
+        },
+        {
+          "heading": "9.3 MCP 도구",
+          "line": 361,
+          "level": 3,
+          "endLine": 377,
+          "classification": "implementation"
+        },
+        {
+          "heading": "9.4 MCP Apps UI",
+          "line": 378,
+          "level": 3,
+          "endLine": 391,
+          "classification": "mixed"
+        },
+        {
+          "heading": "10. 파일 처리·출력·시각화 연결",
+          "line": 392,
+          "level": 2,
+          "endLine": 423,
+          "classification": "ui"
+        },
+        {
+          "heading": "10.1 CSV·XLSX 입력",
+          "line": 394,
+          "level": 3,
+          "endLine": 401,
+          "classification": "context"
+        },
+        {
+          "heading": "10.2 다운로드",
+          "line": 402,
+          "level": 3,
+          "endLine": 411,
+          "classification": "context"
+        },
+        {
+          "heading": "10.3 기존 시각화 도구와 연결",
+          "line": 412,
+          "level": 3,
+          "endLine": 423,
+          "classification": "ui"
+        },
+        {
+          "heading": "11. 원천 자료 확보와 갱신",
+          "line": 424,
+          "level": 2,
+          "endLine": 466,
+          "classification": "context"
+        },
+        {
+          "heading": "11.1 우선 원천",
+          "line": 426,
+          "level": 3,
+          "endLine": 435,
+          "classification": "context"
+        },
+        {
+          "heading": "11.2 스냅샷 구조",
+          "line": 436,
+          "level": 3,
+          "endLine": 448,
+          "classification": "context"
+        },
+        {
+          "heading": "11.3 일일 확인 절차",
+          "line": 449,
+          "level": 3,
+          "endLine": 456,
+          "classification": "context"
+        },
+        {
+          "heading": "11.4 시각·운영 표시",
+          "line": 457,
+          "level": 3,
+          "endLine": 466,
+          "classification": "context"
+        },
+        {
+          "heading": "12. 작업 실행·한도·안전",
+          "line": 467,
+          "level": 2,
+          "endLine": 498,
+          "classification": "context"
+        },
+        {
+          "heading": "12.1 작업 생명주기",
+          "line": 469,
+          "level": 3,
+          "endLine": 476,
+          "classification": "context"
+        },
+        {
+          "heading": "12.2 만료와 정리",
+          "line": 477,
+          "level": 3,
+          "endLine": 482,
+          "classification": "context"
+        },
+        {
+          "heading": "12.3 접근·파일·외부 통신",
+          "line": 483,
+          "level": 3,
+          "endLine": 492,
+          "classification": "context"
+        },
+        {
+          "heading": "12.4 성능 측정",
+          "line": 493,
+          "level": 3,
+          "endLine": 498,
+          "classification": "context"
+        },
+        {
+          "heading": "13. 검증 및 인수 기준",
+          "line": 499,
+          "level": 2,
+          "endLine": 543,
+          "classification": "implementation"
+        },
+        {
+          "heading": "14. 구현 순서와 변경 관리",
+          "line": 544,
+          "level": 2,
+          "endLine": 559,
+          "classification": "context"
+        },
+        {
+          "heading": "15. 확인된 것·미확인된 것·수정 가능한 것",
+          "line": 560,
+          "level": 2,
+          "endLine": 571,
+          "classification": "context"
+        },
+        {
+          "heading": "16. 근거 자료",
+          "line": 572,
+          "level": 2,
+          "endLine": 605,
+          "classification": "context"
+        },
+        {
+          "heading": "저장소",
+          "line": 574,
+          "level": 3,
+          "endLine": 593,
+          "classification": "context"
+        },
+        {
+          "heading": "외부 공식 자료",
+          "line": 594,
+          "level": 3,
+          "endLine": 605,
+          "classification": "context"
+        }
+      ],
+      "uiSections": [
+        {
+          "heading": "02. 상세 기획 및 내부 처리 명세",
+          "line": 2,
+          "endLine": 15
+        },
+        {
+          "heading": "1.1 사용자 요구",
+          "line": 18,
+          "endLine": 25
+        },
+        {
+          "heading": "3. 사이트 구조와 사용자 흐름",
+          "line": 74,
+          "endLine": 103
+        },
+        {
+          "heading": "3.1 경로와 메뉴",
+          "line": 76,
+          "endLine": 83
+        },
+        {
+          "heading": "3.2 기본 작업 화면",
+          "line": 84,
+          "endLine": 91
+        },
+        {
+          "heading": "9.4 MCP Apps UI",
+          "line": 378,
+          "endLine": 391
+        },
+        {
+          "heading": "10. 파일 처리·출력·시각화 연결",
+          "line": 392,
+          "endLine": 423
+        },
+        {
+          "heading": "10.3 기존 시각화 도구와 연결",
+          "line": 412,
+          "endLine": 423
+        }
+      ],
+      "mdxPath": ".storybook/docs/web/sources/docs-link-02-geo-link-specification-f73ed077.mdx"
+    },
+    {
+      "path": "docs/link/03_geo_link_codex_prompt.md",
+      "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "geo 주소·코드 연계 도구",
+      "line": 1,
+      "classification": "mixed",
+      "sections": [
+        {
+          "heading": "geo 주소·코드 연계 도구",
+          "line": 1,
+          "level": 1,
+          "endLine": 9,
+          "classification": "context"
+        },
+        {
+          "heading": "03. Codex 개발 명령문",
+          "line": 2,
+          "level": 2,
+          "endLine": 9,
+          "classification": "context"
+        },
+        {
+          "heading": "개발 지시",
+          "line": 10,
+          "level": 1,
+          "endLine": 259,
+          "classification": "context"
+        },
+        {
+          "heading": "1. 먼저 확인할 것",
+          "line": 16,
+          "level": 2,
+          "endLine": 41,
+          "classification": "context"
+        },
+        {
+          "heading": "2. 구현 의도",
+          "line": 42,
+          "level": 2,
+          "endLine": 49,
+          "classification": "context"
+        },
+        {
+          "heading": "3. 기존 geo와 통합하는 방식",
+          "line": 50,
+          "level": 2,
+          "endLine": 59,
+          "classification": "context"
+        },
+        {
+          "heading": "4. 이번 작업에서 완성할 기능",
+          "line": 60,
+          "level": 2,
+          "endLine": 201,
+          "classification": "context"
+        },
+        {
+          "heading": "4.1 PNU와 법정구역 변환",
+          "line": 64,
+          "level": 3,
+          "endLine": 82,
+          "classification": "context"
+        },
+        {
+          "heading": "4.2 출력 단계와 형태",
+          "line": 83,
+          "level": 3,
+          "endLine": 92,
+          "classification": "context"
+        },
+        {
+          "heading": "4.3 실제 기준 자료",
+          "line": 93,
+          "level": 3,
+          "endLine": 114,
+          "classification": "context"
+        },
+        {
+          "heading": "4.4 목록·CSV·XLSX",
+          "line": 115,
+          "level": 3,
+          "endLine": 126,
+          "classification": "ui"
+        },
+        {
+          "heading": "4.5 결과·오류의 의미",
+          "line": 127,
+          "level": 3,
+          "endLine": 141,
+          "classification": "context"
+        },
+        {
+          "heading": "4.6 웹 작업 화면",
+          "line": 142,
+          "level": 3,
+          "endLine": 149,
+          "classification": "ui"
+        },
+        {
+          "heading": "4.7 공통 서비스와 작업 실행",
+          "line": 150,
+          "level": 3,
+          "endLine": 159,
+          "classification": "context"
+        },
+        {
+          "heading": "4.8 MCP와 MCP Apps",
+          "line": 160,
+          "level": 3,
+          "endLine": 189,
+          "classification": "implementation"
+        },
+        {
+          "heading": "4.9 갱신·보관·공개 안전",
+          "line": 190,
+          "level": 3,
+          "endLine": 201,
+          "classification": "context"
+        },
+        {
+          "heading": "5. 기존 지도·확장 기능과의 연결",
+          "line": 202,
+          "level": 2,
+          "endLine": 211,
+          "classification": "context"
+        },
+        {
+          "heading": "6. 필수 테스트",
+          "line": 212,
+          "level": 2,
+          "endLine": 236,
+          "classification": "implementation"
+        },
+        {
+          "heading": "7. 문서화와 완료 보고",
+          "line": 237,
+          "level": 2,
+          "endLine": 254,
+          "classification": "context"
+        },
+        {
+          "heading": "8. 완료의 정의",
+          "line": 255,
+          "level": 2,
+          "endLine": 259,
+          "classification": "context"
+        }
+      ],
+      "uiSections": [
+        {
+          "heading": "4.4 목록·CSV·XLSX",
+          "line": 115,
+          "endLine": 126
+        },
+        {
+          "heading": "4.6 웹 작업 화면",
+          "line": 142,
+          "endLine": 149
+        }
+      ],
+      "mdxPath": ".storybook/docs/web/sources/docs-link-03-geo-link-codex-prompt-ed8c8218.mdx"
+    },
+    {
+      "path": "docs/link/administrative-source.md",
+      "sha256": "d60ca5b6c9da8bc7ca96c43cc3c1ccb15d785d318c4f1c1395165a4dac4c4786",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "행정동 코드·법정동 관할 관계 자료",
+      "line": 1,
+      "classification": "reference",
+      "sections": [
+        {
+          "heading": "행정동 코드·법정동 관할 관계 자료",
+          "line": 1,
+          "level": 1,
+          "endLine": 60,
+          "classification": "context"
+        },
+        {
+          "heading": "실제 확보한 원천",
+          "line": 5,
+          "level": 2,
+          "endLine": 28,
+          "classification": "context"
+        },
+        {
+          "heading": "대응 관계와 확인 범위",
+          "line": 29,
+          "level": 2,
+          "endLine": 36,
+          "classification": "context"
+        },
+        {
+          "heading": "저장·갱신·검증",
+          "line": 37,
+          "level": 2,
+          "endLine": 55,
+          "classification": "implementation"
+        },
+        {
+          "heading": "이용조건·검증 상태",
+          "line": 56,
+          "level": 2,
+          "endLine": 60,
+          "classification": "implementation"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/link/boundary.md",
+      "sha256": "3de2a3dbd55dd2dd0ab3c6cfbb0058b0da2903411fe21e15c789295fc8ea0c30",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "법정구역 경계 SHP 출력",
+      "line": 1,
+      "classification": "reference",
+      "sections": [
+        {
+          "heading": "법정구역 경계 SHP 출력",
+          "line": 1,
+          "level": 1,
+          "endLine": 44,
+          "classification": "context"
+        },
+        {
+          "heading": "구현 범위",
+          "line": 5,
+          "level": 2,
+          "endLine": 19,
+          "classification": "context"
+        },
+        {
+          "heading": "원천과 현재 확보 상태",
+          "line": 20,
+          "level": 2,
+          "endLine": 33,
+          "classification": "context"
+        },
+        {
+          "heading": "제한과 재현",
+          "line": 34,
+          "level": 2,
+          "endLine": 44,
+          "classification": "context"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/link/data-sources.md",
+      "sha256": "fbe3080deee20df2e1834407fdd617fcf6be2fc3792efa3d64650fb9483b1a41",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "주소·코드 연계 기준자료",
+      "line": 1,
+      "classification": "reference",
+      "sections": [
+        {
+          "heading": "주소·코드 연계 기준자료",
+          "line": 1,
+          "level": 1,
+          "endLine": 90,
+          "classification": "context"
+        },
+        {
+          "heading": "실제 확보한 법정동 사전",
+          "line": 16,
+          "level": 2,
+          "endLine": 33,
+          "classification": "context"
+        },
+        {
+          "heading": "행정동 사전과 실시간 조회 원천",
+          "line": 34,
+          "level": 2,
+          "endLine": 49,
+          "classification": "context"
+        },
+        {
+          "heading": "정규화와 계층의 한계",
+          "line": 50,
+          "level": 2,
+          "endLine": 57,
+          "classification": "context"
+        },
+        {
+          "heading": "저장·활성화·재현",
+          "line": 58,
+          "level": 2,
+          "endLine": 77,
+          "classification": "context"
+        },
+        {
+          "heading": "갱신과 보관 운영 상태",
+          "line": 78,
+          "level": 2,
+          "endLine": 87,
+          "classification": "context"
+        },
+        {
+          "heading": "테스트 자료",
+          "line": 88,
+          "level": 2,
+          "endLine": 90,
+          "classification": "implementation"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/link/implementation-report.md",
+      "sha256": "d9bdc1c497b241dfc2569bb21405bf62cbe6e1c8e7d9cbec088e01baf1ac0f15",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "국내 주소·코드 연계 도구 구현 보고",
+      "line": 1,
+      "classification": "reference",
+      "sections": [
+        {
+          "heading": "국내 주소·코드 연계 도구 구현 보고",
+          "line": 1,
+          "level": 1,
+          "endLine": 241,
+          "classification": "context"
+        },
+        {
+          "heading": "현행 구현: 모든 결과 동시 표시·SHP 별도 다운로드",
+          "line": 5,
+          "level": 2,
+          "endLine": 28,
+          "classification": "context"
+        },
+        {
+          "heading": "이전 구현: 출력 선택·위치·법정동 경계·기준자료 업데이트",
+          "line": 29,
+          "level": 2,
+          "endLine": 69,
+          "classification": "context"
+        },
+        {
+          "heading": "현재 확보본과 실제 원천 확인",
+          "line": 47,
+          "level": 3,
+          "endLine": 55,
+          "classification": "context"
+        },
+        {
+          "heading": "한국 날짜 기준 공유 업데이트",
+          "line": 56,
+          "level": 3,
+          "endLine": 61,
+          "classification": "context"
+        },
+        {
+          "heading": "이번 검증 상태",
+          "line": 62,
+          "level": 3,
+          "endLine": 69,
+          "classification": "implementation"
+        },
+        {
+          "heading": "이전 단순화·주소 검색 구현 이력 (위치·경계 추가 전)",
+          "line": 70,
+          "level": 2,
+          "endLine": 97,
+          "classification": "context"
+        },
+        {
+          "heading": "주소 검색·행정동 추가 당시 구현·검증",
+          "line": 84,
+          "level": 3,
+          "endLine": 97,
+          "classification": "implementation"
+        },
+        {
+          "heading": "첫 구현 기록 (단순화 전)",
+          "line": 98,
+          "level": 2,
+          "endLine": 121,
+          "classification": "context"
+        },
+        {
+          "heading": "실제 기준자료",
+          "line": 122,
+          "level": 2,
+          "endLine": 136,
+          "classification": "context"
+        },
+        {
+          "heading": "변경 파일과 결정",
+          "line": 137,
+          "level": 2,
+          "endLine": 163,
+          "classification": "context"
+        },
+        {
+          "heading": "권한·보관·한도",
+          "line": 164,
+          "level": 2,
+          "endLine": 189,
+          "classification": "context"
+        },
+        {
+          "heading": "초기 구현 검증 결과와 재현 (69개 검사 시점)",
+          "line": 190,
+          "level": 2,
+          "endLine": 217,
+          "classification": "implementation"
+        },
+        {
+          "heading": "초기 구현 성능 측정",
+          "line": 218,
+          "level": 2,
+          "endLine": 231,
+          "classification": "context"
+        },
+        {
+          "heading": "운영 공개 전 남은 사항",
+          "line": 232,
+          "level": 2,
+          "endLine": 241,
+          "classification": "context"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/link/location.md",
+      "sha256": "064951f2112e039f0acc41b1f6ba612d3f2d9e81ba16b0ec653a8c8254c05273",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "위치 입력·출력과 주소 조회",
+      "line": 1,
+      "classification": "reference",
+      "sections": [
+        {
+          "heading": "위치 입력·출력과 주소 조회",
+          "line": 1,
+          "level": 1,
+          "endLine": 56,
+          "classification": "context"
+        },
+        {
+          "heading": "좌표 순서와 범위",
+          "line": 7,
+          "level": 2,
+          "endLine": 20,
+          "classification": "context"
+        },
+        {
+          "heading": "실제 주소·코드 연결 원천",
+          "line": 21,
+          "level": 2,
+          "endLine": 30,
+          "classification": "context"
+        },
+        {
+          "heading": "결과의 의미",
+          "line": 31,
+          "level": 2,
+          "endLine": 41,
+          "classification": "context"
+        },
+        {
+          "heading": "우편번호",
+          "line": 42,
+          "level": 2,
+          "endLine": 45,
+          "classification": "context"
+        },
+        {
+          "heading": "호출 제한과 실패",
+          "line": 46,
+          "level": 2,
+          "endLine": 51,
+          "classification": "context"
+        },
+        {
+          "heading": "검증",
+          "line": 52,
+          "level": 2,
+          "endLine": 56,
+          "classification": "implementation"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "docs/visualization.md",
+      "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "시각화 개발·운영 상세",
+      "line": 1,
+      "classification": "mixed",
+      "sections": [
+        {
+          "heading": "시각화 개발·운영 상세",
+          "line": 1,
+          "level": 1,
+          "endLine": 218,
+          "classification": "ui"
+        },
+        {
+          "heading": "구성",
+          "line": 7,
+          "level": 2,
+          "endLine": 35,
+          "classification": "context"
+        },
+        {
+          "heading": "실행",
+          "line": 36,
+          "level": 2,
+          "endLine": 60,
+          "classification": "context"
+        },
+        {
+          "heading": "엔진 렌더러 (Cesium for Unreal)",
+          "line": 61,
+          "level": 2,
+          "endLine": 72,
+          "classification": "context"
+        },
+        {
+          "heading": "샘플 기준",
+          "line": 73,
+          "level": 2,
+          "endLine": 80,
+          "classification": "context"
+        },
+        {
+          "heading": "현재 샘플",
+          "line": 81,
+          "level": 2,
+          "endLine": 106,
+          "classification": "context"
+        },
+        {
+          "heading": "확장자 추가·바꾸기",
+          "line": 107,
+          "level": 2,
+          "endLine": 116,
+          "classification": "context"
+        },
+        {
+          "heading": "내 파일 업로드",
+          "line": 117,
+          "level": 2,
+          "endLine": 164,
+          "classification": "context"
+        },
+        {
+          "heading": "알려진 한계",
+          "line": 143,
+          "level": 3,
+          "endLine": 164,
+          "classification": "context"
+        },
+        {
+          "heading": "MCP (AI 연결)",
+          "line": 165,
+          "level": 2,
+          "endLine": 199,
+          "classification": "implementation"
+        },
+        {
+          "heading": "검사 (`npm run check`)",
+          "line": 200,
+          "level": 2,
+          "endLine": 209,
+          "classification": "context"
+        },
+        {
+          "heading": "참고",
+          "line": 210,
+          "level": 2,
+          "endLine": 215,
+          "classification": "context"
+        },
+        {
+          "heading": "라이선스",
+          "line": 216,
+          "level": 2,
+          "endLine": 218,
+          "classification": "context"
+        }
+      ],
+      "uiSections": [
+        {
+          "heading": "시각화 개발·운영 상세",
+          "line": 1,
+          "endLine": 6
+        }
+      ],
+      "mdxPath": ".storybook/docs/web/sources/docs-visualization-4930ef19.mdx"
+    },
+    {
+      "path": "tools/oxlint/anti-slop/UPSTREAM.md",
+      "sha256": "854c19511595b7c33461619565b3bdca64f9da184a756fcdf116938498f28df0",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "Vendored anti-slop provenance",
+      "line": 1,
+      "classification": "tooling-license",
+      "sections": [
+        {
+          "heading": "Vendored anti-slop provenance",
+          "line": 1,
+          "level": 1,
+          "endLine": 15,
+          "classification": "context"
+        }
+      ],
+      "uiSections": []
+    },
+    {
+      "path": "tools/oxlint/anti-slop/vendor/eslint-stylistic/UPSTREAM.md",
+      "sha256": "c0eb0f55399b0f29ee8f960b6f2400475e1bc4d9c3eb4c151cd63ab4e8ace4fa",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+      "heading": "Vendored padding-line-between-statements",
+      "line": 1,
+      "classification": "tooling-license",
+      "sections": [
+        {
+          "heading": "Vendored padding-line-between-statements",
+          "line": 1,
+          "level": 1,
+          "endLine": 28,
+          "classification": "context"
+        },
+        {
+          "heading": "Local adaptations",
+          "line": 13,
+          "level": 2,
+          "endLine": 23,
+          "classification": "context"
+        },
+        {
+          "heading": "Updating and verification",
+          "line": 24,
+          "level": 2,
+          "endLine": 28,
+          "classification": "context"
+        }
+      ],
+      "uiSections": []
+    }
+  ],
+  "limitations": [
+    "이전 canonical checkout과 분리된 정확한 Git 원본을 사용합니다.",
+    "문서 출처는 저장소 원문이며 요구 승인 상태는 unknown입니다.",
+    "원본 Markdown은 삭제·이동·덮어쓰지 않았습니다.",
+    "등록된 라이브 시스템에 데이터 변경 요청을 보내지 않습니다."
+  ],
+  "contradictions": [],
+  "screenDocs": [
+    {
+      "screenId": "GEO-WEB-AI",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-AI.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-INDEX",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-INDEX.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-LINK-REFERENCE",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-LINK-REFERENCE.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-LINK",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-LINK.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-CATEGORY-FORMAT-STEP",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-CATEGORY-FORMAT-STEP.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-CONCEPTS",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-CONCEPTS.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-INDEX",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-INDEX.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-SOURCES",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-SOURCES.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-STATUS",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-STATUS.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-TOOLS-TOOL",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-TOOLS-TOOL.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-TOOLS-INDEX",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-TOOLS-INDEX.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-UPLOAD",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-UPLOAD.mdx"
+    },
+    {
+      "screenId": "GEO-WEB-VIZ-WHY",
+      "platform": "web",
+      "file": ".storybook/docs/web/screens/GEO-WEB-VIZ-WHY.mdx"
+    }
+  ],
+  "storybook": {
+    "version": "10.6.5",
+    "framework": "@storybook/vue3-vite",
+    "configDir": ".storybook",
+    "outputPath": "storybook-static"
+  },
+  "reusedComponents": [
+    {
+      "path": "app/components/StepList.vue",
+      "sha256": "5c272591bfe7f26cc737cd1ae974575cacb38f6e497da4feac2b0b467204f859",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984"
+    },
+    {
+      "path": "app/components/ToolChip.vue",
+      "sha256": "a2e34e1dbb7bf06e1c00e237645ed69c4f6eaf42875153a6cf20345e9f73320e",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984"
+    },
+    {
+      "path": "app/components/TermText.vue",
+      "sha256": "1371ac26409198dafd95cb594063a5a1d463fedc6738135b139717e26a31ad56",
+      "gitCommit": "defd4c4d23ba21232fc45c5db03b423fd27bf984"
+    }
+  ]
+}
