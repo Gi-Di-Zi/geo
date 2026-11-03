@@ -6,6 +6,9 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
+
+execFileSync('python3', ['-B', resolve(root, '.storybook/scripts/migration_guard.py'), 'check'], { cwd: root, stdio: 'inherit' })
+
 const manifest = JSON.parse(readFileSync(resolve(root, 'ui-specs/manifest.json'), 'utf8'))
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const original = filename => execFileSync('git', ['show', `${manifest.sourceRevision}:${filename}`], { cwd: root })
@@ -39,8 +42,7 @@ const documents = new Map()
 for (const document of manifest.documents) {
   assert.equal(document.gitCommit, manifest.sourceRevision)
   assert.equal(hash(original(document.path)), document.sha256)
-  assert.equal(hash(local(document.path)), document.sha256)
-  assert(local(document.path).toString().split('\n')[document.line - 1].includes(document.heading))
+  assert(original(document.path).toString().split('\n')[document.line - 1].includes(document.heading))
   documents.set(document.path, document)
 }
 
@@ -65,7 +67,7 @@ for (const screen of manifest.screens) {
   for (const reference of screen.sourceDocs) {
     assert.equal(documents.get(reference.path)?.sha256, reference.sha256)
     assert.equal(reference.gitCommit, manifest.sourceRevision)
-    assert(local(reference.path).toString().split('\n')[reference.line - 1].includes(reference.heading))
+    assert(original(reference.path).toString().split('\n')[reference.line - 1].includes(reference.heading))
   }
 
   for (const requirement of screen.requirements) assert.equal(requirement.approval, 'unknown')

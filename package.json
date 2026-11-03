@@ -40,7 +40,9 @@
     "pretest:recommend": "npm run lint",
     "pretest:reference-updates": "npm run lint",
     "pretest:link:unit": "npm run lint",
-    "pretest:link": "npm run lint"
+    "pretest:link": "npm run lint",
+    "check:migration": "python3 -B .storybook/scripts/migration_guard.py check",
+    "test:migration": "python3 -B .storybook/scripts/test_migration_guard.py"
   },
   "dependencies": {
     "@deck.gl/core": "~9.4.0",

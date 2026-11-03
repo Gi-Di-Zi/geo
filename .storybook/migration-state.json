@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "projectId": "geo",
+  "phase": "snapshot-protected",
+  "approval": "unknown",
+  "dkbReference": "pending-permission",
+  "sourceRevision": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+  "sources": [
+    {
+      "path": "README.md",
+      "sha256": "f7829007ccd19bb86e668e17eb12eb3598766a9823a69b8dcbbbd7358f50e103",
+      "uiRanges": [
+        {
+          "startLine": 138,
+          "endLine": 147,
+          "sha256": "e41d45b931f5463d6147f438ea243ea1a092804a0c047ed47a801c1cb0bddc73"
+        }
+      ]
+    },
+    {
+      "path": "docs/link/01_geo_link_overview.md",
+      "sha256": "ad0ead69710aea230f3c2fb74b3b187cdff7667e54993d54b6fed0f9d9541359",
+      "uiRanges": [
+        {
+          "startLine": 41,
+          "endLine": 46,
+          "sha256": "0a76517d0ed897b90c68c53e95b2dd618cb71e0a6b62c99482840ea7b3c8120b"
+        },
+        {
+          "startLine": 104,
+          "endLine": 115,
+          "sha256": "ad027110e930af13313ecab35a569eda6cf00c0a85b340b08618dc246bf81daf"
+        }
+      ]
+    },
+    {
+      "path": "docs/link/02_geo_link_specification.md",
+      "sha256": "c8ed34a3b4bfb52c20ed4bbe7759f2aef3b31c14c460414185b5ad3ad17b883a",
+      "uiRanges": [
+        {
+          "startLine": 2,
+          "endLine": 15,
+          "sha256": "f888213ab509e30b41f261981c3cadc7f3f176ccdb0f530112da6673e07919d8"
+        },
+        {
+          "startLine": 18,
+          "endLine": 25,
+          "sha256": "b76fec1d6df7720c4ce93062fce389daaec8406642750ef52acc3a147f037970"
+        },
+        {
+          "startLine": 74,
+          "endLine": 103,
+          "sha256": "59f19f90eb60e220c4df8ebe16a1e7ffe6c13fb8bfcfe24ca6cef787cef98022"
+        },
+        {
+          "startLine": 76,
+          "endLine": 83,
+          "sha256": "76a159e65b4efc4e9d5d7ceedb944e5e85cb3c8362b1bc9333b7f08e5db4d9a9"
+        },
+        {
+          "startLine": 84,
+          "endLine": 91,
+          "sha256": "f06623a04640929897d175d4bb5519bd2342fe19ecbb91e7e2e43eb75821b11d"
+        },
+        {
+          "startLine": 378,
+          "endLine": 391,
+          "sha256": "564b8aa62738f5e4cd13fea5fc8cbbb48380c052daf04197beba6837912023dd"
+        },
+        {
+          "startLine": 392,
+          "endLine": 423,
+          "sha256": "1344361c4612854d13d09d87992454eb1f9c9d2bfba325b76a0bc24d84cad737"
+        },
+        {
+          "startLine": 412,
+          "endLine": 423,
+          "sha256": "fe84ad58d0639b2d8c942f40df9f2759a7a19df798358551b52c8fa0323aeabe"
+        }
+      ]
+    },
+    {
+      "path": "docs/link/03_geo_link_codex_prompt.md",
+      "sha256": "1ac698276d357c71cd452ac501307440bd19e9b8f158d618064b8cacb49d53a4",
+      "uiRanges": [
+        {
+          "startLine": 115,
+          "endLine": 126,
+          "sha256": "eb79a68408776bd30e789d466b888e37891a77407fac846da64b25254e6318ee"
+        },
+        {
+          "startLine": 142,
+          "endLine": 149,
+          "sha256": "dcafb91eb66b78961ff4649bd786967c126ada656a3db8cf5dd53bc23726c859"
+        }
+      ]
+    },
+    {
+      "path": "docs/visualization.md",
+      "sha256": "964374deae7224f4251dfbaff2a9f5a75ea16eba1b6ce26ec01912c57e3a9034",
+      "uiRanges": [
+        {
+          "startLine": 1,
+          "endLine": 6,
+          "sha256": "11fdef89aeec07cb45851c326814fefe9575be637f88a1f77769fdf9bc96db29"
+        }
+      ]
+    }
+  ],
+  "snapshots": [
+    {
+      "path": "ui-specs/manifest.json",
+      "initialSha256": "2ceef227a8b908dc2f5cdf2074f2c6bc5b1ed366aece6b91681174298d130ee2"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-AI.json",
+      "initialSha256": "ab702fcf6dbd6edc0d8c2f3dac2238a887406c59bf90ac06418c89190018f5fc"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-INDEX.json",
+      "initialSha256": "a56e270304edb4f1ee8506028b36bc820984496da32fcccf4218a7295a599727"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-LINK-REFERENCE.json",
+      "initialSha256": "a85c0cb77046e14e3fdf4f6ebbd78ed353ae43dd37b1a0a114d7040eaace3a27"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-LINK.json",
+      "initialSha256": "2da4f2992043ff71d5794c3eba05f7cf557e39422e2ec40fe13638373cf084da"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-CATEGORY-FORMAT-STEP.json",
+      "initialSha256": "740ef38c12b45dea869a5e806375f5b0284615a8411d34345caff9e9f2833e31"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-CONCEPTS.json",
+      "initialSha256": "a3660e81b9865b1d1c79939e0bdf95fa442444d700d198832652d1688d051bc9"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-INDEX.json",
+      "initialSha256": "673670d54363d64eb8dcb5362673311284ab451776b9e8f8a2f783637385c8d6"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-SOURCES.json",
+      "initialSha256": "c1a667bb592dfbc873777dd8afc8ddb471d26441907923bb330c3488991c8e6e"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-STATUS.json",
+      "initialSha256": "43bcc4e07fed78323cdb44929b698d619d444a0d132712f0ec0b6768169640da"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-TOOLS-INDEX.json",
+      "initialSha256": "4da1de2eb3ed87cd9bfbdfa2914f4c82cec13451228918f8572a6e06e84f3979"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-TOOLS-TOOL.json",
+      "initialSha256": "32b6421b01eb98824520f91b4ef7836eae079a81e72cb539a77dcfd2672aaf84"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-UPLOAD.json",
+      "initialSha256": "1ed45aaac2706d8c83b0ac4d4aa292307112dd95dc5f885b422c884ab82cef46"
+    },
+    {
+      "path": ".storybook/docs/screen-data/GEO-WEB-VIZ-WHY.json",
+      "initialSha256": "eb44b9ca313ef0197249064670996fa3840b3754096978aadb0c295663fb1541"
+    },
+    {
+      "path": ".storybook/docs/source-data/docs-link-01-geo-link-overview-5b3ee71f.json",
+      "initialSha256": "2013909ef6281248ccab62f4d6c4c43b17f937d431616673d136e7c0c48933a8"
+    },
+    {
+      "path": ".storybook/docs/source-data/docs-link-02-geo-link-specification-f73ed077.json",
+      "initialSha256": "fc207ab62fe9e5621d40bdafe55dd2735ef62623b52a3b65758c7d0c627f983f"
+    },
+    {
+      "path": ".storybook/docs/source-data/docs-link-03-geo-link-codex-prompt-ed8c8218.json",
+      "initialSha256": "82462266fbcf8ff532ed217a548c8fcbbe06ba311af68f0c54558b9857251948"
+    },
+    {
+      "path": ".storybook/docs/source-data/docs-visualization-4930ef19.json",
+      "initialSha256": "6df3edf550d9a01e52830a3a7bc01ccee44d1a0b4dac0982b4804b457dfd3aa4"
+    },
+    {
+      "path": ".storybook/docs/source-data/readme-b3356305.json",
+      "initialSha256": "86f7e8e7621a3274a659d9930accf9d2ce6800d7664950efd165d1955bbd8532"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-AI.mdx",
+      "initialSha256": "8d324d5d4de13e714e2c41db38d633abfff8b78b135195bd3383624af5ef9fef"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-INDEX.mdx",
+      "initialSha256": "adbfe52a697f4c8363bd6ae63398344186a8ed461fac8a428fdfc15bf9506e2a"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-LINK-REFERENCE.mdx",
+      "initialSha256": "c03113971f38621c0ac00b53bf8f89e23e06408d9da72a790385ced0c66ccbec"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-LINK.mdx",
+      "initialSha256": "6cbe8b5f101a85266aaf03e7d64165d23e313e6464fa44daef17c788c334c6ed"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-CATEGORY-FORMAT-STEP.mdx",
+      "initialSha256": "38dcdbfd9122c13f26aa1ba58dc4fccdd93df65c73a205632ecd9f2e2d967012"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-CONCEPTS.mdx",
+      "initialSha256": "398ac146d527cf309cd9f0182031c4db43b6709fd1a505d0ee36d422c885b4d9"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-INDEX.mdx",
+      "initialSha256": "04374f8f48261cd25b8b2ec45ea42971fd2802e0a8e0b9039b8a3e5ba5dfb055"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-SOURCES.mdx",
+      "initialSha256": "d3d48a972579b3d5db1af0a042cf4c42889aa17eb5901110b8240283eb152e63"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-STATUS.mdx",
+      "initialSha256": "9080248c5130d9540001d1bf330be475d5eb2eae1efe5e2c855919fe8138716e"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-TOOLS-INDEX.mdx",
+      "initialSha256": "9e3cb0e2e50e354a4d8f8ebeba46a29cc2b6a9c00d95744e91048373b4d381da"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-TOOLS-TOOL.mdx",
+      "initialSha256": "65e2b853f5d1abe05f91a83953c7c9630daf08206f9fe5f63df61dc42659aeb9"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-UPLOAD.mdx",
+      "initialSha256": "17fb1ec0aa3d82e090ac53a76490ceea064835bfc476ee35cfff8ad2325eb364"
+    },
+    {
+      "path": ".storybook/docs/web/screens/GEO-WEB-VIZ-WHY.mdx",
+      "initialSha256": "ebc7af065ac9a104bc62bba45eb99bc7fbc5573bdf2d74540f90dd0fa6573901"
+    },
+    {
+      "path": ".storybook/docs/web/sources/docs-link-01-geo-link-overview-5b3ee71f.mdx",
+      "initialSha256": "cddf5c219d49780dad9f111d6dd0c052dfca34436969b98943ba63b289b329f3"
+    },
+    {
+      "path": ".storybook/docs/web/sources/docs-link-02-geo-link-specification-f73ed077.mdx",
+      "initialSha256": "571b623e763bafeb76dc39aa7f6dcb96a20535025152fcd18fbe32a35754e7fd"
+    },
+    {
+      "path": ".storybook/docs/web/sources/docs-link-03-geo-link-codex-prompt-ed8c8218.mdx",
+      "initialSha256": "6aae78d5e398a898fe4d7e48da7c3570f332d45449a828c518d01a67cbcf783a"
+    },
+    {
+      "path": ".storybook/docs/web/sources/docs-visualization-4930ef19.mdx",
+      "initialSha256": "b78030a0890232d79d15416cd463ecc79f2cf6de09bef4fc2842ce5c863b3e90"
+    },
+    {
+      "path": ".storybook/docs/web/sources/readme-b3356305.mdx",
+      "initialSha256": "f2caf188905838944ccb03195bcd29550f92a7bacc2940e8bd5534ac78d897f8"
+    }
+  ]
+}

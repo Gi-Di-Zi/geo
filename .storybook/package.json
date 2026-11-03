@@ -8,9 +8,13 @@
   "scripts": {
     "dev": "storybook dev --config-dir . --host 127.0.0.1 --port 6101",
     "build": "npm run lint && npm run check:specs && npm run typecheck && storybook build --config-dir . --output-dir ../storybook-static --disable-telemetry",
-    "lint": "oxlint --deny-warnings --vue-plugin --config ../.oxlintrc.json main.ts preview.ts check-specs.mjs stories/*.ts auto-imports.d.ts components.d.ts mocks/*.vue fixtures/*.ts",
+    "lint": "python3 -B scripts/migration_guard.py check && oxlint --deny-warnings --vue-plugin --config ../.oxlintrc.json main.ts preview.ts check-specs.mjs stories/*.ts auto-imports.d.ts components.d.ts mocks/*.vue fixtures/*.ts",
     "typecheck": "vue-tsc --noEmit --project tsconfig.json",
-    "check:specs": "node check-specs.mjs"
+    "check:specs": "node check-specs.mjs",
+    "check:migration": "python3 -B scripts/migration_guard.py check",
+    "test:migration": "python3 -B scripts/test_migration_guard.py",
+    "pretypecheck": "python3 -B scripts/migration_guard.py check",
+    "pretest": "python3 -B scripts/migration_guard.py check"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.90.0",
