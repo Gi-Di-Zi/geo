@@ -15,6 +15,7 @@ export default defineEventHandler(async event => {
   if (!format || !file) throw createError({ statusCode: 400, statusMessage: '확장자와 파일 함께 필요.' })
 
   if (file.data.length > UPLOAD_LIMIT) throw createError({ statusCode: 413, statusMessage: `파일이 너무 큼. 최대 ${UPLOAD_LIMIT / 1024 ** 2}MB.` })
+  chargeUpload(event, file.data.length)
   // 목적: 대상 뷰어·사용 목적·결과 형식·제공 방식 (shared/recommend.ts). 서버가 다시 확인하고 작업에 남긴다
   const intent = readIntent({ viewer: field('viewer'), priority: field('priority'), output: field('output'), delivery: field('delivery') })
 

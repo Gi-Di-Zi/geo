@@ -124,7 +124,7 @@ const losses = {
 const fixedPlace = {
   'model-3d/glb': '모델에 지도 위치 없음 → 서울광장 고정 위치에 배치 (실제 위치 아님)',
   'model-3d/gltf': '모델에 지도 위치 없음 → 서울광장 고정 위치에 배치 (실제 위치 아님)',
-  'indoor-bim/ifc': 'IFC 대지 위치(IfcSite)를 쓰지 않고 서울시청 앞 고정 위치에 배치 (실제 위치 아님)',
+  'indoor-bim/ifc': 'IfcMapConversion(지도 좌표·방향) 또는 IfcSite 위경도가 있으면 그 위치, 없으면 서울시청 앞 고정 위치 (실제 위치 아님). 높이는 0(지도 바닥) 기준, 대지 위경도만 있으면 방향 미보정',
 } satisfies Record<string, string>
 
 const POINT_NOTES = [
@@ -250,7 +250,9 @@ function evaluate(spec: FormatSpec, r: Recipe, index: number, intent: Intent, pr
 
   if (!pool[0]) {
     const made = [...new Set(r.outputs.map(o => kindLabels[o.kind]))].join('·')
-    const reason = want && !r.outputs.some(o => o.kind === want) ? `이 방식의 결과에 ${kindLabels[want]} 없음 (만드는 것: ${made})` : `${v ? viewerName(v) : '뷰어'}에서 ${want ? kindLabels[want] : '이 결과'} 미지원`
+    // 뷰어가 그 결과 형식을 아예 못 그리면 그 이유가 먼저 (방식의 결과 목록은 부차적)
+    const viewerCannot = !!(want && v && !viewerKinds[v].includes(want))
+    const reason = want && !viewerCannot && !r.outputs.some(o => o.kind === want) ? `이 방식의 결과에 ${kindLabels[want]} 없음 (만드는 것: ${made})` : `${v ? viewerName(v) : '뷰어'}에서 ${want ? kindLabels[want] : '이 결과'} 미지원`
 
     return { candidate: { ...base, reasons: [reason] }, score: -Infinity }
   }
@@ -347,7 +349,7 @@ export function recommend(spec: FormatSpec, intent: Intent, facts: DataFacts = {
 
   if (wantService && !service) conflict = `${SERVICE_OFF}. 파일 결과 대안: ${usable.map(x => `${x.candidate.title} → ${x.candidate.primary ? kindLabels[x.candidate.primary.kind] : ''}`).join(' · ') || '없음'}`
   else if (!recipes.length) conflict = wantService ? '이 형식은 서비스 발행 레시피 없음 → 파일 결과만' : '이 형식은 업로드 변환 없음'
-  else if (!usable.length) conflict = `${reasons}${alternatives.length ? `. 가능한 대안: ${alternatives.join(' · ')}` : ''}`
+  else if (!usable.length) conflict = `${reasons.replace(/\.$/, '')}${alternatives.length ? `. 가능한 대안: ${alternatives.join(' · ')}` : ''}`
 
   const needs: string[] = []
 

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, stat, statfs } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import type { H3Event } from 'h3'
 
 export const uploadDataRoot = () => resolve(process.env.GEO_DATA_DIR || '.data')
 
@@ -25,6 +26,35 @@ async function storedBytes(directory: string): Promise<number> {
   }
 
   return size
+}
+
+/** 공개 배포에서 접속자(IP)마다 하루에 올릴 수 있는 양. 한 접속자가 전체 저장 공간(10GiB)을 채우지 못하게 한다 */
+export const DAILY_UPLOAD_BYTES = 1024 ** 3
+
+const usedToday = new Map<string, number>()
+let today = ''
+
+/** 하루(UTC) 한도 안이면 기록하고 true. ponytail: 메모리 기록 — 작업자를 다시 시작하면 초기화, 재시작이 잦아지면 파일에 기록 */
+export function chargeDaily(client: string, bytes: number, now = Date.now()) {
+  const day = new Date(now).toISOString().slice(0, 10)
+
+  if (day !== today) { usedToday.clear(); today = day }
+
+  const total = (usedToday.get(client) ?? 0) + bytes
+
+  if (total > DAILY_UPLOAD_BYTES) return false
+  usedToday.set(client, total)
+
+  return true
+}
+
+/** 공개 배포의 접속자별 업로드 한도. 접속자 = 전용 프록시가 넣는 X-Real-IP (작업자는 그 프록시의 요청만 받는다) */
+export function chargeUpload(event: H3Event, bytes: number) {
+  if (process.env.GEO_PUBLIC_CONVERSIONS !== '1') return
+
+  if (!chargeDaily(getHeader(event, 'x-real-ip') || 'unknown', bytes)) {
+    throw createError({ statusCode: 429, statusMessage: `하루 업로드 한도(${DAILY_UPLOAD_BYTES / 1024 ** 3}GiB)를 넘었습니다. 내일 다시 시도해 주세요.` })
+  }
 }
 
 /** 원본을 자동 삭제하지 않는다. 공간이 부족하면 새 업로드를 거절한다. */

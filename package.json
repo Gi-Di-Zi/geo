@@ -38,6 +38,8 @@
     "pretest:mcp-app": "npm run lint",
     "test:recommend": "node --test tests/viz/recommend.test.ts tests/viz/delivery.test.ts",
     "pretest:recommend": "npm run lint",
+    "test:snippets": "node --test tests/viz/snippets.test.ts",
+    "pretest:snippets": "npm run lint",
     "pretest:reference-updates": "npm run lint",
     "pretest:link:unit": "npm run lint",
     "pretest:link": "npm run lint"

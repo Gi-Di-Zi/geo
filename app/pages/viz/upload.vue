@@ -13,12 +13,21 @@ const router = useRouter()
 const route = useRoute()
 
 // 조건: 주소(?viewer=&priority=&delivery=, MCP 화면의 "웹 업로드"가 넘김)에서 시작
-const asked = readIntent({ viewer: String(route.query.viewer ?? ''), priority: String(route.query.priority ?? ''), delivery: String(route.query.delivery ?? '') }) ?? {}
-const viewer = ref<ViewerId | 'auto'>(asked.viewer ?? 'auto')
-const priority = ref<Priority>(asked.priority ?? 'balanced')
-const delivery = ref<Delivery>(asked.delivery ?? 'file')
+const asked = () => readIntent({ viewer: String(route.query.viewer ?? ''), priority: String(route.query.priority ?? ''), delivery: String(route.query.delivery ?? '') }) ?? {}
+const viewer = ref<ViewerId | 'auto'>(asked().viewer ?? 'auto')
+const priority = ref<Priority>(asked().priority ?? 'balanced')
+const delivery = ref<Delivery>(asked().delivery ?? 'file')
 
-/** 이 서버가 48시간 임시 서비스 발행을 허용하는지. 묻지 못하면(공개 배포 프록시가 막음) 미제공으로 본다 */
+// 미리 그린 화면은 쿼리 없이 만들어져, 브라우저에 붙은 뒤에야 쿼리가 보인다 → 그때 다시 적용 (이 화면은 자기 쿼리를 바꾸지 않아 고른 값을 덮지 않는다)
+watch(() => route.query, () => {
+  const a = asked()
+
+  viewer.value = a.viewer ?? 'auto'
+  priority.value = a.priority ?? 'balanced'
+  delivery.value = a.delivery ?? 'file'
+})
+
+/** 이 서버가 48시간 임시 서비스 발행을 허용하는지 (공개 배포는 false). 묻지 못하면 미제공으로 본다 */
 const serviceOn = ref(false)
 
 onMounted(() => $fetch<{ service: boolean }>('/api/jobs/capabilities').then(r => { serviceOn.value = r.service }, () => { serviceOn.value = false }))

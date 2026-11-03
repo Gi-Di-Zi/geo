@@ -192,6 +192,7 @@ function buildServer(origin: string, owner: string) {
       stage: z.string().optional().describe('이미 맡긴 파일의 stage 또는 이전 작업 id'),
       ...intentArgs,
     },
+    annotations: { readOnlyHint: true, openWorldHint: false },
     _meta: ui,
   }, async (args: { stage?: string } & IntentArgs) => {
     const intent = toIntent(args)
@@ -225,7 +226,7 @@ function buildServer(origin: string, owner: string) {
       format: z.string().optional().describe('형식 id (예: vector-2d/shp). stage가 있으면 생략 = 판별 1순위'),
       ...intentArgs,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, openWorldHint: false },
   }, async (args: { stage?: string; format?: string } & IntentArgs) => {
     const intent = toIntent(args)
 
@@ -253,6 +254,8 @@ function buildServer(origin: string, owner: string) {
       srs: z.string().optional().describe('파일에 좌표계가 없을 때 원본 좌표계 (예: EPSG:5186). 판별의 기본값이 있으면 생략 가능'),
       ...intentArgs,
     },
+    // 작업을 새로 만들 뿐 기존 데이터를 바꾸거나 지우지 않는다 (표시 없으면 클라이언트가 파괴적 도구로 보고 승인을 더 강하게 묻는다)
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: ui,
   }, async (args: { stage: string; format: string; method?: string; srs?: string } & IntentArgs) => {
     const s = await readStage(args.stage)
@@ -269,6 +272,7 @@ function buildServer(origin: string, owner: string) {
     title: '변환 상태',
     description: '작업 진행(단계 수·지금 단계), 실패 이유, 끝났으면 대상 뷰어용 주력 결과물·내려받기·리소스 URL·적용 코드·결과 파일 검사·손실 주의. 서비스 작업은 서비스 상태·발행·만료 시각·남은 시간.',
     inputSchema: { job: z.string().describe('geo_convert가 준 작업 id') },
+    annotations: { readOnlyHint: true, openWorldHint: false },
   }, async ({ job }) => {
     const info = await jobInfo(job, origin)
 
@@ -283,6 +287,7 @@ function buildServer(origin: string, owner: string) {
       job: z.string().describe('geo_convert가 준 작업 id (3D Tiles·지형 결과)'),
       stop: z.boolean().optional().describe('true = 끄기'),
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: ui,
   }, async ({ job, stop }) => {
     const host = new URL(origin).hostname
@@ -298,6 +303,7 @@ function buildServer(origin: string, owner: string) {
   server.registerTool('geo_formats', {
     title: '받는 형식',
     description: '업로드를 받는 형식 전체, 형식마다 고를 수 있는 파일 방식·도구와 뷰어별 지원.',
+    annotations: { readOnlyHint: true, openWorldHint: false },
   }, async () => ({
     content: [{
       type: 'text',
@@ -315,6 +321,7 @@ function buildServer(origin: string, owner: string) {
     title: '파일 조각 올리기 (업로드 화면 전용)',
     description: '업로드 화면이 쓰는 내부 도구.',
     inputSchema: { upload: z.string().optional(), name: z.string(), data: z.string(), last: z.boolean() },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ['app'] } },
   }, async c => {
     const r = await stageChunk(c)
@@ -366,7 +373,12 @@ export default defineEventHandler(async event => {
 
   let parsed: ReturnType<typeof JSONRPCMessageSchema.safeParse>
 
-  try { parsed = JSONRPCMessageSchema.safeParse(JSON.parse((await readLimitedBody(event, 2 * 1024 ** 2)).toString('utf8'))) }
+  // 업로드 화면의 파일 조각(geo_stage_chunk)도 이 본문으로 오므로 받은 크기를 업로드 한도에 센다
+  try {
+    const raw = await readLimitedBody(event, 2 * 1024 ** 2)
+    chargeUpload(event, raw.length)
+    parsed = JSONRPCMessageSchema.safeParse(JSON.parse(raw.toString('utf8')))
+  }
   catch (error) {
     if (error instanceof SyntaxError) return { jsonrpc: '2.0', error: { code: -32700, message: 'Parse error.' }, id: null }
     throw error

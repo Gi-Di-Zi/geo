@@ -109,7 +109,10 @@ export async function startJob(o: { format: string; name: string; ext: string; d
   if (!/^\.[a-z0-9]{1,10}$/.test(o.ext)) throw createError({ statusCode: 400, statusMessage: '확장자를 알 수 없는 파일.' })
   const spec = uploadFormats.find(f => `${f.category}/${f.id}` === o.format)
 
-  if (!spec || !('recipes' in spec.upload) || !spec.upload.accept.includes(o.ext)) throw createError({ statusCode: 400, statusMessage: '이 형식에서 받지 않는 파일입니다.' })
+  // 도구로 부르는 AI가 다음 행동을 고를 수 있게 무엇이 안 맞는지 말한다
+  if (!spec || !('recipes' in spec.upload)) throw createError({ statusCode: 400, statusMessage: `업로드 변환이 없는 형식 id: ${o.format} → geo_formats의 형식 id 사용` })
+
+  if (!spec.upload.accept.includes(o.ext)) throw createError({ statusCode: 400, statusMessage: `${o.format}은(는) ${o.ext} 파일을 받지 않음 (받는 확장자: ${spec.upload.accept.join(' ')}) → geo_identify가 준 형식 후보 사용` })
 
   if (!o.file && !o.data) throw createError({ statusCode: 400, statusMessage: '원본 파일이 필요합니다.' })
 

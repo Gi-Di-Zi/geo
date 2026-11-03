@@ -21,6 +21,7 @@ const files = [
   'server/api/jobs/[id]/download/[output].ts',
   'shared/conversion.ts',
   'shared/recommend.ts',
+  'shared/snippets.ts',
   'server/utils/service-expiry.ts',
   'server/utils/bundle-check.ts',
   'server/routes/svc/[...path].ts',
@@ -36,6 +37,7 @@ const files = [
   'tests/viz/mcp-app-host.ts',
   'tests/viz/recommend.test.ts',
   'tests/viz/delivery.test.ts',
+  'tests/viz/snippets.test.ts',
   'tests/link/reference-updates.test.ts',
   'tests/link/jobs.test.ts',
 ]

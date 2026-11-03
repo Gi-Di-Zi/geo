@@ -405,6 +405,9 @@ const deg = (r: number) => r * 180 / Math.PI
 /** 단계가 남긴 범위 (출력 폴더의 bounds.json: 그림 한 장의 배치 범위, 업로드 벡터·서버 결과의 범위) */
 const boundsIn = (out: string): Bounds | undefined => (existsSync(join(out, 'bounds.json')) ? JSON.parse(readFileSync(join(out, 'bounds.json'), 'utf8')) : undefined)
 
+/** 단계가 정한 모델 배치 위치 (출력 폴더의 anchor.json: 업로드 IFC의 위치 정보 → 경위도·높이) */
+const anchorIn = (out: string): Output['anchor'] => (existsSync(join(out, 'anchor.json')) ? JSON.parse(readFileSync(join(out, 'anchor.json'), 'utf8')) : undefined)
+
 /** 값이 undefined인 키 빼기: 펼쳐 합칠 때 앞 값을 덮지 않게 (MapLibre는 maxzoom: undefined 키도 기본값을 덮어 멈춘다) */
 const defined = <T extends object>(o: T): T => {
   const result = { ...o }
@@ -495,7 +498,11 @@ export function fillView(recipe: Recipe, out: string): Recipe {
     } else if (o.kind === 'quantized-mesh') found.bounds = JSON.parse(readFileSync(join(file, 'layer.json'), 'utf8')).bounds
     else if (o.kind === '3dtiles') found.bounds = tilesetBounds(file)
     else if (o.kind === 'image') found.bounds = JSON.parse(readFileSync(join(out, 'bounds.json'), 'utf8'))
-    else if (o.kind === 'glb' && o.anchor) found.bounds = [o.anchor[0] - 5e-4, o.anchor[1] - 4e-4, o.anchor[0] + 5e-4, o.anchor[1] + 4e-4]
+    else if (o.kind === 'glb') {
+      const anchor = o.anchor ?? anchorIn(out)
+
+      if (anchor) found = { anchor, bounds: [anchor[0] - 5e-4, anchor[1] - 4e-4, anchor[0] + 5e-4, anchor[1] + 4e-4] }
+    }
 
     return { ...found, ...defined(o) }
   })

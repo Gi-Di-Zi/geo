@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readIntent, recommend } from '../../shared/recommend.ts'
 import { sniff } from '../../shared/sniff.ts'
+import { snippet } from '../../shared/snippets.ts'
 import type { FormatSpec } from '../../shared/types.ts'
 
 const dir = fileURLToPath(new URL('../../shared/catalog/', import.meta.url))
@@ -209,4 +210,13 @@ test('원본 보존 목적인데 손실 없는 결과가 없으면 그 사실을
   assert.ok(r.recommended?.reasons.some(x => x.includes('원본 값을 그대로 두는 결과 없음')))
   // 손실 없는 결과가 있으면 붙이지 않음 (점군 py3dtiles)
   assert.ok(!recommend(spec('pointcloud/las'), { viewer: 'deck', priority: 'fidelity' }, { bytes: MB }).recommended?.reasons.some(x => x.includes('원본 값을 그대로')))
+})
+
+test('MapLibre 적용 코드: 벡터는 면·선·점 레이어 모두 (점 데이터가 빈 지도로 보이지 않게)', () => {
+  for (const kind of ['geojson', 'mvt'] as const) {
+    const code = snippet('maplibre', { id: 'x', kind, path: 'x', label: '', why: '' }, 'https://example.com/x')
+
+    assert.match(code, /type: 'fill'/)
+    assert.match(code, /type: 'circle'/)
+  }
 })

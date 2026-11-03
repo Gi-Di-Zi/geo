@@ -9,6 +9,7 @@ import { serviceTtlMs, SERVICE_HOURS } from '../../shared/conversion.ts'
 import type { Job, ServiceRecord } from '../../shared/types.ts'
 import { checkBundle } from '../../server/utils/bundle-check.ts'
 import { serviceOf, serviceState, sweepServices } from '../../server/utils/service-expiry.ts'
+import { chargeDaily, DAILY_UPLOAD_BYTES } from '../../server/utils/upload-storage.ts'
 
 const HOUR = 3600_000
 const T0 = Date.parse('2026-11-02T00:00:00Z')
@@ -167,4 +168,14 @@ test('파일 결과 검사: quantized-mesh layer.json + 타일, PMTiles·GeoJSON
   assert.equal(geojson.ok, true)
   assert.deepEqual(geojson.fields, ['name', 'height'])
   assert.equal((await checkBundle(out, { id: 'x', kind: 'mvt', path: 'none/{z}/{x}/{y}.pbf', label: '', why: '' }, 'none')).ok, false)
+})
+
+test('공개 업로드 한도: 접속자마다 하루 1GiB, 다른 접속자·다음 날은 따로', () => {
+  const day = Date.parse('2026-11-03T05:00:00Z')
+
+  assert.equal(chargeDaily('1.1.1.1', DAILY_UPLOAD_BYTES - 10, day), true)
+  assert.equal(chargeDaily('1.1.1.1', 11, day), false)
+  assert.equal(chargeDaily('1.1.1.1', 10, day), true)
+  assert.equal(chargeDaily('2.2.2.2', DAILY_UPLOAD_BYTES, day), true)
+  assert.equal(chargeDaily('1.1.1.1', 1, day + 24 * HOUR), true)
 })

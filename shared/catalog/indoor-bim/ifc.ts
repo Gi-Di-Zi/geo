@@ -1,7 +1,15 @@
 import type { FormatSpec, Step } from '../../types.ts'
 
-// 서울시청 앞. 원본의 위치(뉴질랜드 UTM 60S) 대신 이 자리에 세운다
+// 서울시청 앞. 예시는 원본의 위치(UTM 60S, 남태평양 투발루 부근) 대신 이 자리에 세운다. 업로드는 위치 정보가 없을 때만
 const ANCHOR: [number, number, number] = [126.97830, 37.56590, 0]
+
+/** 올린 IFC의 위치 정보 → 세울 곳(/out/anchor.json, /work/anchor)과 IfcConvert 배치 인자(/work/ifc_place) */
+const georef: Step = {
+  title: '위치 정보 읽기',
+  why: 'IfcMapConversion(IFC4 지리참조: 모델 원점의 지도 좌표·X축 방향) → 경위도·회전. 없으면 IfcSite 위경도(대지 원점), 둘 다 없으면 서울시청 앞. 높이 0 = 지형 없는 지도의 바닥. 텍스트 파일 → 필요한 엔티티만 읽음.',
+  tool: 'python',
+  run: `python3 /scripts/ifc_georef.py $INPUT /out/anchor.json ${ANCHOR[0]} ${ANCHOR[1]}`,
+}
 
 /** 올린 IFC 공통 확인: 버전·요소별 개수 */
 const uploadInspect: Step = {
@@ -57,7 +65,7 @@ export default {
         },
         {
           title: '무결성 확인 (위치 정보)',
-          why: '원래 위치: 뉴질랜드 UTM 60S, mm 단위(배율 0.001). 비교를 위해 서울시청 앞으로 이동.',
+          why: '원래 위치: UTM 60S(남태평양 투발루 부근), mm 단위(배율 0.001), X축 60° 회전. 비교를 위해 서울시청 앞으로 이동.',
           tool: 'shell',
           run: `grep -E 'IFCMAPCONVERSION|IFCPROJECTEDCRS' ${RAW}`,
         },
@@ -127,17 +135,17 @@ export default {
   alternatives: [],
   upload: {
     accept: ['.ifc'],
-    note: 'IFC2x3·IFC4 모두 지원. 원래 위치와 무관하게 서울시청 앞 배치.',
+    note: 'IFC2x3·IFC4 모두 지원. IfcMapConversion(지도 좌표) 또는 IfcSite 위경도가 있으면 그 위치, 없으면 서울시청 앞 배치.',
     recipes: [{
       id: 'ifcconvert',
       title: 'IfcConvert + 3d-tiles-tools',
-      preprocess: [uploadInspect],
+      preprocess: [uploadInspect, georef],
       convert: [
         {
           title: '형상만 glb 추출',
-          why: '샘플 IfcConvert 레시피와 동일, 단 --building-local-placement: 대지 아닌 건물 기준. 파일마다 대지 내 건물 위치 상이 → 건물 기준이어야 기준점에 바로 배치.',
+          why: '샘플 IfcConvert 레시피와 같은 옵션 + 위치 정보 단계가 고른 배치: 지도 좌표가 있으면 모델 원점 기준 + --model-rotation(X축을 동쪽에 맞춤), 대지 위경도면 --site-local-placement, 없으면 --building-local-placement(건물 기준점에 바로 배치).',
           tool: 'ifcconvert',
-          run: 'IfcConvert -q -y --y-up --use-element-names --building-local-placement $INPUT /work/building.glb',
+          run: 'IfcConvert -q -y --y-up --use-element-names $(cat /work/ifc_place) $INPUT /work/building.glb',
         },
         {
           title: '웹용 압축',
@@ -146,14 +154,15 @@ export default {
           run: 'gltf-transform optimize /work/building.glb /out/model/building.glb --compress meshopt',
         },
         {
-          title: '서울시청 앞 배치 타일셋 생성',
-          why: '--cartographicPositionDegrees: 위치(경위도·높이) → tileset.json, Cesium 바로 배치.',
+          title: '읽은 위치에 배치한 타일셋 생성',
+          why: '--cartographicPositionDegrees: 위치 정보 단계의 경위도·높이 → tileset.json, Cesium 바로 배치.',
           tool: '3d-tiles-tools',
-          run: `3d-tiles-tools createTilesetJson -i /out/model/building.glb -o /out/model/tileset.json --cartographicPositionDegrees ${ANCHOR.join(' ')} -f`,
+          run: '3d-tiles-tools createTilesetJson -i /out/model/building.glb -o /out/model/tileset.json --cartographicPositionDegrees $(cat /work/anchor) -f',
         },
       ],
       outputs: [
-        { id: 'glb', kind: 'glb', path: 'model/building.glb', anchor: ANCHOR, label: 'GLB + 놓을 위치', why: '형상만 남은 모델, 벽·문 속성 제외. Deck.gl용.' },
+        // 놓을 위치(anchor)는 위치 정보 단계가 남긴 /out/anchor.json (scripts/pipeline.ts fillView)
+        { id: 'glb', kind: 'glb', path: 'model/building.glb', label: 'GLB + 놓을 위치', why: '형상만 남은 모델, 벽·문 속성 제외. Deck.gl용.' },
         { id: 'tiles', kind: '3dtiles', path: 'model/tileset.json', label: '3D Tiles (glb 감싸기)', why: '위치 내장 타일셋. Cesium용.' },
       ],
       viewers: {
@@ -173,13 +182,14 @@ export default {
           tool: 'shell',
           run: "grep -m1 FILE_SCHEMA $INPUT | grep -qi IFC2X3 || { echo 'IFC2x3 아님 → mago 불가. IfcConvert 방식으로 다시'; exit 1; }",
         },
+        georef,
       ],
       convert: [
         {
           title: '위치 지정 3D Tiles 생성',
-          why: '샘플 mago 레시피와 동일. -lon·-lat: 서울시청 앞, 단순화 단계(LOD)별 b3dm 타일. IFC 원점 기준 → 대지 안 건물 배치 거리만큼 기준점에서 떨어질 수 있음. -q 없음: 진행 로그를 실시간 출력으로.',
+          why: '샘플 mago 레시피와 같은 옵션. -lon·-lat: 위치 정보 단계의 경위도(IFC2x3에는 IfcMapConversion이 없어 IfcSite 위경도 또는 서울시청 앞), 단순화 단계(LOD)별 b3dm 타일. IFC 원점 기준 → 대지 안 건물 배치 거리만큼 기준점에서 떨어질 수 있음. -q 없음: 진행 로그를 실시간 출력으로.',
           tool: 'mago-3d-tiler',
-          run: `mkdir -p /work/in && cp $INPUT /work/in/model.ifc && mago-3d-tiler -i /work/in -o /out/tiles -it ifc -lon ${ANCHOR[0]} -lat ${ANCHOR[1]} -tv 1.0`,
+          run: 'mkdir -p /work/in && cp $INPUT /work/in/model.ifc && read lon lat h < /work/anchor && mago-3d-tiler -i /work/in -o /out/tiles -it ifc -lon $lon -lat $lat -tv 1.0',
         },
       ],
       outputs: [

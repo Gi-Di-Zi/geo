@@ -48,12 +48,14 @@ function dataLayer() {
     getElevation: (f: any) => (h ? Number(f.properties?.[h]) || 0 : 0),
   }
   const range = { minZoom: o.minzoom, maxZoom: o.maxzoom, ...(o.bounds && { extent: o.bounds }) }
+  // GDAL MVT 폴더는 빈 칸 타일을 만들지 않는다 → 404는 빈 타일로 넘긴다 (deck 기본 처리는 매번 console.error)
+  const onTileError = (e: unknown) => { if (!(e instanceof Error && 'response' in e && e.response instanceof Response && e.response.status === 404)) console.error(e) }
   switch (o.kind) {
     case 'geojson':
       return new GeoJsonLayer({ ...vector, data: url, onDataLoad: ready })
     case 'mvt':
       // binary: false — 피처를 GeoJSON 객체로 받아야 점/면에 따라 채움을 다르게 줄 수 있다 (샘플 타일은 작아서 성능 차이가 없다)
-      return new MVTLayer({ ...vector, data: url, ...range, binary: false, onViewportLoad: ready, loadOptions: o.layer ? { mvt: { layers: [o.layer] } } : undefined })
+      return new MVTLayer({ ...vector, data: url, ...range, binary: false, onViewportLoad: ready, onTileError, loadOptions: o.layer ? { mvt: { layers: [o.layer] } } : undefined })
     case 'pmtiles': {
       // MVTLayer는 z/x/y 주소로 타일을 받는다. 가짜 주소를 주고, 받아오는 fetch만 PMTiles 아카이브(Range 요청)로 바꿔 끼운다
       const archive = new PMTiles(url)

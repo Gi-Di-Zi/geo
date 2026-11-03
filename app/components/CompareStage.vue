@@ -17,8 +17,9 @@ const active = ref(false)
 
 // 뷰어 하나씩. 한 번이라도 고른 뷰어만 띄우고, 다른 뷰어로 바꿔도 숨겨 둔 뷰어의 상태는 지킨다
 // ?viewer= 로 처음 뷰어 지정 (업로드 화면·MCP 결과 주소가 고른 라이브러리로 연다). 그 뷰어가 못 그리면 아래 규칙으로
-const asked = viewers.find(v => v.id === useRoute().query.viewer)?.id
-const current = ref<ViewerId>(asked ?? 'deck')
+const route = useRoute()
+const askedViewer = () => viewers.find(v => v.id === route.query.viewer)?.id
+const current = ref<ViewerId>(askedViewer() ?? 'deck')
 const seen = reactive(new Set<ViewerId>())
 /** 지도 도구 "선택": 켜면 누른 모델·레이어·피처 정보를 띄운다 (끄면 클릭은 지도 조작만) */
 const selecting = ref(false)
@@ -74,6 +75,15 @@ const tiles = computed(() => viewers.map(v => {
 watch(tiles, t => {
   if (!t.find(x => x.meta.id === current.value)?.output) current.value = t.find(x => x.meta.id === 'deck' && x.output)?.meta.id ?? t.find(x => x.output)?.meta.id ?? 'ol'
 }, { immediate: true })
+// 미리 그린 예시 화면은 쿼리 없이 만들어져, 브라우저에 붙은 뒤에야 ?viewer=가 보인다 → 그때 바꾼다.
+// 지도는 화면에 들어온 뒤(active)에 띄우므로 대개 기본 뷰어를 띄우기 전이고, 이미 띄웠으면 내린다
+watch(() => route.query.viewer, () => {
+  const asked = askedViewer()
+
+  if (!asked || asked === current.value || !tiles.value.find(t => t.meta.id === asked)?.output) return
+  seen.delete(current.value)
+  current.value = asked
+})
 const cur = computed(() => tiles.value.find(t => t.meta.id === current.value)!)
 
 // 엔진(Cesium for Unreal): 페이지에서 그릴 수 없어 지도 대신 불러오는 방법 카드. 결과물 중 3D Tiles·지형 (CesiumJS가 쓰는 것 먼저)

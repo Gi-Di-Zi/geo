@@ -21,6 +21,7 @@ export default defineEventHandler(async event => {
   const file = (await readMultipartFormData(event))?.find(p => p.name === 'file' && p.filename)
 
   if (!file) throw createError({ statusCode: 400, statusMessage: '파일 필요 (file 필드).' })
+  chargeUpload(event, file.data.length)
 
   return identify(await stageData(file.filename!, file.data))
 })

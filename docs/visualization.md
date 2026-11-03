@@ -147,7 +147,7 @@ npm run services                              # 서버 띄우기 (서비스 레�
 | mago로 점군 약 1,000만 점 넘으면 시간 제한에 걸림 | mago 3D Tiles 변환이 CPU 2·4GB에서 720만 점 885초, 단계당 20분 | py3dtiles 고르기 (치악산 67만 점: mago 90초, py3dtiles 18초). 그 이상은 점 솎기 |
 | 업로드한 3D Tiles가 너무 멀리서 열림 (예: 스위스 식생 i3dm → 유럽 전체) | 시점을 최상위 범위로 잡음, 높이 미반영 | 콘텐츠 있는 자식 범위 + region 높이로 시점 |
 | b3dm·glb 3D Tiles 업로드 불가 | 받는 형식이 pnts·i3dm 타일셋뿐 (판별에서 막음) | 3D Tiles 일반 업로드 레시피 |
-| IFC·glb·glTF는 항상 서울시청·서울광장 배치 | IFC의 IfcSite 위경도 미사용, glTF는 위치 정보 없음 | IfcSite 읽기, 위치 입력 칸 |
+| glb·glTF는 항상 서울광장, 위치 정보 없는 IFC는 서울시청 앞 배치 | glTF는 위치 정보 없음. IFC는 IfcMapConversion·IfcSite 위경도를 읽되 높이는 0, 대지 위경도만 있으면 방향 미보정 | 위치 입력 칸, IFC 표고·TrueNorth 반영 |
 | 2.5D 업로드 결과는 GeoJSON 하나 | 업로드 레시피에 3D Tiles 없음 → 수십만 동이면 브라우저 부담 | 큰 파일은 mago 3D Tiles |
 | 좌표가 `.tfw` 등 별도 파일에만 있는 GeoTIFF는 서울시청 앞 배치 | tif는 파일 하나만 받음 (판별에서 주의 표시) | tif + 월드파일 zip 받기 |
 | 8비트 아닌 영상이 어둡거나 하얗게 | `to_rgb.py`가 최소~최대값을 그대로 0~255로 → 이상값에 끌려감 | 2~98% 백분위 맞춤 |
