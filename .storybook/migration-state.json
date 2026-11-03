@@ -1,10 +1,10 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "projectId": "geo",
   "phase": "snapshot-protected",
   "approval": "unknown",
   "dkbReference": "pending-permission",
-  "sourceRevision": "defd4c4d23ba21232fc45c5db03b423fd27bf984",
+  "sourceRevision": "8b433b0f0c1a2022f3d0fe31a9f09aca0ef198ab",
   "sources": [
     {
       "path": "README.md",
@@ -256,5 +256,6 @@
       "path": ".storybook/docs/web/sources/readme-b3356305.mdx",
       "initialSha256": "f2caf188905838944ccb03195bcd29550f92a7bacc2940e8bd5534ac78d897f8"
     }
-  ]
+  ],
+  "planningSourceRevision": "defd4c4d23ba21232fc45c5db03b423fd27bf984"
 }

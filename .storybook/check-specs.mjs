@@ -10,8 +10,10 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 execFileSync('python3', ['-B', resolve(root, '.storybook/scripts/migration_guard.py'), 'check'], { cwd: root, stdio: 'inherit' })
 
 const manifest = JSON.parse(readFileSync(resolve(root, 'ui-specs/manifest.json'), 'utf8'))
+
+const preservation = JSON.parse(readFileSync(resolve(root, '.storybook/migration-state.json'), 'utf8'))
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
-const original = filename => execFileSync('git', ['show', `${manifest.sourceRevision}:${filename}`], { cwd: root })
+const original = filename => execFileSync('git', ['--no-replace-objects', 'show', `${preservation.sourceRevision}:${filename}`], { cwd: root })
 
 const local = filename => {
   const path = resolve(root, filename)

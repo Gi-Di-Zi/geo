@@ -32,7 +32,7 @@ class MigrationProtection(unittest.TestCase):
         self.snapshot.write_text("# Initial UI snapshot\n")
         manifest = self.root / "ui-specs/manifest.json"
         manifest.write_text('{"screen":"initial"}\n')
-        self.state = {"schemaVersion": 1, "projectId": "example", "phase": "snapshot-protected", "approval": "unknown", "dkbReference": "pending-permission", "sourceRevision": revision,
+        self.state = {"schemaVersion": 2, "projectId": "example", "phase": "snapshot-protected", "approval": "unknown", "dkbReference": "pending-permission", "sourceRevision": revision, "planningSourceRevision": revision,
                       "sources": [{"path": "original.md", "sha256": guard.digest(self.source.read_bytes()), "uiRanges": [{"startLine": 2, "endLine": 3, "sha256": guard.digest("\n".join(self.source.read_text().splitlines()[1:3]).encode())}]}],
                       "snapshots": [{"path": str(p.relative_to(self.root)), "initialSha256": guard.digest(p.read_bytes())} for p in [manifest, self.snapshot]]}
         self.state_file = self.root / guard.STATE
@@ -145,6 +145,16 @@ class MigrationProtection(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             guard.reconcile(self.root)
         self.assertEqual(self.inventory(), before)
+
+    def test_preserved_source_pin_does_not_depend_on_unavailable_planning_object(self):
+        self.state["planningSourceRevision"] = "f" * 40
+        self.save()
+        missing = subprocess.run(["git", "--no-replace-objects", "cat-file", "-e", self.state["planningSourceRevision"]], cwd=self.root, capture_output=True)
+        self.assertNotEqual(missing.returncode, 0)
+        result = guard.inspect(self.root)
+        self.assertEqual(result["planningSourceRevision"], "f" * 40)
+        self.assertEqual(result["preservedSourceRevision"], self.state["sourceRevision"])
+        self.assertEqual(result["nonUiSourceChanges"], [])
 
     def test_missing_original_commit_and_invalid_json_fail_closed(self):
         original = self.state['sourceRevision']

@@ -9,3 +9,5 @@
 `npm run test:migration`은 실제 임시 Git 저장소에서 UI 수정 보존, 원문 충돌, hash만 바꾼 재캡처 거절, 무수정 반복 실행과 경로/누락/상태 위조 거절을 검사한다. 현재 운영 DKB의 참조 우선순위·자동 Storybook 배포·토큰 발급은 활성화하지 않는다.
 
 실행 환경은 Python 3와 Git, `sourceRevision`의 원본 Git object를 포함한 source 검증 환경이다. 일반 앱의 Node-alpine/slim Docker build와 루트 lint/prebuild/pretest는 원래대로 유지해 새 Python/Git 요구를 추가하지 않는다. DKB는 기존 native python-tests의 자동 discover 경로에 실제 state 검사와 회귀를 연결했다. 다른 네 프로젝트의 일반 앱 CI 자동 편입은 아직 미자격이며, 현재 보장은 명시적 source check와 Storybook 검증 경로까지다.
+
+`planningSourceRevision`은 초기 UI 조사 당시의 역사 metadata다. `sourceRevision`은 해당 원문 Git blob과 SHA-256이 전부 동일함을 대조한 별도 보존 commit이다. 두 값이 다를 수 있으며 현재 checker는 보존 commit의 원본 bytes를 검증한다. 조사 commit object가 없는 shallow 통합에서도 보존 pin을 가져와 검증할 수 있고, 원문 hash 변경·새 기준 자동 capture는 허용하지 않는다. Git replace object로 원문 검증을 바꾸지 않는다.

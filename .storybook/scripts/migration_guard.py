@@ -48,10 +48,11 @@ def inspect(root):
         state = json.loads(state_file.read_text())
     except (ValueError, UnicodeError):
         raise MigrationConflict("invalid_migration_state") from None
-    need(isinstance(state, dict) and set(state) == {"schemaVersion", "projectId", "phase", "approval", "dkbReference", "sourceRevision", "sources", "snapshots"}, "invalid_migration_state")
-    need(type(state["schemaVersion"]) is int and state["schemaVersion"] == 1, "unsupported_migration_schema")
+    need(isinstance(state, dict) and set(state) == {"schemaVersion", "projectId", "phase", "approval", "dkbReference", "sourceRevision", "planningSourceRevision", "sources", "snapshots"}, "invalid_migration_state")
+    need(type(state["schemaVersion"]) is int and state["schemaVersion"] == 2, "unsupported_migration_schema")
     need(state["phase"] == "snapshot-protected" and state["approval"] == "unknown" and state["dkbReference"] == "pending-permission", "unsupported_migration_phase")
     need(isinstance(state["projectId"], str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", state["projectId"]), "invalid_project_id")
+    need(isinstance(state["planningSourceRevision"], str) and REVISION.fullmatch(state["planningSourceRevision"]), "invalid_planning_revision")
     revision = state["sourceRevision"]
     need(isinstance(revision, str) and REVISION.fullmatch(revision), "invalid_source_revision")
     need(isinstance(state["sources"], list) and state["sources"] and len(state["sources"]) <= 4096, "invalid_source_inventory")
@@ -65,7 +66,7 @@ def inspect(root):
         need(relative not in seen, "duplicate_source_reference")
         seen.add(relative)
         need(isinstance(expected, str) and DIGEST.fullmatch(expected), "invalid_source_digest")
-        original = subprocess.run(["git", "show", f"{revision}:{relative}"], cwd=root, capture_output=True)
+        original = subprocess.run(["git", "--no-replace-objects", "show", f"{revision}:{relative}"], cwd=root, capture_output=True)
         need(original.returncode == 0, "original_git_source_unavailable")
         need(digest(original.stdout) == expected, "original_git_digest_mismatch")
         original_lines = original.stdout.decode("utf-8-sig").splitlines()
@@ -107,7 +108,7 @@ def inspect(root):
             changed.append(relative)
     need("ui-specs/manifest.json" in seen, "snapshot_manifest_required")
     return {"projectId": state["projectId"], "phase": state["phase"], "reconcile": "no-write", "sourceCount": len(state["sources"]),
-            "snapshotCount": len(state["snapshots"]), "editedSnapshots": changed, "nonUiSourceChanges": non_ui_changes, "approval": "unknown", "dkbReference": "pending-permission"}
+            "planningSourceRevision": state["planningSourceRevision"], "preservedSourceRevision": revision, "snapshotCount": len(state["snapshots"]), "editedSnapshots": changed, "nonUiSourceChanges": non_ui_changes, "approval": "unknown", "dkbReference": "pending-permission"}
 
 
 def reconcile(root):
