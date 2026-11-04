@@ -2,7 +2,9 @@
 
 ## 자동 CI
 
-`.github/workflows/quality.yml`의 `Quality / quality`는 pull request와 `main`·`deploy/**` push에서 실행한다. Node.js 24와 lockfile의 의존성을 사용하고, 다음 단계가 모두 성공해야 job이 성공한다. 실패 무시나 선택적 성공 처리는 없다.
+CI는 GitHub Actions 대신 자체 서버에서 실행한다. [`deploy/selfhost-ci.json`](../deploy/selfhost-ci.json)이 source 검사 명령을 고정하고, 서버의 신뢰된 `geo-selfhost-ci.py`가 격리 실행과 산출물 검증을 담당한다. Node.js 24와 lockfile의 의존성을 사용하며 다음 검사는 모두 필수다. 실패 무시나 선택적 성공 처리는 없다.
+
+과거 Quality workflow 원문은 [`.ci/contracts/quality.yml`](../.ci/contracts/quality.yml)에 byte 그대로 보존한다. GitHub 실행 경로 밖의 검증 계약 자료이며, Actions trigger로 실행되지 않는다. 이 이동으로 원문의 승인 SHA-256이나 자체 CI의 필수 검사를 바꾸지 않는다.
 
 1. `npm ci`
 2. `npm run lint`: 기존 anti-slop 범위·규칙·오류 수준을 유지한다.
@@ -12,6 +14,8 @@
 6. `npm run test:recommend`: 실제 카탈로그를 사용한 추천과 임시 파일·정리 함수 대역을 사용한 제공 방식 검증이다. 운영 GeoServer나 DB를 변경하지 않는다.
 7. `python3 tests/viz/upload-runner.test.py`: 임시 작업 폴더·가짜 변환기/Docker를 사용하고, 실제 Linux 프로세스와 파일 잠금으로 동시 실행·중단 복구·소유권을 검증한다.
 8. `npm run build`
+
+이후 `image-build`와 `image-export`까지 성공해야 전체 10단계 CI가 성공한다. 웹 이미지·작업자 source를 같은 revision으로 연결하는 산출물과 원본 격리 증거는 서버 영수증으로 보존한다.
 
 `npm run test:link:unit` 전체를 일반 CI에 그대로 넣지는 않는다. 그 명령이 포함하는 `administrative-service.test.ts`에는 실제 확보한 공식 법정동·행정동 사전을 요구하는 통합 검사가 섞여 있다. 공식 자료가 없는 새 checkout에서는 실패하며, 작은 시험 사전을 공식 자료인 것처럼 주입하거나 그 검사의 assertion을 약화하지 않는다. 위 10개 파일과 별도 갱신 회귀는 운영 사전 없이 실행할 수 있는 기존 검사들이다. 전체 `test:link:unit`은 공식 사전을 별도 경로에 준비한 통합 검증에서 실행한다.
 
@@ -29,7 +33,7 @@
 
 ## 배포와 AI 복구
 
-2026-11-02 연결 조사 시점에는 GitHub push CI가 자동 실행되었으나 Coolify 자동 배포는 꺼져 있었고, GitHub webhook·배포 workflow·배포 runner/secrets가 연결되지 않았다. CI 성공은 실제 서비스에 같은 SHA가 배포되었다는 뜻이 아니다. 이 문서와 Quality workflow 변경만으로 CD나 AI 복구가 활성화되지는 않는다.
+서버의 `geo-delivery-controller.py`가 등록된 source revision의 자체 CI, 동일 산출물 배포, 공개 동작 검증과 종료 백업을 연결한다. GitHub는 source 저장소로 사용하며 Actions CI나 배포 workflow에 의존하지 않는다. CI 성공은 실제 서비스에 같은 SHA가 배포되었다는 뜻이 아니므로 배포·공개 검증·백업의 실제 영수증을 따로 확인한다. AI 복구의 가동 여부도 DKB의 현재 프로젝트 정책, 원래 작업의 중지·승인·예산과 보호된 실행 증거로 확인하며, 이 문서나 보관 계약만으로 활성화되었다고 판단하지 않는다.
 
 기존 DKB 프로젝트 정책은 `dev-first`, `automaticProductionApproval=false`다. 자동화는 성공한 정확한 source SHA와 산출물을 DEV에 반영하고, PROD는 사람이 승인한 동일 산출물만 승격하는 경계를 유지해야 한다. 현재 공개 URL이 DKB의 DEV 환경으로 등록되어 있으므로 환경 이름과 실제 공개 동작을 함께 확인한다.
 
