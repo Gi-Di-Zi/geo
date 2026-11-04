@@ -24,8 +24,10 @@ nginx는 Geo 전용 Docker DNS 이름 `coolify-proxy`로 해석되는 앞단 프
 
 ## 검증된 프록시 설정의 배포 경로
 
-Coolify compose의 두 Nginx 설정 bind는 `GEO_RUNTIME_CONFIG_ROOT` 아래의 `public.nginx.conf`와 `worker.proxy.conf`를 읽는다. 변수가 없거나 비어 있으면 기존 `/srv/storage/sda/apps/geo/source/deploy`를 사용하므로 수동·개발 배포의 기본 경로는 유지된다. 데이터와 비공개 작업자 키의 bind는 이 변수의 영향을 받지 않는다.
+Coolify compose의 두 Nginx 설정 bind는 파일별 공개 환경변수 `GEO_PUBLIC_NGINX_CONF`와 `GEO_WORKER_PROXY_CONF`를 사용한다. 미설정·빈 값은 각각 기존 canonical deploy 디렉터리의 원래 파일을 사용한다. 데이터와 비공개 작업자 키의 읽기 전용 bind는 그대로이며, 소스·데이터를 덮어쓰지 않는다.
 
-자동 배포는 전체 자체 CI를 통과한 source archive를 immutable release로 복원한 뒤, 해당 release의 실제 `deploy` 디렉터리와 두 파일 SHA를 검증하고 이 공개 환경변수만 설정한다. 기존 checkout·작업 데이터는 덮어쓰지 않는다. 같은 배포 요청에서 앱 이미지와 web bind 구성이 함께 바뀌며, 완료 검증은 실제 web 컨테이너의 읽기 전용 bind source와 두 파일 SHA까지 대조해야 한다. 환경변수 변경 자체나 Coolify의 `finished`만으로 이 검증을 대신하지 않는다.
+현재 Coolify v5 parser는 `${VAR:-기본디렉터리}/파일명` 형식의 짧은 bind를 잘못 분해한다. 파일명까지 포함한 기본값과 명시적인 long syntax `type: bind`, `target`, `read_only: true`를 사용하고, 기존 데이터·키의 RO bind를 앞에 유지한다. 검증된 v5 volume 단계의 결과와 Docker Compose에서 기본값·빈 값·release 파일 경로의 실제 두 RO source/target을 함께 검사한다. 일반 Compose config 통과만으로 Coolify 호환을 주장하지 않는다.
 
-이 저장소 변경만으로 운영 제어기의 새 동작이나 인프라 승인 pin이 적용되지는 않는다. 기존 제어기가 설정한 source hash 계약과 root에 검토되어 고정된 세 인프라 파일의 pin을 함께 갱신해야 하며, 이전 실패 intent와 CI 증거는 보존한다.
+자동 배포기는 실제 CI source archive를 immutable release로 복원하고 두 파일 SHA를 검증한 뒤, 이 두 key에 release의 파일 경로만 설정한다. v2 key별 소유 ledger로 UUID·flags·갱신시각과 실제 이전 web bind를 확인한다. 이전 `GEO_RUNTIME_CONFIG_ROOT` key와 실패 operation·ledger는 삭제하거나 다시 실행하지 않는다. 기존 checkout·작업 데이터는 변경하지 않는다.
+
+원래 단일 배포 POST와 응답 유실 시 재호출 금지 계약을 유지한다. 완료 판정은 앱·작업자·공개 동작·데이터 보존과 함께 실제 web의 두 RO bind source 및 파일 SHA를 확인해야 한다. 이 소스 후보만으로 운영에 적용되지 않으며, adapter와 config/factory/issuer/task-CI의 검토된 pin을 먼저 반영하고 새 main revision을 게시한 뒤 기존 자체 CI·배포로 검증한다.

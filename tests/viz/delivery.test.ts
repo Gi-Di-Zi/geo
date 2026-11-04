@@ -185,10 +185,10 @@ test('Coolify 설정 경로만 release로 전환하며 데이터·키 bind와 we
   const compose = JSON.parse(await readFile(new URL('../../deploy/compose.coolify.json', import.meta.url), 'utf8'))
 
   assert.deepEqual(compose.services.web.volumes, [
-    '${GEO_RUNTIME_CONFIG_ROOT:-/srv/storage/sda/apps/geo/source/deploy}/public.nginx.conf:/etc/nginx/conf.d/default.conf:ro',
     '/srv/storage/sda/apps/geo/source/public/data:/public-data:ro',
-    '${GEO_RUNTIME_CONFIG_ROOT:-/srv/storage/sda/apps/geo/source/deploy}/worker.proxy.conf:/etc/nginx/geo-worker-proxy.conf:ro',
     '/srv/storage/sda/apps/geo/worker-config/nginx-key.conf:/etc/nginx/private/worker-key.conf:ro',
+    { type: 'bind', source: '${GEO_PUBLIC_NGINX_CONF:-/srv/storage/sda/apps/geo/source/deploy/public.nginx.conf}', target: '/etc/nginx/conf.d/default.conf', read_only: true },
+    { type: 'bind', source: '${GEO_WORKER_PROXY_CONF:-/srv/storage/sda/apps/geo/source/deploy/worker.proxy.conf}', target: '/etc/nginx/geo-worker-proxy.conf', read_only: true },
   ])
   assert.deepEqual(compose.services.app.volumes, ['/srv/storage/sda/apps/geo/source/public/data:/app/.output/public/data:ro'])
   assert.equal(compose.services.app.image, '${GEO_VERIFIED_IMAGE:?verified image is required}')
