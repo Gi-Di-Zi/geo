@@ -8,7 +8,7 @@ Node 24.19.0에서 npm ci와 npm run build로 만든 .output만 실행 이미지
 
 geo-data-docker.service는 /srv/storage/sda/apps/geo/docker-data를 사용한다. 수집 명령은 PATH=/srv/storage/sda/apps/geo/bin:$PATH, DOCKER_HOST=unix:///run/user/1000/geo-docker.sock 환경에서 실행한다. 프로젝트 Docker wrapper는 수집·변환 컨테이너를 rootless 엔진 안의 UID 0(호스트의 strop)으로 실행해 이미지별 기본 사용자에 따른 Linux bind 쓰기 오류를 해결하며 다른 엔진을 변경하지 않는다. .env는 gitignore와 mode 600을 유지한다.
 
-흐름도는 Windows·OS의 움직임 줄이기 설정과 관계없이 기본 재생한다. 노선·과정 칩·알갱이는 처음부터 표시하고, 꼬리 애니메이션은 공통 움직임 줄이기 CSS가 중단하지 않도록 한다. 사용자가 직접 끄기를 선택할 수 있다. MCP·업로드 변경 범위에는 npm run lint를 연결했으며 dev·build·generate·setup·pipeline·check·test:viz·test:mcp-app의 선행 hook이 검사 실패를 차단한다. 일반 anti-slop 규칙18개와 native companion을 error로 적용하고 기존 저장소 전체 이전으로 주장하지 않는다. .github/workflows/quality.yml은 Node24에서 npm ci → lint → 검사기 회귀 검사 → 사전 갱신 회귀 검사 → build를 실행한다. PR과 main/deploy 브랜치 push에서만 실행하며 자동 배포나 secret 연결은 없다. 실제 GitHub CI 실행 상태와 서버 배포 상태는 별도 확인한다. npm run test:viz·test:mcp-app과 npm run check의 실제 데이터 검증을 완료 조건으로 유지한다.
+흐름도는 Windows·OS의 움직임 줄이기 설정과 관계없이 기본 재생한다. 노선·과정 칩·알갱이는 처음부터 표시하고, 꼬리 애니메이션은 공통 움직임 줄이기 CSS가 중단하지 않도록 한다. 사용자가 직접 끄기를 선택할 수 있다. MCP·업로드 변경 범위에는 npm run lint를 연결했으며 dev·build·generate·setup·pipeline·check·test:viz·test:mcp-app의 선행 hook이 검사 실패를 차단한다. 일반 anti-slop 규칙18개와 native companion을 error로 적용하고 기존 저장소 전체 이전으로 주장하지 않는다. 기존 quality workflow 원문은 `.ci/contracts/quality.yml`에 보존한다. GitHub는 Git 소스 보관에만 사용하며 Actions를 CI/CD로 실행하지 않는다. 실제 서버 CI는 `deploy/selfhost-ci.json`의 필수 10단계와 rootless 격리 증거를 사용하며, CI 통과와 실제 서버 배포 완료는 별도로 확인한다. npm run test:viz·test:mcp-app과 npm run check의 실제 데이터 검증을 완료 조건으로 유지한다.
 
 복구에는 Git 소스/배포 설정과 함께 public/data, pipeline/raw·serve, 공간 DB의 일관된 snapshot과 GeoServer 설정을 보호해야 한다. 공용 파일 백업만으로 실행 중인 공간 DB/볼륨 복구를 대체하지 않는다.
 
@@ -21,3 +21,11 @@ geo-data-docker.service는 /srv/storage/sda/apps/geo/docker-data를 사용한다
 nginx는 Geo 전용 Docker DNS 이름 `coolify-proxy`로 해석되는 앞단 프록시만 신뢰해 X-Forwarded-For에서 접속자 IP를 복원하고 IP별 MCP 요청·동시 업로드 제한과 작업자의 X-Real-IP에 쓴다. 같은 네트워크의 앱이나 호스트가 직접 보낸 X-Forwarded-For는 신뢰하지 않는다. 프록시 이름은 nginx 기동 시 해석하며 이름을 해석할 수 없으면 기동에 실패한다. 프록시 컨테이너 재생성으로 주소가 바뀌면 DNS 결과를 확인하고 nginx를 다시 기동해 신뢰 주소를 갱신해야 한다. 이 설정은 Coolify 배포용이며 로컬 Nuxt 개발에는 쓰이지 않는다. nginx의 request/response buffering을 끄고201MiB요청한도를설정하므로200MiB입력을읽기전용컨테이너의32MiB임시공간에spool하지않는다. MCP요청은앱SDK리소스/프로토콜검증, 실제업로드는공식브리지·웹UI·파일결과로따로확인한다. 실제Claude/ChatGPT계정호스트연결은별도범위다.
 
 사용자 systemd의 PrivateTmp는 이 Ubuntu 호스트에서 별도 사용자 네임스페이스/AppArmor 경계로 rootless Docker 소켓 연결을 막으므로 사용하지 않는다. 대신 mode700의 전용 runtime-data/tmp를 TMPDIR로 지정하고 NoNewPrivileges·작업자 인증·비공개 바인딩·자원 제한은 유지한다.
+
+## 검증된 프록시 설정의 배포 경로
+
+Coolify compose의 두 Nginx 설정 bind는 `GEO_RUNTIME_CONFIG_ROOT` 아래의 `public.nginx.conf`와 `worker.proxy.conf`를 읽는다. 변수가 없거나 비어 있으면 기존 `/srv/storage/sda/apps/geo/source/deploy`를 사용하므로 수동·개발 배포의 기본 경로는 유지된다. 데이터와 비공개 작업자 키의 bind는 이 변수의 영향을 받지 않는다.
+
+자동 배포는 전체 자체 CI를 통과한 source archive를 immutable release로 복원한 뒤, 해당 release의 실제 `deploy` 디렉터리와 두 파일 SHA를 검증하고 이 공개 환경변수만 설정한다. 기존 checkout·작업 데이터는 덮어쓰지 않는다. 같은 배포 요청에서 앱 이미지와 web bind 구성이 함께 바뀌며, 완료 검증은 실제 web 컨테이너의 읽기 전용 bind source와 두 파일 SHA까지 대조해야 한다. 환경변수 변경 자체나 Coolify의 `finished`만으로 이 검증을 대신하지 않는다.
+
+이 저장소 변경만으로 운영 제어기의 새 동작이나 인프라 승인 pin이 적용되지는 않는다. 기존 제어기가 설정한 source hash 계약과 root에 검토되어 고정된 세 인프라 파일의 pin을 함께 갱신해야 하며, 이전 실패 intent와 CI 증거는 보존한다.
