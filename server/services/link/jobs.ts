@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { closeSync, existsSync, openSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { z } from 'zod'
 import { resolveRows, referenceMetadata } from '../../../shared/link/core.ts'
@@ -34,19 +34,29 @@ interface StoredJob {
 
 const directory = (id: string) => join(LINK_JOBS_DIR, linkId(id))
 
-function save(job: StoredJob) {
+// Windows는 다른 요청이 읽고 있는 파일 위로 rename하면 EPERM·EBUSY로 거절한다 → 읽기가 끝나도록 20ms씩 최대 1초 다시 시도.
+// 기다림은 비동기여야 한다: 스레드를 멈추면 읽는 쪽 readFile도 파일을 닫지 못한다
+const BUSY = new Set(['EPERM', 'EACCES', 'EBUSY'])
+
+async function save(job: StoredJob) {
   const destination = join(directory(job.id), 'job.json')
   const temporary = join(directory(job.id), `.job-${randomUUID()}.tmp`)
-  const descriptor = openSync(temporary, 'wx', 0o600)
+
+  await writeFile(temporary, JSON.stringify(job), { mode: 0o600, flag: 'wx' })
 
   try {
-    try { writeFileSync(descriptor, JSON.stringify(job)) }
-    finally { closeSync(descriptor) }
+    // Readers with an open descriptor retain the complete previous snapshot (POSIX).
+    for (let attempt = 0; ; attempt++) {
+      try { await rename(temporary, destination);
 
-    // Readers with an open descriptor retain the complete previous snapshot.
-    renameSync(temporary, destination)
+ return }
+      catch (error) {
+        if (attempt >= 50 || !(error instanceof Error && 'code' in error && BUSY.has(String(error.code)))) throw error
+        await new Promise(done => setTimeout(done, 20))
+      }
+    }
   } finally {
-    if (existsSync(temporary)) unlinkSync(temporary)
+    await rm(temporary, { force: true })
   }
 }
 
@@ -63,7 +73,7 @@ async function readJob(id: string, access: LinkAccess): Promise<StoredJob> {
   if (Date.parse(job.expiresAt) <= Date.now()) throw new LinkServiceError('EXPIRED', '작업 보관 기간이 지났습니다.', 410)
 
   if (['queued', 'running'].includes(job.state) && job.processId !== processId) {
-    job.state = 'failed'; job.finishedAt = new Date().toISOString(); job.error = { code: 'JOB_INTERRUPTED', message: '서버 재시작으로 작업이 중단되었습니다. 원본으로 다시 실행하세요.' }; save(job)
+    job.state = 'failed'; job.finishedAt = new Date().toISOString(); job.error = { code: 'JOB_INTERRUPTED', message: '서버 재시작으로 작업이 중단되었습니다. 원본으로 다시 실행하세요.' }; await save(job)
   }
 
   return job
@@ -84,7 +94,7 @@ function drain() {
 
 async function execute(job: StoredJob, rows: InputRow[], snapshot: ReferenceSnapshot) {
   active.add(job.id)
-  job.state = 'running'; job.startedAt = new Date().toISOString(); save(job)
+  job.state = 'running'; job.startedAt = new Date().toISOString(); await save(job)
   const started = performance.now()
 
   try {
@@ -116,7 +126,7 @@ async function execute(job: StoredJob, rows: InputRow[], snapshot: ReferenceSnap
       for (const key of ['ok', 'needs_selection', 'invalid', 'not_found', 'unavailable'] as const) result.summary[key] += part.summary[key]
 
       for (const [code, count] of Object.entries(part.errors)) result.errors[code] = (result.errors[code] || 0) + count
-      job.progress.done = Math.min(at + chunkSize, selected.length); save(job)
+      job.progress.done = Math.min(at + chunkSize, selected.length); await save(job)
       await new Promise<void>(done => setImmediate(done))
     }
 
@@ -127,7 +137,7 @@ async function execute(job: StoredJob, rows: InputRow[], snapshot: ReferenceSnap
   } catch (error) {
     job.state = 'failed'; job.error = error instanceof LinkServiceError ? { code: error.code, message: error.message } : { code: 'JOB_FAILED', message: '작업 처리 중 오류가 발생했습니다. 원본과 옵션을 확인해 다시 실행하세요.' }
   } finally {
-    job.finishedAt = new Date().toISOString(); save(job); active.delete(job.id); drain()
+    job.finishedAt = new Date().toISOString(); await save(job).catch(() => undefined); active.delete(job.id); drain()
   }
 }
 
@@ -160,7 +170,7 @@ async function create(raw: LinkJobInput, access: LinkAccess, idempotencyKey?: st
 
   await mkdir(directory(id), { recursive: true })
   await writeFile(join(directory(id), 'input.json'), JSON.stringify({ rows, options }))
-  save(job)
+  await save(job)
 
   if (index) { await mkdir(join(LINK_JOBS_DIR, '_requests'), { recursive: true }); await writeFile(index, JSON.stringify({ id, fingerprint })) }
 

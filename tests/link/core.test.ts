@@ -56,10 +56,21 @@ test('숫자 포함 법정동명 및 로로 끝나는 실제 법정동명 허용
   assert.equal(resolve('서울특별시 종로구 종로1가 1').pnu, '1111015600100010000')
   assert.equal(resolve('서울특별시 종로구 세종로 1').pnu, '1111011900100010000')
 })
-test('부분명·동명이인 후보를 임의 확정하지 않음', () => {
+test('동명이인은 후보를 고르게 하고, 이름이 하나뿐이면 빠진 상위 단계를 사전에서 채움', () => {
   const result = resolve('청운동 1')
   assert.equal(result.status, 'needs_selection'); assert.equal(result.candidates.length, 2)
-  assert.equal(resolve('종로구 청운동 1').status, 'needs_selection')
+  const filled = resolve('종로구 청운동 1')
+  assert.equal(filled.pnu, pnu); assert.match(filled.warnings.join(), /사전에서 채웠습니다: 서울특별시 종로구 청운동/)
+})
+test('옛 시도명·옛 시도 코드는 명칭 변경에 따른 현재 코드로, 사이 단계(일반구)를 뺀 이름·번지·OO시 표기도 해석', () => {
+  const old = resolve('강원도 춘천시 효자동 100')
+  assert.equal(old.pnu, '5111011200101000000'); assert.match(old.warnings.join(), /옛 시도명 강원도/)
+  const code = resolve('4211011200101000000')
+  assert.equal(code.status, 'ok'); assert.equal(code.pnu, '5111011200101000000'); assert.match(code.warnings.join(), /폐지 코드 4211011200/)
+  // 명칭 변경과 무관한 폐지 코드는 그대로 거절
+  assert.equal(resolve('1111019900100010000').errors[0]?.code, 'REGION_RETIRED')
+  assert.equal(resolve('경기도 부천시 중동 1156-1번지').pnu, '4119210800111560001')
+  assert.equal(resolve('서울시 종로구 청운동 1').pnu, pnu)
 })
 test('후보 선택과 무관한 후보 거절', () => {
   assert.equal(resolve('청운동 1', { selections: { '1': '1111010100' } }).pnu, pnu)

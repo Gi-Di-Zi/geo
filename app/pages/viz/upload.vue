@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { sniff, type Sniff } from '#shared/sniff'
 import { kindLabels, viewers } from '#shared/viewers'
-import type { FormatSpec, Priority, Recipe, ViewerId } from '#shared/types'
+import type { Form, FormatSpec, Priority, Recipe, ViewerId } from '#shared/types'
 import { fileUploadRecipes, publishesService, SERVICE_HOURS } from '#shared/conversion'
-import { deliveries, priorities, readIntent, recommend, type Delivery, type Intent } from '#shared/recommend'
+import { deliveries, forms, priorities, readIntent, recommend, type Delivery, type Intent } from '#shared/recommend'
 
 // 내 파일로 해 보기: ① 파일 넣기(형식 판별) → ② 형식 고르기 → ③ 대상 라이브러리·목적·제공 방식 → 추천 (고급 설정에서 다른 방식) → ④ 변환 시작
 // → 그 확장자의 시각화 단계로 이동해 변환 진행(JobProgress)·결과 지도 (고른 라이브러리로 연다). 추천 규칙은 MCP와 같은 shared/recommend.ts
@@ -12,11 +12,14 @@ useHead({ title: '내 파일로 해 보기 | 공간 데이터 시각화 도구' 
 const router = useRouter()
 const route = useRoute()
 
-// 조건: 주소(?viewer=&priority=&delivery=, MCP 화면의 "웹 업로드"가 넘김)에서 시작
-const asked = () => readIntent({ viewer: String(route.query.viewer ?? ''), priority: String(route.query.priority ?? ''), delivery: String(route.query.delivery ?? '') }) ?? {}
+// 조건: 주소(?viewer=&priority=&delivery=&form=, MCP 화면의 "웹 업로드"가 넘김)에서 시작
+const asked = () => readIntent({ viewer: String(route.query.viewer ?? ''), priority: String(route.query.priority ?? ''), delivery: String(route.query.delivery ?? ''), form: String(route.query.form ?? '') }) ?? {}
 const viewer = ref<ViewerId | 'auto'>(asked().viewer ?? 'auto')
 const priority = ref<Priority>(asked().priority ?? 'balanced')
 const delivery = ref<Delivery>(asked().delivery ?? 'file')
+
+/** 파일 방식의 최종본 형태: 결과 파일 + 적용 코드 / 바로 열리는 HTML 지도 */
+const form = ref<Form>(asked().form ?? 'files')
 
 // 미리 그린 화면은 쿼리 없이 만들어져, 브라우저에 붙은 뒤에야 쿼리가 보인다 → 그때 다시 적용 (이 화면은 자기 쿼리를 바꾸지 않아 고른 값을 덮지 않는다)
 watch(() => route.query, () => {
@@ -25,6 +28,7 @@ watch(() => route.query, () => {
   viewer.value = a.viewer ?? 'auto'
   priority.value = a.priority ?? 'balanced'
   delivery.value = a.delivery ?? 'file'
+  form.value = a.form ?? 'files'
 })
 
 /** 이 서버가 48시간 임시 서비스 발행을 허용하는지 (공개 배포는 false). 묻지 못하면 미제공으로 본다 */
@@ -149,6 +153,8 @@ function send() {
   body.append('priority', priority.value)
   body.append('delivery', delivery.value)
 
+  if (delivery.value === 'file') body.append('form', form.value)
+
   if (viewer.value !== 'auto') body.append('viewer', viewer.value)
 
   if (found.value?.srs) body.append('srs', srs.value.trim())
@@ -258,6 +264,13 @@ function drop(e: DragEvent) {
                 </button>
               </div>
             </div>
+            <div v-if="delivery === 'file'" class="field">
+              <span class="small">최종본 형태</span>
+              <div class="seg" role="radiogroup" aria-label="최종본 형태">
+                <button v-for="f in forms" :key="f.id" type="button" role="radio" :aria-checked="form === f.id" :title="f.text" :disabled="sent !== null" @click="form = f.id">{{ f.title }}</button>
+              </div>
+              <span class="small muted">{{ forms.find(f => f.id === form)?.text }}</span>
+            </div>
           </div>
 
           <section class="rec" aria-label="추천">
@@ -303,7 +316,7 @@ function drop(e: DragEvent) {
             <span class="arrow" aria-hidden="true">→</span>
             <span v-for="k in kinds" :key="k" class="pill">{{ k }}</span>
           </p>
-          <p class="small muted">{{ delivery === 'service' ? `서비스는 발행 완료 후 ${SERVICE_HOURS}시간 뒤 자동 만료되고 같은 URL은 더 쓸 수 없음. 프로젝트에 계속 쓰려면 파일로 변환해 내려받기.` : '결과 파일을 내려받아 자신의 웹 서버·애플리케이션에서 사용. 결과 화면에 적용 코드·호스팅 조건 표시.' }}</p>
+          <p class="small muted">{{ delivery === 'service' ? `서비스는 발행 완료 후 ${SERVICE_HOURS}시간 뒤 자동 만료되고 같은 URL은 더 쓸 수 없음. 프로젝트에 계속 쓰려면 파일로 변환해 내려받기.` : form === 'html' ? '결과 화면에서 지도 페이지(index.html)·라이브러리·결과를 한 폴더 zip으로 받기. 정적 호스팅에 폴더째 올리면 그대로 열림.' : '결과 파일을 내려받아 자신의 웹 서버·애플리케이션에서 사용. 결과 화면에 적용 코드·호스팅 조건 표시.' }}</p>
           <div v-if="found?.srs" class="srs">
             <label class="small" for="srs-in"><strong>좌표계 선택</strong> — {{ found.srs.why }}</label>
             <input id="srs-in" v-model="srs" list="srs-list" placeholder="EPSG:5186" autocomplete="off" spellcheck="false" :disabled="sent !== null">

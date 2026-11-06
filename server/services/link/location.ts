@@ -6,6 +6,12 @@ export { LocationError } from '../../../shared/link/location.ts'
 export const LOCATION_SOURCE = 'VWorld Geocoder 2.0'
 export const LOCATION_SOURCE_URL = 'https://www.vworld.kr/dev/v4dv_geocoderguide2_s001.do'
 const ENDPOINT = 'https://api.vworld.kr/req/address'
+// 검색 API: 도로명주소 → 건물의 대표지번 PNU(id)·우편번호·건물 좌표, 행정구역 → 대표점(시도청·시군구청 등)
+const SEARCH = 'https://api.vworld.kr/req/search'
+const BASE: Record<string, Record<string, string>> = {
+  [ENDPOINT]: { service: 'address', version: '2.0', crs: 'EPSG:4326', format: 'json', errorFormat: 'json', simple: 'false', refine: 'false' },
+  [SEARCH]: { service: 'search', request: 'search', version: '2.0', crs: 'EPSG:4326', format: 'json', errorFormat: 'json', size: '10' },
+}
 const key = () => process.env.VWORLD_KEY?.trim() || process.env.NUXT_PUBLIC_VWORLD_KEY?.trim() || ''
 const metadata = (method: 'address_point' | 'region_representative' | 'reverse_geocoded', checkedAt: string) => ({ source: LOCATION_SOURCE, sourceUrl: LOCATION_SOURCE_URL, sourceDate: null, checkedAt, method })
 type Meta = ReturnType<typeof metadata>
@@ -21,17 +27,17 @@ async function limited<T>(run: () => Promise<T>) {
   } else active++
   try { return await run() } finally { const next = waiting.shift(); if (next) next(); else active-- }
 }
-async function request(parameters: Record<string, string>): Promise<Record<string, any>> {
+async function request(parameters: Record<string, string>, endpoint = ENDPOINT): Promise<Record<string, any>> {
   const apiKey = key()
   if (!apiKey) throw new LocationError('GEOCODER_SETUP_REQUIRED', '위치 조회를 위한 VWorld API 키가 서버에 설정되지 않았습니다.', 'unavailable')
-  const fingerprint = createHash('sha256').update(JSON.stringify(parameters) + apiKey).digest('hex')
+  const fingerprint = createHash('sha256').update(endpoint + JSON.stringify(parameters) + apiKey).digest('hex')
   const cached = cache.get(fingerprint)
   if (cached && cached.expires > Date.now()) return cached.data as Record<string, any>
   const existing = pending.get(fingerprint)
   if (existing) return existing as Promise<Record<string, any>>
   const operation = limited(async () => {
-    const url = new URL(ENDPOINT)
-    for (const [name, value] of Object.entries({ service: 'address', version: '2.0', crs: 'EPSG:4326', format: 'json', errorFormat: 'json', simple: 'false', refine: 'false', ...parameters, key: apiKey })) url.searchParams.set(name, value)
+    const url = new URL(endpoint)
+    for (const [name, value] of Object.entries({ ...BASE[endpoint], ...parameters, key: apiKey })) url.searchParams.set(name, value)
     let response: Response
     try { response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(10_000) }) }
     catch { throw new LocationError('GEOCODER_UNAVAILABLE', '위치 조회 원천에 연결하지 못했습니다. 잠시 뒤 다시 시도하세요.', 'unavailable') }
@@ -71,8 +77,32 @@ function korea(point: { lon: number; lat: number }) {
 export function getLocationCapabilities() {
   return { state: key() ? 'available' : 'setup_required', crs: LOCATION_CRS, source: LOCATION_SOURCE, sourceUrl: LOCATION_SOURCE_URL, axisOrder: 'X=easting/longitude, Y=northing/latitude', maxRows: 20, globalConcurrency: 2, cacheSeconds: 60, warning: '주소 좌표와 구역 대표점은 필지 중심점·관할 경계의 확정값이 아닙니다.' }
 }
-export async function forwardLocation(address: string, type: 'parcel' | 'road' | 'region' = 'parcel'): Promise<ForwardLocation> {
+export interface RoadMatch { pnu: string; road: string; parcel: string; building: string; postcode?: string; lon: number; lat: number; checkedAt: string }
+/** 도로명주소 검색 (VWorld 검색 API, 도로명주소 DB): 건물마다 대표지번 PNU·도로명·지번·우편번호·건물 좌표. 같은 주소의 동(본관·신관)은 PNU가 같다 */
+export async function searchRoad(address: string): Promise<RoadMatch[]> {
+  if (!address.trim() || address.length > 200 || /[\u0000-\u001f]/.test(address)) throw new LocationError('INVALID_ADDRESS', '조회할 주소를 확인하세요.')
+  const data = await request({ query: address.trim(), type: 'address', category: 'road' }, SEARCH)
+  const items: Array<Record<string, any>> = Array.isArray(data.result?.items) ? data.result.items : []
+  return items.flatMap(item => {
+    const lon = Number(item.point?.x), lat = Number(item.point?.y)
+    if (typeof item.id !== 'string' || !/^\d{19}$/.test(item.id) || !(lon >= 122 && lon <= 135 && lat >= 28 && lat <= 41)) return []
+    return [{ pnu: item.id, road: text(item.address?.road), parcel: text(item.address?.parcel), building: text(item.address?.bldnm), postcode: zip(item.address?.zipcode), lon, lat, checkedAt: data.checkedAt }]
+  })
+}
+/** 법정구역 대표점 (VWorld 검색 API 행정구역: L1 시도·L2 시군구·L4 읍면동, 리는 없음). 결과 id가 요청 코드와 같을 때만 */
+async function district(name: string, code: string) {
+  const digits = code.endsWith('00000000') ? 2 : code.endsWith('00000') ? 5 : code.endsWith('00') ? 8 : 0
+  if (!digits || !/^\d{10}$/.test(code)) return undefined
+  const data = await request({ query: name, type: 'district', category: { 2: 'L1', 5: 'L2', 8: 'L4' }[digits]! }, SEARCH).catch(() => undefined)
+  const items: Array<Record<string, any>> = Array.isArray(data?.result?.items) ? data.result.items : []
+  const item = items.find(i => i.id === code.slice(0, digits)), lon = Number(item?.point?.x), lat = Number(item?.point?.y)
+  return item && lon >= 122 && lon <= 135 && lat >= 28 && lat <= 41 ? { lon, lat, checkedAt: data!.checkedAt as string } : undefined
+}
+export async function forwardLocation(address: string, type: 'parcel' | 'road' | 'region' = 'parcel', regionCode = ''): Promise<ForwardLocation> {
   if (!['parcel', 'road', 'region'].includes(type) || !address.trim() || address.length > 2000 || /[\u0000-\u001f]/.test(address)) throw new LocationError('INVALID_ADDRESS', '조회할 주소·지역명을 확인하세요.')
+  // 지역은 행정구역 대표점을 먼저 쓴다. 지오코더에 지역명을 넣으면 그 안의 아무 필지 좌표가 나온다
+  const center = type === 'region' && regionCode ? await district(address.trim(), regionCode) : undefined
+  if (center) return { x: center.lon, y: center.lat, lon: center.lon, lat: center.lat, crs: 'EPSG:4326', ...metadata('region_representative', center.checkedAt), source: 'VWorld 검색 API (행정구역)', warning: '원천의 행정구역 대표점(시도청·시군구청 등)입니다. 구역 중심점이나 경계를 확정한 결과가 아닙니다.' }
   const data = await request({ request: 'getCoord', address: address.trim(), type: type === 'road' ? 'road' : 'parcel' })
   const raw = data.result?.point
   const x = typeof raw?.x === 'string' || typeof raw?.x === 'number' ? String(raw.x) : '', y = typeof raw?.y === 'string' || typeof raw?.y === 'number' ? String(raw.y) : ''

@@ -2,7 +2,7 @@
 import type { LinkBatch, LinkOptions, LinkResult, LinkConversionKey } from '#shared/link/types'
 import { formatLocation, parseLocation, transformLocation } from '#shared/link/location'
 
-useHead({ title: '주소·코드 변환 · 개발 중', meta: [{ name: 'description', content: '개발 중인 국내 주소·코드 연계 도구. 기준자료와 외부 API 조회 결과를 검증하고 있습니다.' }, { name: 'referrer', content: 'no-referrer' }] })
+useHead({ title: '주소·코드 변환', meta: [{ name: 'description', content: 'PNU·법정동코드·행정동코드·지번·도로명주소·좌표를 넣으면 주소·코드·위치·우편번호를 한 번에. 경계 SHP 다운로드.' }, { name: 'referrer', content: 'no-referrer' }] })
 type SearchAddress = { address: string; jibunAddress: string; legalCode: string }
 const detectedNames: Record<LinkResult['inputType'], string> = { pnu: 'PNU', code: '법정동코드', administrative: '행정동코드', address: '주소', location: '좌표', postcode: '우편번호' }
 const resultKinds: { id: LinkConversionKey; name: string }[] = [
@@ -145,10 +145,10 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
     <FlowSteps />
     <div class="wrap link-page">
       <header>
-        <p class="eyebrow">국내 주소·코드 연계 · 개발 중</p>
+        <p class="eyebrow">국내 주소·코드 연계</p>
         <h1>주소·코드 변환</h1>
         <p class="lead">주소나 코드를 넣으면 주소·우편번호·PNU·법정동·행정동·위치를 한 번에 보여줍니다.</p>
-        <p class="development-note" role="note"><strong>개발 중인 기능입니다.</strong> 기준자료와 외부 API 조회 결과를 검증하고 있습니다.</p>
+        
       </header>
       <form class="converter" @submit.prevent="submit">
         <template v-if="mode === 'search'">
@@ -203,7 +203,6 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
 
 <style scoped>
 .link-page { max-width: 960px; padding-top: 44px; padding-bottom: 64px; }.eyebrow { color: var(--ink-2); font-size: var(--fs-0); font-weight: 600; }h1 { margin-top: 6px; font-size: var(--fs-5); }.lead { margin-top: 10px; color: var(--ink-2); }
-.development-note { margin-top: 16px; padding: 12px 16px; font-size: var(--fs-0); color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-control); }
 .converter { margin-top: 28px; padding: 26px; border: 1px solid var(--rule); border-radius: var(--r-panel); background: var(--surface); }
 textarea, select, .xy-fields input { width: 100%; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-control); color: var(--ink); background: var(--surface); font: inherit; }.xy-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }.xy-fields label { display: grid; gap: 6px; }textarea { display: block; line-height: 1.7; resize: vertical; field-sizing: content; min-height: 46px; max-height: 14em; }.input-hint { margin-top: 7px; color: var(--ink-2); font-size: var(--fs-0); }.result small.input-hint { display: block; }
 .search-row { display: flex; gap: 10px; align-items: flex-start; }.search-row textarea { flex: 1; min-width: 0; }.search-row .primary { flex: none; }.tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }.detected { display: block; margin-top: 4px; color: var(--ink-2); font-family: var(--font); font-size: .75rem; }.primary { min-height: 44px; padding-inline: 24px; background: var(--ink); color: white; font-weight: 600; }.btn:disabled { opacity: .5; cursor: default; }

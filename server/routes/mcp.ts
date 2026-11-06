@@ -21,9 +21,10 @@ MCP Apps 연동은 베타 기능이다. 대화 안 앱 화면과 내려받기 �
 흐름: 사용자 요청에서 대상 라이브러리(viewer)·목적(priority)·원하는 결과 형식(outputKind)·제공 방식(delivery)을 읽어 geo_identify에 넘긴다 → 앱 화면이 그 조건을 미리 고른 채 열리고 파일을 올리면 서버가 추천을 계산 → 사용자가 확인·변경 후 변환 → geo_status로 결과.
 앱 화면이 없는 클라이언트: 파일의 stage(또는 이전 작업 id)로 geo_identify → geo_recommend → geo_convert(method 생략 = 추천) → geo_status.
 조건을 모르면 묻지 말고 생략해도 된다(viewer 생략 = 뷰어별 후보 제시, priority 기본 balanced). 결과 형식만 말했으면 outputKind만 넘긴다.
-제공 방식: file(기본) = 사용자의 웹 프로젝트에 가져가 쓰는 완성형 결과 파일(내려받기·적용 코드). service = ${SERVICE_HOURS}시간 임시 공간 서비스(WMS·WFS 등 실제 응답·연동 확인용, 발행 완료 후 ${SERVICE_HOURS}시간 뒤 자동 만료). 공개 서버는 service를 제공하지 않으며 이때 file로 바꾸지 말고 이유를 전한다.
+제공 방식: file(기본) = 사용자의 웹 프로젝트에 가져가 쓰는 완성형 결과 파일(내려받기·적용 코드). 바로 열리는 지도 페이지를 원하면 form=html(결과 + index.html + 라이브러리 한 폴더 zip). service = ${SERVICE_HOURS}시간 임시 공간 서비스(WMS·WFS 등 실제 응답·연동 확인용, 발행 완료 후 ${SERVICE_HOURS}시간 뒤 자동 만료). 공개 서버는 service를 제공하지 않으며 이때 file로 바꾸지 말고 이유를 전한다.
 채팅 첨부 파일을 자동으로 읽지 않으며 URL 가져오기·서버 로컬 경로는 제공하지 않는다. 최대 200MB, 한 번에 한 변환. 서버의 원본·결과 파일은 운영자가 정리할 때까지 보관(기간 보장 없음), 결과 링크를 아는 사용자가 열 수 있다.
-MCP Apps를 지원하지 않는 클라이언트는 웹 업로드 화면과 도구 결과의 view 주소를 이용한다.`
+MCP Apps를 지원하지 않는 클라이언트는 웹 업로드 화면과 도구 결과의 view 주소를 이용한다.
+국내 주소·코드(PNU·법정동코드·행정동코드·지번주소·도로명주소·좌표)는 geo_link_resolve에 줄 단위 text와 options={target:"all"}을 넘겨 주소·PNU·단계 코드·행정동·위치·우편번호를 한 번에 받는다(한 번에 20줄, 좌표는 inputType:"location"). 후보가 여럿이면 임의로 고르지 말고 사용자에게 보여 준다.`
 
 // MCP Apps SDK(app-with-deps.js, 외부 import 없는 한 파일): 끝의 export { 내부 이름 as 공개 이름, … }을 globalThis.McpApps 대입으로 바꿔 화면 HTML 안에 넣는다
 let sdk: Promise<string> | undefined
@@ -50,21 +51,23 @@ const intentArgs = {
     .describe('원하는 결과 형식. auto·생략 = 자동'),
   delivery: z.enum(['file', 'service']).optional()
     .describe(`file = 웹 프로젝트에 가져가 쓰는 결과 파일(기본). service = ${SERVICE_HOURS}시간 임시 공간 서비스(WMS·WFS 응답·연동 확인용, 서비스 발행이 허용된 서버만)`),
+  form: z.enum(['files', 'html']).optional()
+    .describe('파일 방식의 최종본 형태: files = 결과 파일 + 라이브러리별 적용 코드(기존 웹 프로젝트에 넣기, 기본), html = 결과 + 지도 페이지(index.html)·라이브러리를 한 폴더 zip으로(바로 열리는 독립 HTML 지도). 둘 다 받을 수 있고 고른 쪽을 먼저 안내'),
 }
 
-type IntentArgs = { viewer?: string; priority?: string; outputKind?: string; delivery?: string }
+type IntentArgs = { viewer?: string; priority?: string; outputKind?: string; delivery?: string; form?: string }
 
 /** zod가 값을 확인한 도구 인자 → 목적 (auto = 미지정) */
-const toIntent = (a: IntentArgs): Intent => readIntent({ viewer: a.viewer, priority: a.priority, output: a.outputKind, delivery: a.delivery }) ?? {}
+const toIntent = (a: IntentArgs): Intent => readIntent({ viewer: a.viewer, priority: a.priority, output: a.outputKind, delivery: a.delivery, form: a.form }) ?? {}
 
 /** 앱 화면에 넘길 목적 (미지정은 auto) */
-const intentView = (i: Intent) => ({ viewer: i.viewer ?? 'auto', priority: i.priority ?? 'balanced', outputKind: i.output ?? 'auto', delivery: i.delivery ?? 'file' })
+const intentView = (i: Intent) => ({ viewer: i.viewer ?? 'auto', priority: i.priority ?? 'balanced', outputKind: i.output ?? 'auto', delivery: i.delivery ?? 'file', form: i.form ?? 'files' })
 
 const intentText = (i: Intent) => [
   `대상: ${i.viewer ? viewerName(i.viewer) : '미지정'}`,
   `목적: ${priorities.find(p => p.id === (i.priority ?? 'balanced'))?.name}`,
   i.output ? `결과 형식: ${kindLabels[i.output]}` : '',
-  `제공: ${i.delivery === 'service' ? `서비스(${SERVICE_HOURS}시간 임시)` : '파일'}`,
+  `제공: ${i.delivery === 'service' ? `서비스(${SERVICE_HOURS}시간 임시)` : i.form === 'html' ? '파일 · 독립 HTML 지도' : '파일'}`,
 ].filter(Boolean).join(' · ')
 
 /** 판별 결과 → 모델이 읽을 글 (화면은 structuredContent) */
@@ -105,7 +108,7 @@ function recommendText(r: Recommendation, stage?: string) {
   if (!r.intent.viewer) lines.push(`뷰어별: ${r.byViewer.map(b => `${b.name} ${b.output ? `→ ${kindLabels[b.output.kind]} (${b.title})` : `미지원 (${b.reason})`}`).join(' · ')}`)
   lines.push(...r.needs.map(n => `필요: ${n}`), ...r.notes.map(n => `알림: ${n}`))
 
-  if (c && stage && !r.blocked) lines.push(`다음: 사용자 확인 뒤 geo_convert({ stage: "${stage}", format: "${r.format}", method: "${c.method}"${r.intent.viewer ? `, viewer: "${r.intent.viewer}"` : ''}, priority: "${r.intent.priority}"${r.intent.output ? `, outputKind: "${r.intent.output}"` : ''}${r.intent.delivery === 'service' ? ', delivery: "service"' : ''} }). 변환은 자동으로 시작하지 않음`)
+  if (c && stage && !r.blocked) lines.push(`다음: 사용자 확인 뒤 geo_convert({ stage: "${stage}", format: "${r.format}", method: "${c.method}"${r.intent.viewer ? `, viewer: "${r.intent.viewer}"` : ''}, priority: "${r.intent.priority}"${r.intent.output ? `, outputKind: "${r.intent.output}"` : ''}${r.intent.delivery === 'service' ? ', delivery: "service"' : ''}${r.intent.form === 'html' ? ', form: "html"' : ''} }). 변환은 자동으로 시작하지 않음`)
 
   return lines.join('\n')
 }
@@ -122,6 +125,9 @@ function statusText(s: Awaited<ReturnType<typeof jobInfo>>) {
   // 결과가 약속과 다르면 완료로 안내하지 않는다
   if (s.problems.length) return `${head}: 변환은 끝났지만 결과 확인 실패 — ${s.problems.join(' / ')}\n결과를 쓰지 말고 다른 방식으로 다시: geo_convert({ stage: "${s.job}", … })`
   const lines = [`${head}: 완료 (${(s.progress.ms / 1000).toFixed(0)}초)`, `지도 화면: ${s.view}`]
+
+  // 최종본 형태 html: 바로 열리는 지도 폴더가 주 결과
+  if (s.site && s.intent?.form === 'html') lines.push(`독립 HTML 지도 (결과 + index.html + 라이브러리 한 폴더 zip, 정적 호스팅에 올리면 그대로 열림): ${s.site}`)
 
   if (s.service) {
     const v = s.service
@@ -145,7 +151,7 @@ function statusText(s: Awaited<ReturnType<typeof jobInfo>>) {
     if (o.check) lines.push(`  결과 파일 검사: ${o.check.ok ? `통과 — ${o.check.checked.join(', ')}` : `문제 — ${o.check.problems.join(', ')}`}${o.check.fields?.length ? ` · 속성: ${o.check.fields.slice(0, 12).join(', ')}` : ''}`)
   }
 
-  for (const u of s.usages) lines.push(`${u.name} 적용 (${u.api}) — URL은 내려받아 올린 곳 주소로 바꿔 사용:\n\`\`\`js\n${u.code}\n\`\`\``)
+  for (const u of s.usages) lines.push(`${u.name} 적용 (${u.api}) — URL은 내려받아 올린 곳 주소로 바꿔 사용${u.site ? ` · 같은 코드의 독립 HTML 지도: ${u.site}` : ''}:\n\`\`\`js\n${u.code}\n\`\`\``)
   lines.push(
     ...s.limits.map(x => `주의: ${x}`),
     '브라우저 렌더링은 서버가 검증하지 않음 → 지도 화면에서 확인',
@@ -180,7 +186,8 @@ async function planFor(stage: string, format: string | undefined, intent: Intent
   return { found, recommendation: recommend(spec, intent, { bytes: found.bytes, count: found.count ?? undefined, srs: found.srs, blocked: found.blocked, schema: found.schema }, serviceEnabled()) }
 }
 
-function buildServer(origin: string, owner: string) {
+/** client: 공개 배포의 접속자 IP (주소·코드 도구의 하루 조회 한도). 없으면 비공개 실행 */
+function buildServer(origin: string, owner: string, client?: string) {
   const server = new McpServer({ name: 'geo-web-bridge', version: '1.1.0' }, { instructions: INSTRUCTIONS, capabilities: { extensions: { [EXTENSION_ID]: {} } } })
   const ui = { ui: { resourceUri: APP } }
   const service = { enabled: serviceEnabled(), hours: SERVICE_HOURS, deliveries }
@@ -210,7 +217,7 @@ function buildServer(origin: string, owner: string) {
       }
     }
 
-    const query = new URLSearchParams(Object.entries(intentView(intent)).filter(([, v]) => v !== 'auto' && v !== 'balanced' && v !== 'file'))
+    const query = new URLSearchParams(Object.entries(intentView(intent)).filter(([, v]) => v !== 'auto' && v !== 'balanced' && v !== 'file' && v !== 'files'))
 
     return {
       content: [{ type: 'text', text: `대화 안에 업로드 화면을 띄웠다 (${intentText(intent)} — 화면에 미리 선택). 사용자가 파일을 놓으면 서버가 판별·추천을 계산하고, 사용자가 조건·방식을 확인하거나 바꾼 뒤 변환을 시작하면 그 내용이 대화에 전달된다. 화면을 지원하지 않는 클라이언트는 ${origin}/viz/upload${query.size ? `?${query}` : ''}를 사용자에게 전달한다.${intent.delivery === 'service' && !service.enabled ? ' 이 서버는 서비스 발행을 제공하지 않음 → 화면에 미지원으로 표시.' : ''}` }],
@@ -345,7 +352,7 @@ function buildServer(origin: string, owner: string) {
     }] }
   })
 
-  if (process.env.GEO_PUBLIC_CONVERSIONS !== '1') registerLinkTools(server, origin, owner, appSdk)
+  registerLinkTools(server, origin, owner, appSdk, client)
 
   return server
 }
@@ -388,7 +395,7 @@ export default defineEventHandler(async event => {
 
   const body = parsed.data
   const owner = process.env.GEO_PUBLIC_CONVERSIONS === '1' ? '' : await mcpLinkOwner(event, 'method' in body && body.method === 'initialize')
-  const server = buildServer(origin, owner)
+  const server = buildServer(origin, owner, process.env.GEO_PUBLIC_CONVERSIONS === '1' ? getHeader(event, 'x-real-ip') || '' : undefined)
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
   event.node.res.on('close', () => { transport.close(); server.close() })
   await server.connect(transport)

@@ -180,11 +180,15 @@ export interface ServiceRecord {
 /** 사용 목적: 일반, 빠른 미리보기, 대용량 웹 표출, 원본 정보·정밀도 보존 */
 export type Priority = 'balanced' | 'fast_preview' | 'large_data' | 'fidelity'
 
+/** 파일 방식의 최종본 형태: files = 결과 파일 + 적용 코드(내 웹 프로젝트에 넣기), html = 결과 + 지도 페이지·라이브러리 한 폴더(바로 열리는 HTML 지도) */
+export type Form = 'files' | 'html'
+
 /** 작업에 남기는 목적. recommended = 시작할 때 서버가 계산한 추천 방식, primary = 대상 뷰어에서 쓸 주력 결과물 id */
 export interface JobIntent {
   viewer?: ViewerId
   priority: Priority
   output?: OutputKind
+  form?: Form
   recommended?: string
   primary?: string
   reason?: string

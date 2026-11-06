@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createError, defineEventHandler, getCookie, getHeader, getRequestURL, setCookie, setResponseHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { LinkServiceError, linkLimits } from './files.ts'
+import { dailyCounter } from '../../utils/upload-storage.ts'
 
 export interface LinkAccess { owner?: string; token?: string }
 export const newAccessToken = () => randomBytes(32).toString('base64url')
@@ -50,6 +51,22 @@ export async function readLinkJson(event: H3Event) {
     throw new LinkServiceError('INVALID_JSON', '올바른 JSON 요청이 필요합니다.')
   }
 }
+/** 공개 배포에서 외부 원천(VWorld 지오코더·검색·경계)을 부르는 행 수의 접속자별 하루 한도. 사전만 쓰는 변환(PNU·법정동·지번주소)은 세지 않는다 */
+export const LINK_DAILY_LOOKUPS = 2000
+const chargeLookups = dailyCounter(LINK_DAILY_LOOKUPS)
+export function lookupRows(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return 0
+  const input: { text?: unknown; rows?: unknown; options?: { target?: unknown; inputType?: unknown; lookups?: unknown }; codes?: unknown } = raw
+  if (Array.isArray(input.codes)) return input.codes.length
+  if (input.options?.lookups === false || (!['all', 'location', 'legal_boundary'].includes(String(input.options?.target)) && input.options?.inputType !== 'location')) return 0
+  return Array.isArray(input.rows) ? input.rows.length : typeof input.text === 'string' ? input.text.split(/\r?\n/).filter(line => line.trim()).length : 0
+}
+/** client: 공개 배포에서 전용 프록시가 넣는 접속자 IP. 비공개 실행(로컬·사내)은 세지 않는다 */
+export function chargeLinkLookups(client: string | undefined, raw: unknown) {
+  if (process.env.GEO_PUBLIC_CONVERSIONS !== '1' || client === undefined) return
+  if (!chargeLookups(client || 'unknown', lookupRows(raw))) throw new LinkServiceError('DAILY_LOOKUP_LIMIT', `위치·우편번호·경계 조회는 접속자마다 하루 ${LINK_DAILY_LOOKUPS}행까지입니다. 내일 다시 시도하거나, 코드·지번주소 변환(위치 제외)을 이용하세요.`, 429)
+}
+export const linkClient = (event: H3Event) => getHeader(event, 'x-real-ip') || ''
 export function linkHttpError(error: unknown): never {
   if (error instanceof LinkServiceError) throw createError({ statusCode: error.statusCode, data: { code: error.code, message: error.message }, message: error.message })
   if (error && typeof error === 'object' && 'issues' in error) throw createError({ statusCode: 400, data: { code: 'INVALID_INPUT' }, message: '입력·옵션 형식을 확인하세요.' })

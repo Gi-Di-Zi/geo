@@ -7,7 +7,7 @@ type Project = { id: string; name: string; base?: string; summary: string; thumb
 /** 공간 데이터 시각화 도구 (/viz). 예시 화면 헤더의 프로젝트 이름·돌아가기 주소 */
 export const vizProject = { id: 'viz', name: '공간 데이터 시각화 도구', base: '/viz', summary: '공개 원본을 수집·전처리·웹 변환하고, 처리 방식과 지도·3D 결과를 비교', thumb: 'thumbs/model-3d-citygml.webp' }
 
-export const linkProject = { id: 'link', name: '국내 주소·코드 연계 도구', base: '/link', status: '개발 중', summary: 'PNU·법정동코드·행정동코드·주소·위치를 연결하는 확장 기능. 자료·외부 API 검증 진행 중' }
+export const linkProject = { id: 'link', name: '국내 주소·코드 연계 도구', base: '/link', summary: 'PNU·법정동·행정동코드·지번·도로명주소·좌표를 서로 변환. 한 번 넣으면 주소·코드·위치·우편번호·경계 SHP까지' }
 
 export const projects: Project[] = [
   vizProject,

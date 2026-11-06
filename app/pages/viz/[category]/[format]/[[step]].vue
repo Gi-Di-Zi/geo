@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CollectReport, Job, Recipe, Report } from '#shared/types'
+import { viewers } from '#shared/viewers'
 import type { FlowStep } from '~/utils/catalog'
 
 const route = useRoute()
@@ -132,6 +133,14 @@ const shownReport = computed(() => (mine.value ? job.value?.report : report.valu
 // 내 파일 결과: 파일은 내려받기, 서버 방식은 48시간 임시 서비스 (만료 시각은 서버 기준 UTC → 이 브라우저의 현지 시각으로 표시)
 const downloads = computed(() => job.value?.job.recipe?.outputs.filter(o => !o.path.startsWith('/svc/')) ?? [])
 
+// 독립 HTML 지도(결과 + index.html + 라이브러리 zip): 파일 결과를 그리는 뷰어마다. 최종본 형태를 html로 골랐으면 앞에
+const sites = computed(() => viewers.filter(v => {
+  const use = shown.value.viewers[v.id]
+  const o = use && 'output' in use ? shown.value.outputs.find(x => x.id === use.output) : undefined
+
+  return !!o && !o.path.startsWith('/')
+}))
+
 const service = computed(() => {
   const s = job.value?.job.service
 
@@ -165,6 +174,10 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
         <strong>변환 결과</strong>
         <span v-if="service" class="small" :class="{ gone: !service.live }">{{ service.live ? `임시 서비스 · 만료 ${service.expires} (남은 ${service.hours}시간 ${service.minutes}분)` : `임시 서비스 이용 기간 종료 (${service.state}) — 서비스 URL 이용 불가` }}</span>
         <a v-for="output in downloads" :key="output.id" class="btn" :href="`/api/jobs/${job.job.id}/download/${encodeURIComponent(output.id)}`" download>{{ output.label }} 내려받기</a>
+        <span v-if="sites.length" class="sites" :class="{ first: job.job.intent?.form === 'html' }" title="결과 + 지도 페이지(index.html) + 라이브러리를 한 폴더 zip으로. 정적 호스팅에 올리면 그대로 열림">
+          <span class="small">HTML 지도</span>
+          <a v-for="v in sites" :key="v.id" class="btn" :href="`/api/jobs/${job.job.id}/site?viewer=${v.id}`" download>{{ v.name }}</a>
+        </span>
         <NuxtLink to="/viz/upload" class="btn">다른 파일 올리기</NuxtLink>
       </section>
       <CompareStage
@@ -220,6 +233,8 @@ useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!
 .job-results { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px var(--gutter); background: var(--surface); border-bottom: 1px solid var(--rule); }
 .job-results .btn { text-decoration: none; }
 .job-results .gone { color: #B42318; }
+.job-results .sites { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.job-results .sites.first { order: -1; }
 .pre-pick { display: grid; gap: 8px; justify-items: start; margin-bottom: 28px; }
 .pre-pick h2 { font-size: var(--fs-2); }
 .pending { flex: 1; min-height: 0; overflow: auto; display: grid; justify-items: center; align-content: start; gap: 12px; padding: 32px var(--gutter); background: var(--stage); }

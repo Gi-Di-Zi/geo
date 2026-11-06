@@ -17,7 +17,9 @@ export default defineEventHandler(event => {
       throw createError({ statusCode: 403, statusMessage: 'Private conversion worker' })
     }
 
+    // 주소·코드 연계는 즉시 변환·조회·경계만 (일괄 작업·파일 업로드는 공개하지 않음)
     const allowed = event.path === '/mcp' || event.path === '/api/stage' || /^\/api\/jobs(?:\/|$)/.test(event.path)
+      || /^\/api\/link\/(?:capabilities|resolve|regions|references|references\/update|boundary)(?:\?|$)/.test(event.path)
 
     if (!allowed) throw createError({ statusCode: 403, statusMessage: 'Worker route unavailable' })
   }

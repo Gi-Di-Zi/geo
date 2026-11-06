@@ -4,6 +4,8 @@ node_modules
 .data
 .env
 public/cesium
+# 독립 HTML 지도의 라이브러리 묶음: 설치·빌드 때 scripts/standalone-lib.ts가 만든다
+server/assets/standalone
 pipeline/work
 # 샘플 원본·변환 결과는 올리지 않는다. npm run setup으로 다시 받고 변환
 pipeline/raw

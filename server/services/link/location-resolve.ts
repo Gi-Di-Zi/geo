@@ -52,7 +52,7 @@ export async function resolveLocationRows(inputs: InputRow[], provided: Partial<
         // 도로명은 원천의 도로명 주소 조회로만 처리한다.
         if (row.status === 'invalid' && options.inputType === 'address' && /(?:로|길)\s+\d/.test(input.value)) { address = input.value; kind = 'road'; row.status = 'ok'; row.errors = []; row.format = 'valid' }
         if (row.status === 'ok') {
-          const found = await provider.forwardLocation(address, kind), result = transformLocation(found, options.outputCrs || 'EPSG:4326')
+          const found = await provider.forwardLocation(address, kind, kind === 'region' ? row.regionCode : ''), result = transformLocation(found, options.outputCrs || 'EPSG:4326')
           row.output = { code: formatLocation(result), x: String(result.x), y: String(result.y), crs: result.crs, longitude: String(found.lon), latitude: String(found.lat), code_kind: 'location', location_method: found.method }
           row.evidence.push(found.source + '; 조회 시각 ' + found.checkedAt); row.warnings.push(found.warning)
         } else row.output = {}

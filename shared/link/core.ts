@@ -48,13 +48,36 @@ export function referenceMetadata(snapshot: ReferenceSnapshot) {
 
 const candidate = (r: LinkRegion): LinkCandidate => ({ id: r.code, code: r.code, name: r.fullName, status: r.status, level: r.level })
 const compact = (s: string) => s.replace(/\s+/g, ' ').trim()
-// 시도 약칭만 허용하며 동명·행정동·도로명은 추측하지 않는다.
-function canonicalName(s: string) {
-  return compact(s).replace(/^(서울|부산|대구|인천|광주|대전|울산|경기|충북|충남|전북|전남|경북|경남|강원|제주|세종)(?=\s)/, token => ({
-    서울: '서울특별시', 부산: '부산광역시', 대구: '대구광역시', 인천: '인천광역시', 광주: '광주광역시', 대전: '대전광역시', 울산: '울산광역시',
-    경기: '경기도', 충북: '충청북도', 충남: '충청남도', 전북: '전북특별자치도', 전남: '전라남도', 경북: '경상북도', 경남: '경상남도',
-    강원: '강원특별자치도', 제주: '제주특별자치도', 세종: '세종특별자치시',
-  }[token] ?? token))
+// 시도 약칭·'OO시'·옛 시도명만 바꾸며 동명·행정동·도로명은 추측하지 않는다. 광주시는 경기도 광주시와 겹쳐 바꾸지 않는다
+const SIDO_ALIASES: Record<string, string> = {
+  서울: '서울특별시', 부산: '부산광역시', 대구: '대구광역시', 인천: '인천광역시', 광주: '광주광역시', 대전: '대전광역시', 울산: '울산광역시',
+  경기: '경기도', 충북: '충청북도', 충남: '충청남도', 전북: '전북특별자치도', 전남: '전라남도', 경북: '경상북도', 경남: '경상남도',
+  강원: '강원특별자치도', 제주: '제주특별자치도', 세종: '세종특별자치시',
+  서울시: '서울특별시', 부산시: '부산광역시', 대구시: '대구광역시', 인천시: '인천광역시', 대전시: '대전광역시', 울산시: '울산광역시', 세종시: '세종특별자치시',
+  강원도: '강원특별자치도', 전라북도: '전북특별자치도', 제주도: '제주특별자치도',
+}
+const OLD_SIDO = /^(강원도|전라북도|제주도)\s/
+export function canonicalName(s: string) {
+  return compact(s).replace(new RegExp(`^(${Object.keys(SIDO_ALIASES).join('|')})(?=\\s)`), token => SIDO_ALIASES[token] ?? token)
+}
+
+// 시도 명칭 변경으로 앞 두 자리만 바뀐 코드: 제주도 49→제주특별자치도 50(2006-07-01), 강원도 42→강원특별자치도 51(2023-06-11), 전라북도 45→전북특별자치도 52(2024-01-18).
+// 아래 단계 이름이 같은 현존 코드만 잇는다. 명칭 변경 전에 이미 폐지된 코드는 후속이 없다
+const RENAMED_SIDO: Record<string, string> = { 49: '50', 42: '51', 45: '52' }
+function successor(region: LinkRegion, byCode: Map<string, LinkRegion>) {
+  const next = RENAMED_SIDO[region.code.slice(0, 2)], found = next ? byCode.get(next + region.code.slice(2)) : undefined
+  const below = (r: LinkRegion) => r.fullName.split(' ').slice(1).join(' ')
+
+  return found?.status === 'active' && below(found) === below(region) ? found : undefined
+}
+
+/** 이름 목록 part가 all 안에 순서대로 모두 있는지 (사이 단계 생략 허용) */
+function inOrder(all: string[], part: string[]) {
+  let i = 0
+
+  for (const word of all) if (word === part[i]) i++
+
+  return i === part.length
 }
 
 function ancestry(region: LinkRegion, byCode: Map<string, LinkRegion>): LinkRegion[] {
@@ -171,7 +194,7 @@ function resolveOne(input: InputRow, options: LinkOptions, snapshot: ReferenceSn
     if (region) result.regionCode = region.code
   } else {
     // 숫자가 들어간 법정동명은 지역 토큰에 남긴다. 지번 뒤 문자는 지원하지 않고 원문을 보존한다.
-    const match = /^(.*?)\s+(산\s*)?(\d{1,4})(?:\s*-\s*(\d{1,4}))?$/.exec(compact(value))
+    const match = /^(.*?)\s+(산\s*)?(\d{1,4})(?:\s*-\s*(\d{1,4}))?(?:\s*번지)?$/.exec(compact(value))
     if (!match || /\d+\s*(?:동|호)(?:\s|$)|[()]/.test(value)) {
       result.status = 'invalid'; result.format = 'invalid'; result.unparsed = value
       result.errors.push(error(/(?:로|길)\s+\d|\d+호|[()]/.test(value) ? 'UNSUPPORTED_ADDRESS' : 'UNPARSED_ADDRESS')); return result
@@ -185,21 +208,36 @@ function resolveOne(input: InputRow, options: LinkOptions, snapshot: ReferenceSn
       result.status = 'invalid'; result.format = 'invalid'; result.unparsed = value; result.errors.push(error('UNSUPPORTED_ADDRESS')); return result
     }
     const active = matches.filter(r => r.status === 'active')
-    let choices = active.length ? active : matches
+    // 사이 단계(일반구 등)를 뺀 이름: 최하위 이름이 같은 현존 구역 중 입력한 이름을 순서대로 모두 포함하는 곳 (예: 부천시 중동 → 부천시 원미구 중동)
+    const words = regionText.split(' ')
+    const loose = active.length || words.length < 2 ? [] : (addressIndex(snapshot).get(words.at(-1)!) ?? []).filter(r => r.status === 'active' && inOrder(r.fullName.split(' '), words))
+    let choices = active.length ? active : loose.length ? loose : matches
     const riParents = choices.filter(r => r.level === 'eupmyeondong' && /[읍면]$/.test(r.name))
     const riChoices = riParents.flatMap(p => addressIndex(snapshot).get(`@${p.code}`) ?? []).filter(r => r.status === 'active')
     if (riChoices.length) choices = riChoices
     const selected = options.selections?.[input.id]
     if (selected && !choices.some(r => r.code === selected)) { result.status = 'invalid'; result.errors.push(error('SELECTION_INVALID')); return result }
-    region = selected ? choices.find(r => r.code === selected) : choices.length === 1 && choices[0]!.fullName === regionText ? choices[0] : undefined
+    // 이름이 하나뿐인 현존 구역은 빠진 상위·사이 단계를 사전에서 채운다. 같은 이름이 여럿이거나 리가 필요하면 후보를 고르게 한다
+    const only = choices.length === 1 && (choices[0]!.fullName === regionText || (choices[0]!.status === 'active' && !riChoices.length)) ? choices[0] : undefined
+    region = selected ? choices.find(r => r.code === selected) : only
     if (!region && choices.length) {
       result.status = 'needs_selection'; result.candidates = choices.map(candidate); result.errors.push(error(riChoices.length ? 'MISSING_RI' : 'AMBIGUOUS_REGION')); result.unparsed = match[1]!
-      result.evidence.push('법정구역 경로·최하위 이름의 토큰 경계 일치; 부족한 상위 지역은 자동 선택하지 않음')
+      result.evidence.push('법정구역 경로·최하위 이름의 토큰 경계 일치; 같은 이름의 여러 구역은 자동 선택하지 않음')
       return result
     }
+    const old = OLD_SIDO.exec(compact(match[1]!))
+    if (old) result.warnings.push(`옛 시도명 ${old[1]}을(를) 현재 명칭 ${SIDO_ALIASES[old[1]!]}(으)로 해석했습니다.`)
+    if (region && !selected && region.fullName !== regionText) result.warnings.push(`입력에 없는 지역 단계를 사전에서 채웠습니다: ${region.fullName}`)
     if (region) { result.regionCode = region.code; result.pnu = `${region.code}${landType}${main}${sub}`; result.candidateId = selected }
     else result.unparsed = match[1]!
     result.evidence.push('법정구역 경로 정확 일치 + 지번 본번·부번; 필지 존재를 확인하지 않은 PNU 형식 조합')
+  }
+  const renamed = region?.status === 'retired' ? successor(region, byCode) : undefined
+  if (region && renamed) {
+    result.warnings.push(`폐지 코드 ${region.code}(${region.fullName})를 시도 명칭 변경에 따른 현재 코드 ${renamed.code}(${renamed.fullName})로 바꿨습니다.`)
+    region = renamed; result.regionCode = renamed.code
+    if (parts) parts = { ...parts, regionCode: renamed.code }
+    if (result.pnu) result.pnu = renamed.code + result.pnu.slice(10)
   }
   if (!snapshot.available) { result.status = 'unavailable'; result.errors.push(error('SOURCE_UNAVAILABLE')) }
   else if (!region) { result.status = snapshot.coverage === 'partial' ? 'unavailable' : 'not_found'; result.code = 'unknown'; result.errors.push(error(snapshot.coverage === 'partial' ? 'OUT_OF_COVERAGE' : 'REGION_NOT_FOUND')) }

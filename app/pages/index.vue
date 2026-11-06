@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 첫 화면: 시각화 탐색을 먼저, 개발 중인 확장은 보조 영역에 표시.
+// 첫 화면: 시각화 탐색을 먼저, 함께 쓰는 다른 도구는 아래 영역에 표시.
 import { tools } from '#shared/catalog/tools'
 import { viewers } from '#shared/viewers'
 
@@ -88,12 +88,12 @@ const stack = [
       </section>
 
       <section class="part" aria-labelledby="projects-title">
-        <h2 id="projects-title">개발 중인 확장 기능</h2>
+        <h2 id="projects-title">함께 쓰는 도구</h2>
         <ul class="list">
-          <li v-for="p in projects.filter(p => p.status)" :key="p.id">
+          <li v-for="p in projects.filter(p => p.id !== vizProject.id)" :key="p.id">
             <NuxtLink v-if="p.base" :to="p.base" class="proj">
               <img v-if="p.thumb" :src="`${base}${p.thumb}`" alt="" width="640" height="400">
-              <span class="body"><span class="small">{{ p.status }}</span><b>{{ p.name }}</b><span>{{ p.summary }}</span></span>
+              <span class="body"><span v-if="p.status" class="small">{{ p.status }}</span><b>{{ p.name }}</b><span>{{ p.summary }}</span></span>
             </NuxtLink>
             <div v-else class="proj soon">
               <span class="ph" aria-hidden="true">기획 중</span>

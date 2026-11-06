@@ -22,6 +22,15 @@ nginx는 Geo 전용 Docker DNS 이름 `coolify-proxy`로 해석되는 앞단 프
 
 사용자 systemd의 PrivateTmp는 이 Ubuntu 호스트에서 별도 사용자 네임스페이스/AppArmor 경계로 rootless Docker 소켓 연결을 막으므로 사용하지 않는다. 대신 mode700의 전용 runtime-data/tmp를 TMPDIR로 지정하고 NoNewPrivileges·작업자 인증·비공개 바인딩·자원 제한은 유지한다.
 
+## 주소·코드 연계 (작업자)
+
+nginx는 `/api/link/`의 즉시 변환·조회·경계 경로(resolve·boundary·references/update는 POST, capabilities·regions·references는 GET)만 작업자로 넘기고 접속자별 초당 5건(버스트 20)으로 제한한다. 작업자 미들웨어도 같은 목록만 받는다. CSV·XLSX 업로드·일괄 작업 경로는 공개하지 않는다(MCP도 공개 모드에서는 일괄 작업·파일 도구를 등록하지 않는다).
+
+작업자에 필요한 것:
+- 기준 사전: 작업자 작업 디렉터리의 `.data/reference/link`(또는 `LINK_REFERENCE_DIR`). 처음 한 번 `npm run link:reference`·`npm run link:administrative`로 받는다. 이후 갱신은 /link/reference 화면의 업데이트(한국 날짜 하루 한 번, 같은 날 요청은 공유).
+- VWorld 키: 작업자 환경변수 `VWORLD_KEY`(지오코더·검색 API). 경계 SHP(2D 데이터 API)는 키에 등록한 서비스 URL을 `VWORLD_DOMAIN`에 글자 그대로 넣는다. 키가 없으면 위치·우편번호·경계는 설정 필요로 표시되고 코드·지번주소 변환은 그대로 된다.
+- 외부 원천을 부르는 조회(위치·우편번호·경계, 도로명주소)는 접속자(X-Real-IP)별 하루 2,000줄(작업자 메모리 기록, 재시작 시 초기화). 사전만 쓰는 변환은 세지 않는다.
+
 ## 검증된 프록시 설정의 배포 경로
 
 Coolify compose의 두 Nginx 설정 bind는 파일별 공개 환경변수 `GEO_PUBLIC_NGINX_CONF`와 `GEO_WORKER_PROXY_CONF`를 사용한다. 미설정·빈 값은 각각 기존 canonical deploy 디렉터리의 원래 파일을 사용한다. 데이터와 비공개 작업자 키의 읽기 전용 bind는 그대로이며, 소스·데이터를 덮어쓰지 않는다.

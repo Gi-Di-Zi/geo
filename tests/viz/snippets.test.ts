@@ -1,14 +1,17 @@
 // 적용 코드(shared/snippets.ts)를 그대로 실행해 결과가 실제로 그려지는지 확인한다. 사이트 뷰어가 아니라 사용자가 붙여 넣을 코드를 검사한다.
 // 예시 결과(/data/…, /svc/…)가 있는 사이트(VIZ_TEST_URL)와 같은 출처에서 실행하고, 배경지도 자리(basemap·baseStyle·basemapTileUrl)는 흰 배경으로 채운다.
-// 지도 영역에 흰색이 아닌 픽셀이 있으면 그려진 것으로 본다. Cesium 지형은 색이 없으므로 .terrain 타일 응답으로 본다
+// 지도 영역에 흰색이 아닌 픽셀이 있으면 그려진 것으로 본다. Cesium 지형은 색이 없으므로 .terrain 타일 응답으로 본다.
+// 독립 HTML 지도(shared/standalone.ts)도 결과 zip과 같은 배치로 열어 같은 기준으로 본다 (라이브러리 묶음: scripts/standalone-lib.ts)
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
-import { chromium, type Browser } from '@playwright/test'
+import { chromium, type Browser, type Page } from '@playwright/test'
 import { usage } from '../../shared/snippets.ts'
+import { standalonePage } from '../../shared/standalone.ts'
+import type { StandaloneLib } from '../../shared/standalone.ts'
 import { viewers } from '../../shared/viewers.ts'
 import type { FormatSpec, Output, ViewerId } from '../../shared/types.ts'
 
@@ -24,7 +27,8 @@ for (const file of readdirSync(dir, { recursive: true, encoding: 'utf8' }).map(f
   specs.push(mod.default)
 }
 
-interface Case { name: string; viewer: ViewerId; o: Output; url: string; center: [number, number]; code: string }
+/** data = 결과 폴더 주소 (서버 결과면 빈 값) */
+interface Case { name: string; viewer: ViewerId; o: Output; url: string; data: string; center: [number, number]; zoom: number; code: string }
 
 /** 예시 레시피의 뷰어별 결과마다 사이트 코드 서랍과 같은 주소·시점으로 만든 적용 코드 */
 const cases: Case[] = specs.filter(s => !s.closed).flatMap(s => s.recipes.flatMap(r => viewers.flatMap(({ id: viewer }) => {
@@ -32,16 +36,29 @@ const cases: Case[] = specs.filter(s => !s.closed).flatMap(s => s.recipes.flatMa
   const o = m && 'output' in m ? r.outputs.find(x => x.id === m.output) : undefined
 
   if (!o) return []
-  const url = o.path.startsWith('/') ? base + o.path : `${base}/data/${s.category}/${s.id}/${r.id}/${o.path}`
+  const data = o.path.startsWith('/') ? '' : `${base}/data/${s.category}/${s.id}/${r.id}/`
+  const url = data ? data + o.path : base + o.path
 
   const view = r.view ?? s.view
 
-  return [{ name: `${viewer} ${o.kind} ${s.category}/${s.id}/${r.id}`, viewer, o, url, center: view.center, code: usage(viewer, o, url, view).code }]
+  return [{ name: `${viewer} ${o.kind} ${s.category}/${s.id}/${r.id}`, viewer, o, url, data, center: view.center, zoom: view.zoom, code: usage(viewer, o, url, view).code }]
 })))
 
 test('적용 코드에 빈 값(undefined·NaN·빈 좌표)이 끼지 않는다', () => {
   // data: undefined는 deck.gl TileLayer 공식 예제의 의도된 값
   const bad = cases.flatMap(c => (/undefined|NaN|fromDegrees\(\)|position: null/.test(c.code.replaceAll('data: undefined', '')) ? [c.name] : []))
+
+  assert.deepEqual(bad, [])
+})
+
+test('독립 HTML 지도: 모든 파일 결과의 데이터 주소가 페이지 기준(DATA)으로 바뀌고 자리 표시가 남지 않는다', () => {
+  const lib: StandaloneLib = { imports: {}, files: {}, versions: { cesium: '1.0.0' } }
+
+  const bad = cases.filter(c => c.data).flatMap(c => {
+    const html = standalonePage(c.viewer, c.o, { center: c.center, zoom: c.zoom }, lib, c.name)
+
+    return html.includes('__GEO_DATA__') || !html.includes('DATA + "') ? [c.name] : []
+  })
 
   assert.deepEqual(bad, [])
 })
@@ -99,14 +116,48 @@ const page = (bundle: string) => `<!doctype html><html><head><meta charset="utf-
 <link rel="stylesheet" href="/cesium/Widgets/widgets.css"><script>window.CESIUM_BASE_URL = '/cesium/'</script>
 </head><body><div id="map"></div><script type="module">${bundle.replaceAll('</script', '<\\/script')}</script></body></html>`
 
-async function render(browser: Browser, c: Case) {
+/** 열 페이지 준비: 경로를 가로채고 열 주소를 준다 (실패면 이유) */
+type Stage = (tab: Page) => Promise<string | Error>
+
+/** 적용 코드: 배경지도 자리를 흰 배경으로 채워 esbuild로 한 덩어리 */
+const snippetStage = (c: Case): Stage => async tab => {
   const out = await build({
     stdin: { contents: `${prelude[c.viewer]}${c.code}${postlude[c.viewer]}\nwindow.__done = true`, resolveDir: root, loader: 'ts' },
     bundle: true, format: 'esm', write: false, platform: 'browser', target: 'es2022', logLevel: 'silent',
     define: { 'process.env.NODE_ENV': '"production"' },
   }).catch((e: Error) => e)
 
-  if (out instanceof Error) return { faults: [`빌드 실패: ${out.message.split('\n')[1] ?? out.message}`], inked: 0, terrain: 0, missing: [] }
+  if (out instanceof Error) return new Error(`빌드 실패: ${out.message.split('\n')[1] ?? out.message}`)
+  await tab.route(`${base}/__snippet`, r => r.fulfill({ contentType: 'text/html', body: page(out.outputFiles[0].text) }))
+  // MapLibre 6 워커: 번들러가 결과 옆에 내보내는 파일 (esbuild 한 덩어리 번들에는 없음)
+  await tab.route(`${base}/maplibre-gl-worker.mjs*`, r => r.fulfill({ contentType: 'text/javascript', path: join(root, 'node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs') }))
+
+  return `${base}/__snippet`
+}
+
+const WHITE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC', 'base64')
+const HIDE = '<style>html,body{background:#fff}.maplibregl-ctrl,.ol-control,.ol-attribution,.cesium-viewer-bottom,.cesium-viewer-toolbar,.cesium-viewer-animationContainer,.cesium-viewer-timelineContainer,.cesium-viewer-fullscreenContainer{display:none!important}</style>'
+
+/** 독립 HTML 지도: 결과 zip과 같은 배치(index.html · lib/ · data/)를 사이트 예시 결과로. 배경지도(OSM)는 흰 타일로 바꿔 데이터만 색이 남게 */
+const siteStage = (c: Case, lib: StandaloneLib): Stage => async tab => {
+  const at = `${base}/__site/`
+
+  const html = standalonePage(c.viewer, c.o, { center: c.center, zoom: c.zoom }, lib, c.name)
+    .replace('</head>', `${HIDE}</head>`).replace(/\n<\/script>\n<\/body>/, `${postlude[c.viewer]}\nwindow.__done = true\n</script>\n</body>`)
+
+  await tab.route('https://tile.openstreetmap.org/**', r => r.fulfill({ contentType: 'image/png', body: WHITE_PNG }))
+  await tab.route(`${at}index.html`, r => r.fulfill({ contentType: 'text/html', body: html }))
+  await tab.route(`${at}lib/**`, r => {
+    const file = join(root, 'server/assets/standalone', c.viewer, new URL(r.request().url()).pathname.split('/lib/')[1] ?? '')
+
+    return existsSync(file) ? r.fulfill({ path: file }) : r.fulfill({ status: 404 })
+  })
+  await tab.route(`${at}data/**`, async r => r.fulfill({ response: await r.fetch({ url: c.data + r.request().url().slice(`${at}data/`.length) }) }))
+
+  return `${at}index.html`
+}
+
+async function render(browser: Browser, stage: Stage) {
   const tab = await browser.newPage({ viewport: { width: 800, height: 600 } })
   const faults: string[] = []
   const missing: string[] = []
@@ -124,13 +175,15 @@ async function render(browser: Browser, c: Case) {
 
     if (r.status() >= 400) missing.push(`${r.status()} ${r.url().replace(base, '')}`)
   })
-  await tab.route(`${base}/__snippet`, r => r.fulfill({ contentType: 'text/html', body: page(out.outputFiles[0].text) }))
-  // MapLibre 6 워커: 번들러가 결과 옆에 내보내는 파일 (esbuild 한 덩어리 번들에는 없음)
-  await tab.route(`${base}/maplibre-gl-worker.mjs*`, r => r.fulfill({ contentType: 'text/javascript', path: join(root, 'node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs') }))
+  const open = await stage(tab)
+
+  if (open instanceof Error) { await tab.close();
+
+ return { faults: [open.message], inked: 0, terrain: 0, missing: [] } }
 
   try {
     // load는 코드의 최상위 await(타일셋·지형 읽기)까지 기다린다 → 응답 시작만 보고 끝남은 __done으로 확인
-    await tab.goto(`${base}/__snippet`, { waitUntil: 'commit' }).catch((e: Error) => faults.push(`페이지 열기 실패: ${e.message.split('\n')[0]}`))
+    await tab.goto(open, { waitUntil: 'commit' }).catch((e: Error) => faults.push(`페이지 열기 실패: ${e.message.split('\n')[0]}`))
     await tab.waitForFunction(() => '__done' in window, null, { timeout: 30_000 }).catch(() => faults.push('코드가 30초 안에 끝나지 않음'))
 
     for (let quiet = 0, t = 0; quiet < 3 && t < 40; t++) { await tab.waitForTimeout(500); quiet = inflight > 0 ? 0 : quiet + 1 }
@@ -163,23 +216,17 @@ async function render(browser: Browser, c: Case) {
   } finally { await tab.close() }
 }
 
-test('적용 코드를 그대로 실행하면 결과가 그려진다 (뷰어×결과 종류마다 한 예시)', { timeout: 600_000 }, async t => {
-  const browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'], ...(process.env.VIZ_BROWSER_PATH ? { executablePath: process.env.VIZ_BROWSER_PATH } : { channel: 'chrome' }) })
-  const seen = new Set<string>()
+const launch = () => chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'], ...(process.env.VIZ_BROWSER_PATH ? { executablePath: process.env.VIZ_BROWSER_PATH } : { channel: 'chrome' }) })
+
+/** 사례마다 열어 그려졌는지·오류를 보고 실패 목록 */
+async function check(t: test.TestContext, runs: Case[], stageOf: (c: Case) => Stage) {
+  const browser = await launch()
   const failed: string[] = []
 
   t.after(() => browser.close())
-  const once = (list: Case[], key: (c: Case) => string) => list.filter(c => !seen.has(key(c)) && !!seen.add(key(c)))
-
-  // 타일 파일은 최대 줌보다 2단계 더 확대해도 비지 않아야 한다 (없는 타일을 요청하지 않고 최대 줌 타일을 확대). 위치 = 예시 시점 가운데.
-  // 최대 줌이 높은(19) 서버 타일은 그 위로 확대할 일이 드물고, 화면이 수십 m라 점 데이터는 원래 비어 보일 수 있어 제외
-  const zoomed = once(cases.filter(c => ['mvt', 'xyz-raster', 'terrain-rgb'].includes(c.o.kind) && c.o.maxzoom !== undefined && c.o.maxzoom <= 16 && !c.o.path.startsWith('/')), c => `확대 ${c.viewer}:${c.o.kind}`)
-    .map(c => ({ ...c, name: `${c.name} (최대 줌+2 확대)`, code: usage(c.viewer, c.o, c.url, { center: c.center, zoom: (c.o.maxzoom ?? 0) + 2 }).code }))
-
-  const runs = [...once(cases, c => `${c.viewer}:${c.o.kind}`), ...zoomed]
 
   for (const c of runs) {
-    const r = await render(browser, c)
+    const r = await render(browser, stageOf(c))
     // 배경이 흰색 → 데이터가 아니면 칠해질 것이 없다. 약 100px(0.02%)이면 그려진 것
     const drawn = c.o.kind === 'quantized-mesh' ? r.terrain > 0 : r.inked > 0.0002
 
@@ -188,5 +235,23 @@ test('적용 코드를 그대로 실행하면 결과가 그려진다 (뷰어×�
     if (!drawn || r.faults.length) failed.push(`${c.name}${drawn ? '' : ' — 그려지지 않음'}${r.faults.length ? ` — ${r.faults[0].slice(0, 160)}` : ''}`)
   }
 
-  assert.deepEqual(failed, [])
+  return failed
+}
+
+/** 같은 열쇠(뷰어:결과 종류)는 한 번만 */
+const once = (list: Case[], key: (c: Case) => string, seen = new Set<string>()) => list.filter(c => !seen.has(key(c)) && !!seen.add(key(c)))
+
+test('적용 코드를 그대로 실행하면 결과가 그려진다 (뷰어×결과 종류마다 한 예시)', { timeout: 600_000 }, async t => {
+  // 타일 파일은 최대 줌보다 2단계 더 확대해도 비지 않아야 한다 (없는 타일을 요청하지 않고 최대 줌 타일을 확대). 위치 = 예시 시점 가운데.
+  // 최대 줌이 높은(19) 서버 타일은 그 위로 확대할 일이 드물고, 화면이 수십 m라 점 데이터는 원래 비어 보일 수 있어 제외
+  const zoomed = once(cases.filter(c => ['mvt', 'xyz-raster', 'terrain-rgb'].includes(c.o.kind) && c.o.maxzoom !== undefined && c.o.maxzoom <= 16 && c.data), c => `${c.viewer}:${c.o.kind}`)
+    .map(c => ({ ...c, name: `${c.name} (최대 줌+2 확대)`, code: usage(c.viewer, c.o, c.url, { center: c.center, zoom: (c.o.maxzoom ?? 0) + 2 }).code }))
+
+  assert.deepEqual(await check(t, [...once(cases, c => `${c.viewer}:${c.o.kind}`), ...zoomed], snippetStage), [])
+})
+
+test('독립 HTML 지도(index.html·lib·data)를 열면 결과가 그려진다 (뷰어×파일 결과 종류마다 한 예시)', { timeout: 600_000 }, async t => {
+  const lib: StandaloneLib = JSON.parse(readFileSync(join(root, 'server/assets/standalone/manifest.json'), 'utf8'))
+
+  assert.deepEqual(await check(t, once(cases.filter(c => c.data), c => `${c.viewer}:${c.o.kind}`), c => siteStage(c, lib)), [])
 })

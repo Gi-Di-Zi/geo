@@ -5,7 +5,7 @@
 import { noteOf } from './catalog/delivery.ts'
 import { fileUploadRecipes, publishesService, SERVICE_HOURS } from './conversion.ts'
 import { kindLabels, viewerKinds, viewers } from './viewers.ts'
-import type { FormatSpec, Output, OutputKind, Priority, Recipe, ViewerId } from './types.ts'
+import type { Form, FormatSpec, Output, OutputKind, Priority, Recipe, ViewerId } from './types.ts'
 
 export type Delivery = 'file' | 'service'
 
@@ -13,6 +13,12 @@ export type Delivery = 'file' | 'service'
 export const deliveries: { id: Delivery; title: string; text: string }[] = [
   { id: 'file', title: '실제 웹 프로젝트에서 사용할 수 있는 공간데이터 파일 생성', text: '변환된 결과 파일을 다운로드하고 자신의 웹 서버 또는 애플리케이션에서 사용할 수 있습니다.' },
   { id: 'service', title: `${SERVICE_HOURS}시간 임시 공간 서비스 — 실제 조회·연동 테스트`, text: `WMS·WFS 등 공간 서비스의 실제 응답과 웹 지도 연동을 확인하는 용도입니다. 발행 완료 후 ${SERVICE_HOURS}시간이 지나면 자동 만료됩니다.` },
+]
+
+/** 파일 방식의 최종본 형태. 같은 변환 결과로 둘 다 받을 수 있고, 고른 쪽을 먼저 보여 준다 */
+export const forms: { id: Form; title: string; text: string }[] = [
+  { id: 'files', title: '결과 파일 + 적용 코드', text: '이미 있는 웹 프로젝트에 결과 파일을 올리고, 라이브러리별 코드를 붙여 씁니다.' },
+  { id: 'html', title: '바로 열리는 HTML 지도', text: '결과 파일과 지도 페이지(index.html)·라이브러리를 한 폴더로 받습니다. 정적 호스팅에 폴더째 올리면 그대로 열립니다.' },
 ]
 
 export const priorities: { id: Priority; name: string; text: string }[] = [
@@ -30,6 +36,8 @@ export interface Intent {
   priority?: Priority
   output?: OutputKind
   delivery?: Delivery
+  /** 파일 방식의 최종본 형태 (서비스 방식에는 해당 없음) */
+  form?: Form
 }
 
 /** 파일 특성 (shared/sniff.ts): 크기, 머리글로 확인한 피처·점 수, 좌표계 입력 필요, 변환이 실패할 이유 */
@@ -71,7 +79,7 @@ export type Size = 'small' | 'medium' | 'large' | 'unknown'
 
 export interface Recommendation {
   format: string
-  intent: { viewer: ViewerId | null; priority: Priority; output: OutputKind | null; delivery: Delivery }
+  intent: { viewer: ViewerId | null; priority: Priority; output: OutputKind | null; delivery: Delivery; form: Form }
   size: Size
   /** 이 실행 환경에서 서비스 발행 가능 여부 */
   service: { enabled: boolean; hours: number }
@@ -294,14 +302,15 @@ function rank(spec: FormatSpec, recipes: Recipe[], intent: Intent, priority: Pri
 }
 
 /** 바깥 입력(도구 인자·폼 필드)의 목적 값 확인. 'auto'·빈 값 = 지정 안 함. 모르는 값이면 null */
-export function readIntent(raw: { viewer?: string; priority?: string; output?: string; delivery?: string }): Intent | null {
+export function readIntent(raw: { viewer?: string; priority?: string; output?: string; delivery?: string; form?: string }): Intent | null {
   const pick = (v: string | undefined) => (v && v !== 'auto' ? v : undefined)
   const viewer = viewers.find(x => x.id === pick(raw.viewer))?.id
   const priority = priorities.find(p => p.id === pick(raw.priority))?.id
   const output = outputKinds.find(k => k === pick(raw.output))
   const delivery = deliveries.find(d => d.id === pick(raw.delivery))?.id
+  const form = forms.find(f => f.id === pick(raw.form))?.id
 
-  if ((pick(raw.viewer) && !viewer) || (pick(raw.priority) && !priority) || (pick(raw.output) && !output) || (pick(raw.delivery) && !delivery)) return null
+  if ((pick(raw.viewer) && !viewer) || (pick(raw.priority) && !priority) || (pick(raw.output) && !output) || (pick(raw.delivery) && !delivery) || (pick(raw.form) && !form)) return null
   const intent: Intent = {}
 
   if (viewer) intent.viewer = viewer
@@ -311,6 +320,8 @@ export function readIntent(raw: { viewer?: string; priority?: string; output?: s
   if (output) intent.output = output
 
   if (delivery) intent.delivery = delivery
+
+  if (form) intent.form = form
 
   return intent
 }
@@ -363,7 +374,7 @@ export function recommend(spec: FormatSpec, intent: Intent, facts: DataFacts = {
 
   return {
     format: `${spec.category}/${spec.id}`,
-    intent: { viewer: intent.viewer ?? null, priority, output: intent.output ?? null, delivery },
+    intent: { viewer: intent.viewer ?? null, priority, output: intent.output ?? null, delivery, form: delivery === 'file' ? intent.form ?? 'files' : 'files' },
     size,
     service: { enabled: service, hours: SERVICE_HOURS },
     recommended: top ?? null,

@@ -11,7 +11,7 @@ const examples = [
 ]
 const launch = () => chromium.launch({ headless: true, ...(process.env.VIZ_BROWSER_PATH ? { executablePath: process.env.VIZ_BROWSER_PATH } : { channel: 'chrome' }) })
 
-test('홈·시각화 탐색은 데스크톱과 모바일에서 대표 예시·개발 상태를 구분한다', { timeout: 60_000 }, async t => {
+test('홈·시각화 탐색은 데스크톱과 모바일에서 대표 예시와 함께 쓰는 도구를 보여 준다', { timeout: 60_000 }, async t => {
   const browser = await launch(); t.after(() => browser.close())
   const page = await browser.newPage()
   const faults: string[] = []
@@ -28,12 +28,13 @@ test('홈·시각화 탐색은 데스크톱과 모바일에서 대표 예시·�
         await expect(link.locator('img')).toBeVisible()
         await expect.poll(() => link.locator('img').evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
       }
-      await expect(page.locator('.flow-bar').getByRole('link', { name: /국내 주소·코드 연계 도구/ })).toContainText('개발 중')
+      // 주소·코드 연계는 정식 기능 (개발 중 표시 없음)
+      await expect(page.locator('.flow-bar').getByRole('link', { name: /국내 주소·코드 연계 도구/ })).not.toContainText('개발 중')
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${path}: ${width}px 가로 넘침`)
     }
   }
   await page.goto(base)
-  await expect(page.getByRole('region', { name: '개발 중인 확장 기능' })).toContainText('자료·외부 API 검증 진행 중')
+  await expect(page.getByRole('region', { name: '함께 쓰는 도구' })).toContainText('국내 주소·코드 연계 도구')
   await page.getByRole('navigation', { name: '시작', exact: true }).getByRole('link', { name: '대표 예시 3개' }).click()
   await expect(page).toHaveURL(base + '/viz#examples')
   await expect(page.getByRole('heading', { name: '대표 예시로 시작하기' })).toBeInViewport()
@@ -61,11 +62,10 @@ test('기존 유형 선택과 대표 예시의 수집·전처리·변환·결과
   }
   assert.equal((await page.goto(base + '/link'))?.status(), 200)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  await expect(page.getByRole('note')).toContainText('개발 중인 기능입니다.')
-  await expect(page).toHaveTitle(/개발 중/)
+  await expect(page).not.toHaveTitle(/개발 중/)
   assert.equal((await page.goto(base + '/link/reference'))?.status(), 200)
-  await expect(page.locator('header .eyebrow')).toContainText('개발 중')
-  await expect(page).toHaveTitle(/개발 중/)
+  await expect(page.locator('header .eyebrow')).not.toContainText('개발 중')
+  await expect(page).not.toHaveTitle(/개발 중/)
 })
 
 test('프로덕션 MCP 리소스에 설치 SDK가 포함된다 (외부 자산 경로 회귀)', async () => {

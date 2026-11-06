@@ -31,22 +31,26 @@ async function storedBytes(directory: string): Promise<number> {
 /** 공개 배포에서 접속자(IP)마다 하루에 올릴 수 있는 양. 한 접속자가 전체 저장 공간(10GiB)을 채우지 못하게 한다 */
 export const DAILY_UPLOAD_BYTES = 1024 ** 3
 
-const usedToday = new Map<string, number>()
-let today = ''
+/** 접속자별 하루(UTC) 사용량: 한도 안이면 기록하고 true. ponytail: 메모리 기록 — 작업자를 다시 시작하면 초기화, 재시작이 잦아지면 파일에 기록 */
+export function dailyCounter(limit: number) {
+  const used = new Map<string, number>()
+  let today = ''
 
-/** 하루(UTC) 한도 안이면 기록하고 true. ponytail: 메모리 기록 — 작업자를 다시 시작하면 초기화, 재시작이 잦아지면 파일에 기록 */
-export function chargeDaily(client: string, bytes: number, now = Date.now()) {
-  const day = new Date(now).toISOString().slice(0, 10)
+  return (client: string, amount: number, now = Date.now()) => {
+    const day = new Date(now).toISOString().slice(0, 10)
 
-  if (day !== today) { usedToday.clear(); today = day }
+    if (day !== today) { used.clear(); today = day }
 
-  const total = (usedToday.get(client) ?? 0) + bytes
+    const total = (used.get(client) ?? 0) + amount
 
-  if (total > DAILY_UPLOAD_BYTES) return false
-  usedToday.set(client, total)
+    if (total > limit) return false
+    used.set(client, total)
 
-  return true
+    return true
+  }
 }
+
+export const chargeDaily = dailyCounter(DAILY_UPLOAD_BYTES)
 
 /** 공개 배포의 접속자별 업로드 한도. 접속자 = 전용 프록시가 넣는 X-Real-IP (작업자는 그 프록시의 요청만 받는다) */
 export function chargeUpload(event: H3Event, bytes: number) {

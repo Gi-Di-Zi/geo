@@ -16,6 +16,8 @@ export const linkOptionsSchema = z.object({
   expandCandidates: z.boolean().default(false),
   selections: z.record(z.string(), z.string()).optional(),
   conversionSelections: z.partialRecord(z.enum(linkConversionKeys), z.record(z.string(), z.string())).optional(),
+  // 전체 결과(target=all)에서 외부 원천(VWorld: 위치·우편번호·도로명주소·행정동 역조회)을 부를지. false = 사전만 → 한 번에 200줄, 하루 조회 한도에 세지 않음
+  lookups: z.boolean().default(true),
 }).strict()
 export type LinkOptions = z.infer<typeof linkOptionsSchema>
 export const defaultOptions: LinkOptions = linkOptionsSchema.parse({})

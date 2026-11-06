@@ -158,6 +158,9 @@ test('바깥 입력 확인: auto = 미지정, 모르는 값 = null', () => {
   assert.deepEqual(readIntent({ viewer: 'auto', priority: 'large_data', output: 'auto' }), { priority: 'large_data' })
   assert.equal(readIntent({ viewer: 'leaflet' }), null)
   assert.equal(readIntent({ output: 'wms' }), null)
+  // 최종본 형태: 결과 파일 + 적용 코드(files) / 독립 HTML 지도(html)
+  assert.deepEqual(readIntent({ form: 'html' }), { form: 'html' })
+  assert.equal(readIntent({ form: 'zip' }), null)
 })
 
 test('LAS 머리글: 점 수·RGB·좌표계 기록 유무 (좌표계 없으면 변환 전에 막음)', async t => {

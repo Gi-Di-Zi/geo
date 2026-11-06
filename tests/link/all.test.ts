@@ -81,9 +81,13 @@ test('법정동 후보 선택을 공통 적용하고 행정동 복수 관계 선
   assert.equal(selected.rows[0]?.output.pnu, '1111010100100010000')
   assert.equal(selected.rows[0]?.output.legal_code, '1111010100')
   const multiple: AdministrativeSnapshot = { ...administrative, regions: [...administrative.regions, { ...administrative.regions[0]!, code: '1111051600', name: '시험동', fullName: '서울특별시 종로구 시험동' }], relations: [...administrative.relations, { ...administrative.relations[0]!, administrativeCode: '1111051600' }] }
+  // 필지 위치를 역조회한 행정동이 후보 중에 있으면 그것으로, 위치가 없으면 후보 유지
   const batch = await resolveAllRows([row('1111010100100010000')], { inputType: 'pnu_legal' }, fixture, multiple, provider)
-  assert.equal(batch.rows[0]?.conversions?.administrative_region.status, 'needs_selection')
+  assert.equal(batch.rows[0]?.conversions?.administrative_region.status, 'ok')
+  assert.equal(batch.rows[0]?.output.administrative_code, '1111051500')
   assert.equal(batch.rows[0]?.conversions?.pnu.status, 'ok')
+  const unplaced = await resolveAllRows([row('1111010100100010000')], { inputType: 'pnu_legal' }, fixture, multiple, { ...provider, forwardLocation: async () => { throw new LocationError('GEOCODER_NO_MATCH', '없음', 'not_found') } })
+  assert.equal(unplaced.rows[0]?.conversions?.administrative_region.status, 'needs_selection')
   const resolved = await resolveAllRows([row('1111010100100010000')], { inputType: 'pnu_legal', conversionSelections: { administrative_region: { '1': '1111010100|1111051600' } } }, fixture, multiple, provider)
   assert.equal(resolved.rows[0]?.output.administrative_code, '1111051600')
   assert.equal(resolved.rows[0]?.output.pnu, '1111010100100010000')
@@ -122,6 +126,26 @@ test('우편번호는 같은 필지·위치일 때만 정하고 구역·다른 �
   const roadFound = { ...found, roadAddress: '서울특별시 종로구 사직로 9 (행촌동,대신중고등학교)', postcode: '03029' }
   const road = await resolveAllRows([row('서울특별시 종로구 사직로 9'), row('서울특별시 종로구 사직로 10', '2')], { inputType: 'address' }, fixture, administrative, { ...provider, reverseLocation: async () => roadFound })
   assert.equal(road.rows[0]!.conversions!.postcode.value, '03029'); assert.equal(road.rows[1]!.conversions!.postcode.errors[0]?.code, 'POSTCODE_ADDRESS_MISMATCH')
+})
+
+test('도로명주소는 원천의 건물 대표지번 PNU·건물 위치·우편번호로 정하고, 다른 주소·띄어쓰기 경계 밖 일치는 쓰지 않는다', async () => {
+  const searchRoad = async () => [{ pnu: '1111011900100010000', road: '서울특별시 종로구 세종대로 175 (세종로)', parcel: '세종로 1', building: '', postcode: '03172', lon: 126.9769, lat: 37.572, checkedAt: '2026-11-06T00:00:00Z' }]
+  const batch = await resolveAllRows([row('서울 종로구 세종대로175'), row('세종대로 175', '2'), row('서울특별시 종로구 세종대로 1', '3'), row('대로 175', '4')], {}, fixture, administrative, { ...provider, searchRoad })
+  const [full, short, other, partial] = batch.rows
+  assert.equal(full!.inputType, 'address'); assert.equal(full!.value, '서울 종로구 세종대로175')
+  assert.equal(full!.output.pnu, '1111011900100010000'); assert.equal(full!.output.postcode, '03172'); assert.equal(full!.output.location_method, 'building_point')
+  assert.equal(short!.output.pnu, '1111011900100010000'); assert.match(short!.warnings.join(), /시도·시군구를 도로명주소 검색 결과에서 채웠습니다/)
+  assert.notEqual(other!.output.pnu, '1111011900100010000'); assert.notEqual(partial!.output.pnu, '1111011900100010000')
+})
+
+test('외부 조회 끔(lookups=false): 위치 원천을 부르지 않고 사전 결과만, 한 번에 200줄까지', async () => {
+  let calls = 0
+  const counting = { forwardLocation: async () => { calls++; return point }, reverseLocation: async () => { calls++; return found } }
+  const batch = await resolveAllRows(Array.from({ length: 30 }, (_, index) => row('1111010100100010000', String(index))), { inputType: 'pnu_legal', lookups: false }, fixture, administrative, counting)
+  assert.equal(calls, 0)
+  assert.equal(batch.rows[0]!.output.address, '서울특별시 종로구 청운동 1'); assert.equal(batch.rows[0]!.output.administrative_code, '1111051500')
+  assert.equal(batch.rows[0]!.conversions!.location.errors[0]?.code, 'LOOKUP_OFF')
+  await assert.rejects(() => resolveAllRows(Array.from({ length: 21 }, (_, index) => row('11', String(index))), { inputType: 'pnu_legal' }, fixture, administrative, counting), { code: 'ALL_ROW_LIMIT' })
 })
 
 test('입력 순서·중복·실패 행을 보존하고 전체 한도와 직접 실행 경계를 검사한다', async () => {

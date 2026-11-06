@@ -35,7 +35,8 @@ test('소량과 작업 결과 의미가 같고 원본·빈 행·중복·실패�
   assert.ok(info.result!.rows.every(row => row.parcel === 'not_checked'))
 })
 
-test('진행 중 열린 상태 파일은 완전한 이전 상태를 유지하고 새 조회는 완료 상태를 읽는다', async () => {
+// 열린 파일 위로 rename하는 보장은 POSIX 전용: Windows(Node fs)는 열린 파일을 바꾸지 못한다
+test('진행 중 열린 상태 파일은 완전한 이전 상태를 유지하고 새 조회는 완료 상태를 읽는다', { skip: process.platform === 'win32' && 'Windows는 열린 파일 위로 rename 불가' }, async () => {
   const job = await startLinkJob({ text: Array(450).fill(pnu).join('\n') }, owner)
   const descriptor = openSync(join(LINK_JOBS_DIR, job.id, 'job.json'), 'r')
 

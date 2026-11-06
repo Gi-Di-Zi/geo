@@ -8,7 +8,7 @@ import { downloadOf } from '#shared/catalog/delivery'
 import { recommend, SERVICE_OFF, viewerName, type Intent } from '#shared/recommend'
 import { sniff } from '#shared/sniff'
 import { kindCrs, kindHosting, usage } from '#shared/snippets'
-import type { Job, JobIntent, Output, Report } from '#shared/types'
+import type { Job, JobIntent, Output, Report, ViewerId } from '#shared/types'
 import { engineOutput, kindLabels, viewers } from '#shared/viewers'
 import { MAX_UPLOAD_BYTES, publishesService, SERVICE_HOURS } from '#shared/conversion'
 import type { BundleCheck } from './bundle-check'
@@ -167,6 +167,9 @@ export async function startJob(o: { format: string; name: string; ext: string; d
 
     if (intent.output) kept.output = intent.output
 
+    // 최종본 형태는 파일 방식에만 (서비스 결과는 이 서버가 응답하는 주소라 HTML 폴더로 줄 수 없다)
+    if (intent.form && way === 'file') kept.form = intent.form
+
     if (chosen.primary) kept.primary = chosen.primary.id
     const job: Job = { id, format: o.format, name: o.name.slice(0, 200), bytes, state: 'running', createdAt: new Date().toISOString(), method: recipe.id, intent: kept }
 
@@ -189,6 +192,14 @@ const checks = new Map<string, Promise<BundleCheck>>()
  * 작업 상태 + 결과. 파일 방식: 주력 결과물(대상 뷰어용)·내려받기·리소스 주소·적용 코드·호스팅 조건·결과 검사.
  * 서비스 방식: 서비스 주소·발행/만료 시각·남은 시간·상태 (만료 차단은 요청마다 server/middleware/service-gate.ts). origin = 이 서버의 바깥 주소
  */
+/** 뷰어가 그리는 결과: 대상 라이브러리면 그 주력 결과, 아니면 레시피의 뷰어별 결과. 적용 코드와 독립 HTML 지도가 같은 규칙 */
+export function viewerOutput(job: Job, viewer: ViewerId): Output | undefined {
+  const use = job.recipe?.viewers[viewer]
+  const pick = job.intent?.viewer === viewer && job.intent.primary ? job.intent.primary : use && 'output' in use ? use.output : undefined
+
+  return job.recipe?.outputs.find(o => o.id === pick)
+}
+
 export async function jobInfo(id: string, origin: string, now = Date.now()) {
   const dir = jobDir(id)
 
@@ -228,7 +239,7 @@ export async function jobInfo(id: string, origin: string, now = Date.now()) {
       id: o.id, label: o.label, kind: o.kind, kindLabel: kindLabels[o.kind], url: url(o), primary: o.id === primaryId, service: !d,
       // 서비스 주소는 만료되면 쓸 수 없다 → 화면이 복사·열기를 정상처럼 보이지 않게
       available: d ? true : live,
-      crs: kindCrs[o.kind], bounds: o.bounds ?? null, layer: o.layer ?? null, features: measured?.features ?? null,
+      crs: kindCrs[o.kind], bounds: o.bounds ?? null, layer: o.layer ?? null, features: measured?.features ?? null, minzoom: o.minzoom ?? null, maxzoom: o.maxzoom ?? null,
       ...(d && { download: `${origin}/api/jobs/${id}/download/${encodeURIComponent(o.id)}`, zip: d.zip, file: d.name, hosting: kindHosting[o.kind] }),
       ...(check && { check }),
     }
@@ -242,15 +253,14 @@ export async function jobInfo(id: string, origin: string, now = Date.now()) {
 
   if (primary?.check && !primary.check.ok) problems.push(...primary.check.problems)
 
-  // 적용 코드: 고른 뷰어면 그 뷰어 하나, 미지정이면 이 방식이 그리는 뷰어마다. 주소는 내려받아 올린 곳 주소로 바꾸면 그대로
-  const usages = job.state !== 'done' || !job.recipe ? [] : viewers.flatMap(v => {
-    const u = job.recipe?.viewers[v.id]
-    const pick = viewer === v.id && primaryId ? primaryId : u && 'output' in u ? u.output : undefined
-    const o = outputs.find(x => x.id === pick)
+  // 적용 코드: 고른 뷰어면 그 뷰어 하나, 미지정이면 이 방식이 그리는 뷰어마다. 주소는 내려받아 올린 곳 주소로 바꾸면 그대로.
+  // site = 같은 코드로 만든 독립 HTML 지도 폴더(zip) 내려받기 — 파일 결과만
+  const usages = job.state !== 'done' ? [] : viewers.flatMap(v => {
+    const o = viewerOutput(job, v.id)
 
     if (!o || (viewer && viewer !== v.id)) return []
 
-    return [{ viewer: v.id, name: v.name, output: o.id, ...usage(v.id, o, url(o), job.recipe?.view) }]
+    return [{ viewer: v.id, name: v.name, output: o.id, ...usage(v.id, o, url(o), job.recipe?.view), site: o.path.startsWith('/') ? null : `${origin}/api/jobs/${id}/site?viewer=${v.id}` }]
   })
 
   // 이 결과의 손실·배치 제약: 시작할 때와 같은 조건으로 다시 계산 (목적 없는 예전 작업은 기본 조건)
@@ -286,6 +296,8 @@ export async function jobInfo(id: string, origin: string, now = Date.now()) {
     limits,
     outputs: list,
     usages,
+    /** 독립 HTML 지도(결과 + index.html + 라이브러리 zip): 대상 라이브러리, 없으면 첫 뷰어. 최종본 형태 html이면 이것이 주 결과 */
+    site: usages.find(u => u.viewer === viewer)?.site ?? usages.find(u => u.site)?.site ?? null,
     /** 끝났지만 결과가 약속과 다름 (주력 결과물 없음·검사 실패) → 완료로 안내하지 않는다 */
     problems,
   }
