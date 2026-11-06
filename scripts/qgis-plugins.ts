@@ -1,7 +1,7 @@
 // QGIS 사용자 지정 플러그인 저장소: qgis/<플러그인>/를 zip으로 묶고 plugins.xml 하나로 목록 → server/assets/qgis/ (server/routes/qgis/[file].get.ts가 /qgis/plugins.xml로 제공.
 // 정적 폴더 public/qgis로 두면 안내 화면 /qgis와 경로가 겹친다)
 // QGIS: 플러그인 → 플러그인 관리 및 설치 → 설정 → 저장소 추가 → https://geospatial.kro.kr/qgis/plugins.xml
-// 설치(postinstall)·빌드(prebuild) 때 실행. 결과는 Git에 넣지 않는다. 직접 설치한 서버는 PUBLIC_URL로 내려받기 주소를 바꾼다
+// 설치(postinstall)·빌드(prebuild) 때 실행. 결과는 Git에 넣지 않는다. 내려받기 주소의 서버 자리(__GEO_ORIGIN__)는 응답할 때 그 서버 주소로 채운다
 import { copyFileSync, createWriteStream, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,7 +10,6 @@ import archiver from 'archiver'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const source = join(root, 'qgis')
 const out = join(root, 'server/assets/qgis')
-const site = (process.env.PUBLIC_URL || 'https://geospatial.kro.kr').replace(/\/$/, '')
 const today = new Date().toISOString().slice(0, 10)
 const cdata = (text: string) => `<![CDATA[${text.replaceAll(']]>', ']]]]><![CDATA[>')}]]>`
 const esc = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
@@ -60,7 +59,7 @@ for (const id of readdirSync(source).filter(name => !name.startsWith('.') && !na
     <file_name>${file}</file_name>
     <icon></icon>
     <author_name>${esc(m.author)}</author_name>
-    <download_url>${site}/qgis/${file}</download_url>
+    <download_url>__GEO_ORIGIN__/qgis/${file}</download_url>
     <uploaded_by>${esc(m.author)}</uploaded_by>
     <create_date>${today}</create_date>
     <update_date>${today}</update_date>

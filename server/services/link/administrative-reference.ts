@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { linkData } from './data-dir.ts'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { crc32, inflateRawSync } from 'node:zlib'
@@ -9,7 +10,7 @@ import { checkXlsxZip } from './files.ts'
 const BASE = 'https://www.mois.go.kr'
 export const ADMINISTRATIVE_LIST_URL = BASE + '/frt/bbs/type001/commonSelectBoardList.do?bbsId=BBSMSTR_000000000052&searchCnd=0&searchWrd=' + encodeURIComponent('행정기관')
 const MAX_BYTES = 10 * 1024 ** 2, MAX_EXPANDED = 40 * 1024 ** 2
-const rootDir = () => resolve(process.env.LINK_ADMINISTRATIVE_DIR || '.data/reference/link/administrative')
+const rootDir = () => resolve(process.env.LINK_ADMINISTRATIVE_DIR || linkData('reference/link/administrative'))
 const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex')
 const unavailable = (): AdministrativeSnapshot => ({ version: 'administrative-unavailable', available: false, source: '행정안전부 주민등록 행정기관 및 관할구역 현황', sourceUrl: ADMINISTRATIVE_LIST_URL,
   sourceDate: null, publishedAt: null, checkedAt: null, coverage: 'none', codeSystem: 'mois_administrative_region', codeLength: 10, regions: [], relations: [], warning: '행정동 기준 자료가 준비되지 않았습니다. npm run link:administrative로 수집하세요.' })

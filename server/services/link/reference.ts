@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { linkData } from './data-dir.ts'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { crc32, inflateRawSync } from 'node:zlib'
@@ -8,7 +9,7 @@ import { referenceMetadata } from '../../../shared/link/core.ts'
 export const REFERENCE_SOURCE_URL = 'https://www.code.go.kr/stdcode/regCodeL.do'
 const DOWNLOAD_URL = 'https://www.code.go.kr/etc/codeFullDown.do'
 const MAX_BYTES = 10 * 1024 ** 2
-const rootDir = () => resolve(process.env.LINK_REFERENCE_DIR || '.data/reference/link')
+const rootDir = () => resolve(process.env.LINK_REFERENCE_DIR || linkData('reference/link'))
 const sha = (data: string | Buffer) => createHash('sha256').update(data).digest('hex')
 const unavailable = (warning = '법정구역 사전 미설정. npm run link:reference -- --check로 공식 자료를 수집하세요.'): ReferenceSnapshot => ({
   version: 'unavailable', available: false, source: '행정안전부 행정표준코드관리시스템', sourceUrl: REFERENCE_SOURCE_URL,

@@ -138,5 +138,6 @@ for package in (geo_web_bridge, geo_address_link):
     plugin.unload()
 print('메뉴:', iface.menus)
 print('실패:', failed)
-app.exitQgis()
-sys.exit(1 if failed else 0)
+# QGIS 종료 처리(exitQgis)는 화면 없는 실행에서 0이 아닌 코드로 끝날 수 있다 → 결과를 낸 뒤 바로 끝낸다
+sys.stdout.flush()
+os._exit(1 if failed else 0)

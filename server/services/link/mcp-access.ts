@@ -1,11 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { linkData } from './data-dir.ts'
 import { join, resolve } from 'node:path'
 import { getHeader, setHeader } from 'h3'
 import type { H3Event } from 'h3'
 import { getLinkOwner, hashAccess, newAccessToken } from './access.ts'
 import { linkLimits, LinkServiceError } from './files.ts'
 
-const root = () => resolve(process.env.LINK_DATA_DIR || '.data/link', 'mcp-sessions')
+const root = () => resolve(process.env.LINK_DATA_DIR || linkData('link'), 'mcp-sessions')
 /** 도구 응답에 비밀을 넣지 않고 MCP 표준 세션 헤더로 작업 소유권을 이어간다. */
 export async function mcpLinkOwner(event: H3Event, initialize = false) {
   const session = getHeader(event, 'mcp-session-id')

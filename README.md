@@ -169,7 +169,9 @@ QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https:/
 | geo-web-bridge 웹 지도 변환 | 레이어(2D 벡터·래스터)를 대상 라이브러리·목적에 맞는 웹 결과로. 결과 파일 + 적용 코드 또는 바로 열리는 HTML 지도로 받고, 결과(GeoJSON·타일 폴더·COG)를 QGIS에 다시 불러와 확인. 레이어 좌표계를 그대로 보내 좌표계를 고를 일이 없음 |
 | geo-web-bridge 주소·코드 연계 | 속성 표의 PNU·법정동코드·행정동코드·지번주소·도로명주소 열을 주소·PNU·단계별 코드·행정동·우편번호·위치로 바꿔 새 레이어에 붙이고, 위치로 점 레이어도. 원본은 바꾸지 않음. 외부 조회를 끄면 사전만으로 200줄씩 한도 없이 |
 
-플러그인 원본은 [qgis/](qgis), 저장소(zip·plugins.xml)는 빌드 때 [scripts/qgis-plugins.ts](scripts/qgis-plugins.ts)가 만듭니다. 서버 칸에 직접 설치한 서버 주소를 넣으면 외부로 보낼 수 없는 자료도 같은 규칙으로 변환합니다.
+플러그인 없이도 [QGIS 연결 안내](https://geospatial.kro.kr/qgis)의 방법으로 결과 주소(GeoJSON·PMTiles·COG·타일·3D Tiles)와 예시 공간 서비스(WMS·WMTS·WFS·OGC API Features·벡터 타일)를 QGIS에 바로 엽니다(QGIS 3.44에서 확인).
+
+플러그인 원본은 [qgis/](qgis), 저장소(zip·plugins.xml)는 빌드 때 [scripts/qgis-plugins.ts](scripts/qgis-plugins.ts)가 만들고, plugins.xml의 내려받기 주소는 응답하는 서버 주소로 채웁니다. 서버 칸에 직접 설치한 서버 주소를 넣으면 외부로 보낼 수 없는 자료도 같은 규칙으로 변환합니다. 개발: `npm run qgis:dev`(이 PC의 QGIS에 바로가기로 연결·켜기·로컬 서버), `npm run test:qgis`(흐름 + 데스크톱 시험).
 
 <a id="deployment"></a>
 ## 배포 상태

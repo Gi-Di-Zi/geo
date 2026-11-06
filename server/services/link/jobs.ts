@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { linkData } from './data-dir.ts'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
@@ -12,7 +13,7 @@ import { exportBatch, LinkServiceError, linkLimits } from './files.ts'
 import { inputRows, linkId, linkInputSchema } from './service.ts'
 import { getReference } from './reference.ts'
 
-export const LINK_JOBS_DIR = resolve(process.env.LINK_DATA_DIR || '.data/link', 'jobs')
+export const LINK_JOBS_DIR = resolve(process.env.LINK_DATA_DIR || linkData('link'), 'jobs')
 const processId = randomUUID()
 const active = new Set<string>()
 const queue: Array<() => Promise<void>> = []

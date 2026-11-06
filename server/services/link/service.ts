@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { linkData } from './data-dir.ts'
 import { randomUUID } from 'node:crypto'
 import { join, resolve } from 'node:path'
 import { z } from 'zod'
@@ -17,7 +18,7 @@ import type { LinkAccess } from './access.ts'
 import { LinkServiceError, linkLimits, readInputFile, rowsFromBook, rowsFromText, selectedSheet } from './files.ts'
 import type { InputBook, FileSettings } from './files.ts'
 
-export const LINK_STAGE_DIR = resolve(process.env.LINK_DATA_DIR || '.data/link', 'stage')
+export const LINK_STAGE_DIR = resolve(process.env.LINK_DATA_DIR || linkData('link'), 'stage')
 export const linkInputSchema = z.object({
   rows: z.array(inputRowSchema).max(linkLimits.rows).optional(), text: z.string().max(linkLimits.uncompressedBytes).optional(),
   uploadId: z.string().uuid().optional(), uploadToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/).optional(),

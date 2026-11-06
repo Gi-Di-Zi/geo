@@ -27,9 +27,13 @@ nginx는 Geo 전용 Docker DNS 이름 `coolify-proxy`로 해석되는 앞단 프
 nginx는 `/api/link/`의 즉시 변환·조회·경계 경로(resolve·boundary·references/update는 POST, capabilities·regions·references는 GET)만 작업자로 넘기고 접속자별 초당 5건(버스트 20)으로 제한한다. 작업자 미들웨어도 같은 목록만 받는다. CSV·XLSX 업로드·일괄 작업 경로는 공개하지 않는다(MCP도 공개 모드에서는 일괄 작업·파일 도구를 등록하지 않는다).
 
 작업자에 필요한 것:
-- 기준 사전: 작업자 작업 디렉터리의 `.data/reference/link`(또는 `LINK_REFERENCE_DIR`). 처음 한 번 `npm run link:reference`·`npm run link:administrative`로 받는다. 이후 갱신은 /link/reference 화면의 업데이트(한국 날짜 하루 한 번, 같은 날 요청은 공유).
+- 기준 사전: `GEO_DATA_DIR`(업로드와 같은 데이터 폴더) 아래 `reference/link`. `LINK_REFERENCE_DIR`·`LINK_ADMINISTRATIVE_DIR`·`LINK_DATA_DIR`가 있으면 그쪽. 작업자가 뜰 때 사전이 없으면 공개 원천(행정표준코드관리시스템·행정안전부, 키 없음)에서 자동으로 받는다(server/plugins/link-reference.ts, 빈 폴더에서 약 2초). 끄려면 `LINK_REFERENCE_AUTOSTART=0`, 작업자 키 없는 단일 서버는 `=1`. 이후 갱신은 /link/reference 화면의 업데이트(한국 날짜 하루 한 번, 같은 날 요청은 공유).
 - VWorld 키: 작업자 환경변수 `VWORLD_KEY`(지오코더·검색 API). 경계 SHP(2D 데이터 API)는 키에 등록한 서비스 URL을 `VWORLD_DOMAIN`에 글자 그대로 넣는다. 키가 없으면 위치·우편번호·경계는 설정 필요로 표시되고 코드·지번주소 변환은 그대로 된다.
 - 외부 원천을 부르는 조회(위치·우편번호·경계, 도로명주소)는 접속자(X-Real-IP)별 하루 2,000줄(작업자 메모리 기록, 재시작 시 초기화). 사전만 쓰는 변환은 세지 않는다.
+
+## 공간 서비스 주소 (GeoServer)
+
+GeoServer는 능력 문서(GetCapabilities)와 OGC API 링크에 내부 경로(`http://<host>/geoserver/geo/…`)를 적는다. nginx가 이 응답의 주소를 공개 경로(`https://<host>/svc/geoserver/…`)로 바꿔 내보내고(sub_filter, 압축 없이 받음), OGC API Features의 시작 페이지·적합성·컬렉션 경로도 연다. 이것이 없으면 QGIS 같은 표준 클라이언트가 이어지는 요청(GetMap·GetFeature·GetTile)을 보내지 못한다. 사이트의 웹 뷰어는 주소를 직접 만들어 영향이 없다. 앱 앞단 경로는 `X-Forwarded-Proto: https`로 넘겨 앱이 만드는 절대 주소(QGIS plugins.xml 내려받기 등)가 https가 되게 한다.
 
 ## 검증된 프록시 설정의 배포 경로
 

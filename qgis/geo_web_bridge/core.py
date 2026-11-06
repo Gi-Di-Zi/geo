@@ -30,6 +30,7 @@ def safe_name(text):
 def export_layer(layer, folder, selected_only=False):
     """레이어 → 서버에 올릴 파일과 형식 id. 벡터 = GeoPackage(속성·좌표계 그대로), 래스터 = 원본 GeoTIFF 또는 GeoTIFF로 쓰기"""
     name = safe_name(layer.name())
+    os.makedirs(folder, exist_ok=True)
     if isinstance(layer, QgsVectorLayer):
         if not layer.isSpatial():
             raise ServerError('도형이 없는 표입니다. 주소·코드 연계 플러그인을 쓰세요.')

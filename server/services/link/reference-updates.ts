@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { linkData } from './data-dir.ts'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { z } from 'zod'
@@ -181,17 +182,17 @@ export function createReferenceUpdater(config: { directory: string; sources: Ref
   return { status, update: () => pending ||= run().finally(() => { pending = undefined }) }
 }
 
-const updater = createReferenceUpdater({ directory: resolve(process.env.LINK_REFERENCE_UPDATE_DIR || '.data/reference/link/updates'), sources: [
+const updater = createReferenceUpdater({ directory: resolve(process.env.LINK_REFERENCE_UPDATE_DIR || linkData('reference/link/updates')), sources: [
   { id: 'legal', label: '법정동 코드', info: referenceInfo, refresh: async force => {
     const parsed = refreshSchema.safeParse(await refreshReference(force))
 
     return parsed.success ? parsed.data : { state: 'failed' }
-  }, history: day => readHistory(join(resolve(process.env.LINK_REFERENCE_DIR || '.data/reference/link'), 'checks', day + '.json')) },
+  }, history: day => readHistory(join(resolve(process.env.LINK_REFERENCE_DIR || linkData('reference/link')), 'checks', day + '.json')) },
   { id: 'administrative', label: '행정동·법정동 관할 관계', info: administrativeInfo, refresh: async force => {
     const parsed = refreshSchema.safeParse(await refreshAdministrativeReference(force))
 
     return parsed.success ? parsed.data : { state: 'failed' }
-  }, history: day => readHistory(join(resolve(process.env.LINK_ADMINISTRATIVE_DIR || '.data/reference/link/administrative'), 'checks', day + '.json')) },
+  }, history: day => readHistory(join(resolve(process.env.LINK_ADMINISTRATIVE_DIR || linkData('reference/link/administrative')), 'checks', day + '.json')) },
 ] })
 
 export const referenceUpdateStatus = () => updater.status()

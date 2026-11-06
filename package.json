@@ -39,6 +39,8 @@
     "test:recommend": "node --test tests/viz/recommend.test.ts tests/viz/delivery.test.ts",
     "pretest:recommend": "npm run lint",
     "test:snippets": "node --test tests/viz/snippets.test.ts",
+    "test:qgis": "node scripts/test-qgis.ts",
+    "qgis:dev": "node scripts/qgis-dev.ts",
     "pretest:snippets": "npm run lint && node scripts/standalone-lib.ts",
     "pretest:reference-updates": "npm run lint",
     "pretest:link:unit": "npm run lint",
