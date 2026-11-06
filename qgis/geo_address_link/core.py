@@ -1,5 +1,6 @@
 # 주소·코드 연계 흐름 (화면 없음 → 시험 가능): 열 값 목록 → 서버 변환(POST /api/link/resolve, target=all) → 값마다 결과 → 새 레이어
 # 같은 값은 한 번만 묻는다. 코드는 문자열 열로 (앞자리 0·19자리 PNU가 숫자로 바뀌어 깨지지 않게)
+# 직접 검색(레이어 없이): 줄 목록 → 같은 변환, 결과는 패널에 보이고 원하면 점·필지 레이어로
 import json
 import re
 
@@ -8,6 +9,10 @@ from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsF
 
 from .client import ServerError, post_json
 
+SEARCH_LIMIT = 20
+# 직접 검색의 좌표 줄: "경도, 위도" (EPSG:4326, 소수점 필수 → 코드와 헷갈리지 않게)
+COORDINATE = re.compile(r'^\s*-?\d{1,3}\.\d+\s*,\s*-?\d{1,2}\.\d+\s*$')
+STATUS = {'ok': '정상', 'needs_selection': '후보 선택 필요', 'invalid': '형식 오류', 'not_found': '찾지 못함', 'unavailable': '이용 불가', 'empty': '값 없음', 'skipped': '처리 안 함'}
 INPUT_TYPES = [('auto', '자동 판별 (줄마다)'), ('pnu_legal', 'PNU·법정동코드'), ('administrative', '행정동코드'), ('address', '주소 (지번·도로명)'), ('geometry', '도형 위치 → 그 지점의 필지 (열 대신)')]
 
 # (열 이름 ≤ 10자: Shapefile로 저장해도 유지, 별칭, 결과 키, 종류)
@@ -50,8 +55,8 @@ GROUPS = [
     ('단계별 코드 (시도·시군구·읍면동·리)', ['g_sido_cd', 'g_sido_nm', 'g_sgg_cd', 'g_sgg_nm', 'g_emd_cd', 'g_emd_nm', 'g_ri_cd', 'g_ri_nm'], False),
     ('행정동', ['g_hjd_cd', 'g_hjd_nm'], False),
     ('우편번호·위치', ['g_zip', 'g_lon', 'g_lat'], True),
-    ('도로명주소·건물 유무 (도로명주소 건물)', ['g_road', 'g_bld', 'g_bld_n', 'g_bld_nm'], True),
-    ('필지 실재·토지 속성 (연속지적도·토지특성)', ['g_parcel', 'g_jimok', 'g_area', 'g_zone', 'g_use', 'g_price', 'g_lyear'], True),
+    ('도로명주소·건물 유무', ['g_road', 'g_bld', 'g_bld_n', 'g_bld_nm'], True),
+    ('필지 실재·토지 속성', ['g_parcel', 'g_jimok', 'g_area', 'g_zone', 'g_use', 'g_price', 'g_lyear'], True),
 ]
 # 필지 단위 결과(서버 options.details): 이 열 중 하나라도 고르면 묻는다 (필지마다 원천 3번 더)
 DETAIL_FIELDS = {'g_road', 'g_bld', 'g_bld_n', 'g_bld_nm', 'g_parcel', 'g_jimok', 'g_area', 'g_zone', 'g_use', 'g_price', 'g_lyear'}
@@ -98,6 +103,21 @@ def resolve(server, values, input_type='auto', lookups=True, report=lambda text,
         for value, row in zip(part, batch['rows']):
             results[value] = row
     return results, stopped
+
+
+def search(server, lines, lookups=True, report=lambda text, percent=None: None, canceled=lambda: False):
+    """직접 검색: 좌표 줄은 그 지점의 필지(location), 나머지는 자동 판별. 외부 조회를 켜면 필지 단위 결과까지. 돌려줌 {줄: 결과 행}"""
+    places = [v for v in lines if COORDINATE.match(v)]
+    if places and not lookups:
+        raise ServerError('좌표로 찾으려면 외부 조회를 켜세요.')
+    results = {}
+    for values, kind in (([v for v in lines if v not in places], 'auto'), (places, 'location')):
+        if values:
+            found, stopped = resolve(server, values, kind, lookups, report, canceled, details=lookups)
+            if stopped:
+                raise ServerError(stopped)
+            results.update(found)
+    return results
 
 
 def row_values(row):

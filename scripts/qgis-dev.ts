@@ -1,5 +1,6 @@
 // 이 PC의 QGIS에 저장소의 플러그인(qgis/)을 연결한다 (개발·시험용). 프로필 plugins 폴더에 바로가기(Windows junction·그 밖 symlink)를 만들어
-// 저장소에서 고친 코드가 QGIS를 다시 켜면 바로 반영된다. 두 플러그인을 켜고 서버 칸을 로컬 서버로 맞춘다 (QGIS가 꺼져 있을 때만 설정 파일을 고친다).
+// 저장소에서 고친 코드가 QGIS를 다시 켜면 바로 반영된다. 두 플러그인을 켜고 숨은 설정 server_override를 로컬 서버로 맞춘다 (QGIS가 꺼져 있을 때만 설정 파일을 고친다).
+// 플러그인 화면에는 서버 칸이 없다 (배포 서버 고정). 배포 서버로 돌리려면 고급 설정에서 server_override를 지운다
 // 사용: npm run qgis:dev [-- --server http://localhost:3000]   되돌리기: npm run qgis:dev -- --remove (바로가기만 지움)
 import { execSync } from 'node:child_process'
 import { existsSync, lstatSync, readFileSync, readdirSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
@@ -63,13 +64,13 @@ for (const profile of profiles) {
   const ini = join(profile, 'QGIS', `${profile.includes('QGIS4') ? 'QGIS4' : 'QGIS3'}.ini`)
 
   if (running || !existsSync(ini)) {
-    console.log(`QGIS가 켜져 있거나 설정 파일이 없어 설정은 고치지 않았습니다 → QGIS 플러그인 관리에서 두 플러그인을 켜고, 서버 칸에 ${server}를 넣으세요.`)
+    console.log(`QGIS가 켜져 있거나 설정 파일이 없어 설정은 고치지 않았습니다 → QGIS를 끄고 다시 하거나, 플러그인 관리에서 두 플러그인을 켜고 설정 → 옵션 → 고급 설정에서 <플러그인>/server_override = ${server}`)
     continue
   }
 
   let text = readFileSync(ini, 'utf8')
 
-  for (const id of plugins) text = setIni(setIni(text, 'PythonPlugins', id, 'true'), id, 'server', server)
+  for (const id of plugins) text = setIni(setIni(text, 'PythonPlugins', id, 'true'), id, 'server_override', server)
   writeFileSync(ini, text)
   console.log(`설정: 두 플러그인 켬, 서버 ${server} (${ini})`)
 }

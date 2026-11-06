@@ -1,8 +1,10 @@
 # 변환 흐름 (화면 없음 → 시험 가능): 레이어 내보내기 → 서버 변환(POST /api/jobs) → 진행 확인(/info) → 내려받기·압축 풀기 → QGIS 레이어
 # 2D만: 벡터는 GeoPackage, 래스터는 GeoTIFF로 보낸다. 레이어의 좌표계가 파일에 들어가므로 서버에서 좌표계를 고를 일이 없다
+# 예시 데이터: 서버 카탈로그의 확장자별 공개 샘플 원본(/api/qgis/samples → /data/<유형>/<형식>/raw/)을 받아 레이어로
 import os
 import re
 import time
+import urllib.parse
 import zipfile
 
 from qgis.core import (QgsDataSourceUri, QgsProject, QgsRasterFileWriter, QgsRasterLayer, QgsRasterPipe,
@@ -13,8 +15,9 @@ from .client import ServerError, download, get_json, post_file
 
 UPLOAD_LIMIT = 200 * 1024 ** 2
 VIEWERS = [('auto', '자동 추천'), ('ol', 'OpenLayers'), ('maplibre', 'MapLibre GL JS'), ('deck', 'Deck.gl'), ('cesium', 'CesiumJS')]
-PRIORITIES = [('balanced', '일반적인 사용'), ('fast_preview', '빠른 미리보기'), ('large_data', '대용량 웹 표출'), ('fidelity', '원본 정보 보존')]
 FORMS = [('files', '결과 파일 + 적용 코드'), ('html', '바로 열리는 HTML 지도')]
+# 예시 원본에서 열 파일: 유형에 맞는 확장자 중 가장 큰 것 (압축 안의 설명 json·csv·pdf는 건너뛴다)
+OPEN_EXT = {'vector': ('.gpkg', '.fgb', '.geojson', '.json', '.gml', '.shp'), 'raster': ('.tif', '.tiff', '.img', '.png', '.jpg', '.jpeg', '.webp')}
 
 
 def code(value):
@@ -59,8 +62,56 @@ def export_layer(layer, folder, selected_only=False):
     raise ServerError('벡터·래스터 레이어만 변환할 수 있습니다.')
 
 
+def list_samples(server):
+    """확장자별 예시 (QGIS에서 2D 레이어로 바로 열리는 것): id·ext·category·kind·dataset·attribution·license"""
+    return get_json(f'{server.rstrip("/")}/api/qgis/samples')
+
+
+def unzip(path, folder):
+    """압축 풀기. UTF-8 표시가 없는 이름은 CP949로 다시 읽는다 (국내 공공데이터 zip). 상위 경로(..)는 zipfile이 걸러 낸다"""
+    with zipfile.ZipFile(path) as z:
+        for info in z.infolist():
+            if not info.flag_bits & 0x800:
+                try:
+                    info.filename = info.filename.encode('cp437').decode('cp949')
+                except UnicodeError:
+                    pass
+            z.extract(info, folder)
+
+
+def fetch_sample(server, sample, folder, report=lambda text, percent=None: None):
+    """예시 원본 받기 → 열 파일 경로. 같은 크기로 이미 받은 파일은 다시 받지 않고, 압축은 푼다"""
+    base = f'{server.rstrip("/")}/data/{sample["id"]}'
+    collect = get_json(f'{base}/collect.json')
+    if not collect.get('published'):
+        raise ServerError('이 예시는 원본을 내려받을 수 없습니다.')
+    target = os.path.join(folder, sample['id'].replace('/', '-'))
+    files = collect['files']
+    for i, f in enumerate(files):
+        path = os.path.join(target, *f['name'].split('/'))
+        if not (os.path.exists(path) and os.path.getsize(path) == f['bytes']):
+            report(f'예시 받는 중 {i + 1}/{len(files)}: {f["name"]}', 100 * i / len(files))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            download(f'{base}/raw/{urllib.parse.quote(f["name"])}', path)
+        if path.lower().endswith('.zip'):
+            unzip(path, target)
+    found = [os.path.join(d, n) for d, _, names in os.walk(target) for n in names if n.lower().endswith(OPEN_EXT[sample['kind']])]
+    if not found:
+        raise ServerError('예시 원본에서 열 파일을 찾지 못했습니다.')
+    return max(found, key=os.path.getsize)
+
+
+def sample_layer(path, sample):
+    """받은 예시 파일 → QGIS 레이어 (이름: 확장자 예시 · 파일 이름)"""
+    name = f'{sample["ext"]} 예시 · {os.path.splitext(os.path.basename(path))[0]}'
+    layer = QgsRasterLayer(path, name) if sample['kind'] == 'raster' else QgsVectorLayer(path, name, 'ogr')
+    if not layer.isValid():
+        raise ServerError(f'예시 파일을 열지 못함: {path}')
+    return layer
+
+
 def convert(server, path, fmt, intent, out_dir, report=lambda text, percent=None: None, canceled=lambda: False):
-    """변환 → 결과 폴더. intent = viewer·priority·form. 돌려줌: 결과 요약(info), 결과 폴더, 데이터 폴더(레이어 불러올 기준)"""
+    """변환 → 결과 폴더. intent = viewer·form (priority는 기본 balanced). 돌려줌: 결과 요약(info), 결과 폴더, 데이터 폴더(레이어 불러올 기준)"""
     server = server.rstrip('/')
     size = os.path.getsize(path)
     if size > UPLOAD_LIMIT:

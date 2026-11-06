@@ -1,4 +1,4 @@
-# QGIS 플러그인(qgis/) 흐름 시험: QGIS Python(화면 없음)으로 내보내기 → 실제 서버 변환 → 결과 레이어, 주소·코드 연계 → 결과·점 레이어, 메뉴·대화상자.
+# QGIS 플러그인(qgis/) 흐름 시험: QGIS Python(화면 없음)으로 내보내기 → 실제 서버 변환 → 결과 레이어, 주소·코드 연계(레이어 값·직접 검색) → 결과·점·필지 레이어, 예시 데이터, 메뉴·오른쪽 패널.
 # 실제 변환 작업자가 있는 서버가 필요하다 (docs/ci-cd.md). 사용(Windows): "%PROGRAMFILES%\QGIS 3.44.9\bin\python-qgis-ltr.bat" tests/qgis/plugins_test.py qgis http://localhost:3000 <빈 폴더>
 import os
 import sys
@@ -115,21 +115,55 @@ spot_layer, _, _ = link.build_layers(spot, spot_items, spot_results, names)
 spot_row = next(spot_layer.getFeatures())
 check('연계: 도형 위치(EPSG:5186 점) → 필지 PNU', spot_row['g_pnu'] == '1168010100107370000' and spot_row['g_bld'] == '있음', f"{spot_items[0][1]} → {spot_row['g_pnu']}")
 
+# 4-2) 직접 검색(레이어 없이): 주소·PNU는 자동 판별, "경도, 위도" 줄은 그 지점의 필지
+lines = ['서울 강남구 테헤란로 152', '127.0365100, 37.5000300', '1111010100100010000']
+found = link.search(server, lines, True)
+check('직접 검색: 주소·좌표·PNU 세 줄', [found[v]['status'] for v in lines] == ['ok', 'ok', 'ok'] and found[lines[1]]['output']['pnu'] == '1168010100107370000', str({v: found[v]['output'].get('pnu') for v in lines}))
+
+# 4-3) 예시 데이터: 서버 목록 → 원본 받기(CP949 zip·월드파일 포함) → QGIS 레이어
+samples = {s['id']: s for s in viz.list_samples(server)}
+check('예시 목록 (2D로 여는 형식)', {'vector-2d/fgb', 'vector-25d/shp', 'raster/tif'} <= set(samples) and all(s['kind'] in ('vector', 'raster') for s in samples.values()), str(len(samples)))
+for sample_id, expect in (('vector-2d/fgb', 'countries'), ('vector-25d/shp', 'TL_SPBD_BULD'), ('raster/tif', '50110')):
+    sample_path = viz.fetch_sample(server, samples[sample_id], os.path.join(work, '예시'))
+    sample = viz.sample_layer(sample_path, samples[sample_id])
+    filled = sample.featureCount() > 0 if isinstance(sample, QgsVectorLayer) else sample.width() > 0
+    check(f'예시 {sample_id} → 레이어', sample.isValid() and filled and expect in sample_path, sample_path)
+check('예시 zip 이름은 CP949로 (과천)', any('과천' in d for d in os.listdir(os.path.join(work, '예시', 'vector-25d-shp'))), str(os.listdir(os.path.join(work, '예시', 'vector-25d-shp'))))
+
 # 5) 외부 조회 끔: 200줄씩, 위치 없음
 many = ['1111010100100010000'] + [f'11110101001{n:08d}' for n in range(1, 30)]
 results2, _ = link.resolve(server, many, 'pnu_legal', False)
 check('연계(외부 조회 끔): 30개 한 번에, 주소 있음', len(results2) == 30 and results2['1111010100100010000']['output']['address'] == '서울특별시 종로구 청운동 1')
 
-# 6) 화면: 두 플러그인을 가짜 iface로 등록하고 대화상자 생성
+# 6) 화면: 두 플러그인을 가짜 iface로 등록하고 오른쪽 패널 생성 (둘은 탭으로), 직접 검색 결과 표시·레이어 추가
+from qgis.gui import QgsMapCanvas  # noqa: E402
+from qgis.PyQt.QtCore import Qt  # noqa: E402
 from qgis.PyQt.QtWidgets import QMainWindow  # noqa: E402
+
+RIGHT = getattr(Qt, 'DockWidgetArea', Qt).RightDockWidgetArea
 
 
 class Iface:
     def __init__(self):
-        self.window, self.menus = QMainWindow(), []
+        self.window, self.canvas, self.menus, self.active = QMainWindow(), QgsMapCanvas(), [], None
 
     def mainWindow(self):
         return self.window
+
+    def mapCanvas(self):
+        return self.canvas
+
+    def addDockWidget(self, area, dock):
+        self.window.addDockWidget(area, dock)
+
+    def removeDockWidget(self, dock):
+        self.window.removeDockWidget(dock)
+
+    def setActiveLayer(self, layer):
+        self.active = layer
+
+    def zoomToActiveLayer(self):
+        pass
 
     def addPluginToWebMenu(self, menu, action):
         self.menus.append((menu, action.text()))
@@ -149,11 +183,24 @@ import geo_web_bridge  # noqa: E402
 
 iface = Iface()
 QgsProject.instance().addMapLayers([points, table])
+loaded = []
 for package in (geo_web_bridge, geo_address_link):
     plugin = package.classFactory(iface)
     plugin.initGui()
     plugin.run()
-    check(f'{package.__name__}: 메뉴 등록·대화상자', plugin.dialog is not None and plugin.dialog.isVisible())
+    loaded.append(plugin)
+    check(f'{package.__name__}: 메뉴 등록·오른쪽 패널', plugin.dock is not None and not plugin.dock.isHidden() and iface.window.dockWidgetArea(plugin.dock) == RIGHT)
+check('두 패널은 탭으로', len(iface.window.tabifiedDockWidgets(loaded[1].dock)) == 1)
+panel = loaded[1].dock
+panel.show_results(lines, found)
+check('직접 검색 결과 표시 (줄마다 항목)', panel.tree.topLevelItemCount() == 3 and panel.tree.topLevelItem(0).childCount() > 5, str(panel.tree.topLevelItemCount()))
+panel.add_search_layers()
+added = [layer.name() for layer in QgsProject.instance().mapLayers().values() if layer.name().startswith('주소·코드 검색')]
+check('직접 검색 → 점·필지 레이어', len(added) == 2 and iface.active is not None, str(added))
+web = loaded[0].dock
+web.fill_samples(list(samples.values()))
+check('예시 목록 → 패널', web.sample.count() == len(samples) and web.sample.currentData()['id'] in samples and web.sample_note.text().startswith('출처'), web.sample_note.text())
+for plugin in loaded:
     plugin.unload()
 print('메뉴:', iface.menus)
 print('실패:', failed)

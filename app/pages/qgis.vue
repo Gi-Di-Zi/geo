@@ -18,12 +18,13 @@ const ways = [
 
 const plugins = [
   {
-    name: 'geo-web-bridge 웹 지도 변환', id: 'geo_web_bridge', menu: '웹 → geo-web-bridge → 웹 지도로 변환…', for: '/viz',
+    name: 'geo-web-bridge 웹 지도 변환', id: 'geo_web_bridge', menu: '웹 → geo-web-bridge → 웹 지도로 변환 (오른쪽 패널)', for: '/viz',
     does: '레이어(2D 벡터·래스터)를 OpenLayers·MapLibre·Deck.gl·CesiumJS용 웹 결과로 변환합니다.',
     steps: [
-      '레이어와 대상 라이브러리·목적을 고릅니다. "선택한 피처만"도 됩니다.',
+      '레이어를 고릅니다. "예시 데이터로 해 보기"에서 확장자별 공개 예시(GeoPackage·FlatGeobuf·GeoJSON·SHP·GML·GeoTIFF·PNG·JPG·WebP·IMG)를 불러와 바로 해 볼 수도 있습니다.',
+      '대상 라이브러리(자동 추천 가능)를 고릅니다. "선택한 피처만"도 됩니다.',
       '최종본 형태를 고릅니다: 결과 파일 + 적용 코드(내 웹 프로젝트에 넣기) 또는 바로 열리는 HTML 지도(결과 + index.html + 라이브러리 한 폴더).',
-      '변환이 끝나면 저장 폴더에 결과가 풀리고, 결과(GeoJSON·타일 폴더·COG)를 QGIS에 다시 불러와 확인합니다. 적용 코드는 화면에서 복사합니다.',
+      '변환이 끝나면 저장 폴더에 결과가 풀리고, 결과(GeoJSON·타일 폴더·COG)를 QGIS에 다시 불러와 확인합니다. 적용 코드는 패널의 결과 칸에 나옵니다. 저장 폴더와 폴더 열기는 옵션에 있습니다.',
     ],
     notes: [
       '벡터는 GeoPackage, 래스터는 GeoTIFF로 보냅니다. 좌표계는 레이어 그대로라 따로 고를 필요가 없습니다.',
@@ -32,10 +33,11 @@ const plugins = [
     ],
   },
   {
-    name: 'geo-web-bridge 주소·코드 연계', id: 'geo_address_link', menu: '웹 → geo-web-bridge → 주소·코드 연계…', for: '/link',
-    does: '속성 표의 한 열(PNU·법정동코드·행정동코드·지번주소·도로명주소) 또는 레이어의 도형 위치를 주소·PNU·단계별 코드·행정동·우편번호·위치·도로명주소·건물 유무·필지 실재·토지 속성으로 바꿔 새 레이어에 붙입니다.',
+    name: 'geo-web-bridge 주소·코드 연계', id: 'geo_address_link', menu: '웹 → geo-web-bridge → 주소·코드 연계 (오른쪽 패널)', for: '/link',
+    does: '웹처럼 주소·코드·좌표를 바로 찾거나, 속성 표의 한 열(PNU·법정동코드·행정동코드·지번주소·도로명주소) 또는 레이어의 도형 위치를 주소·PNU·단계별 코드·행정동·우편번호·위치·도로명주소·건물 유무·필지 실재·토지 속성으로 바꿔 새 레이어에 붙입니다.',
     steps: [
-      '레이어와 값이 든 열, 입력 종류(자동 판별 가능)를 고릅니다. 도형 없는 표도 됩니다. 점·면 레이어는 "도형 위치"를 고르면 그 지점의 필지를 찾습니다.',
+      '직접 검색 탭: 주소·코드·좌표(경도, 위도)를 한 줄에 하나씩(최대 20줄) 넣거나 지도에서 찍기로 그 지점의 필지를 찾습니다. 결과는 패널에 보이고(값을 두 번 누르면 복사), 점·필지 레이어로 추가할 수 있습니다.',
+      '레이어 값 탭: 레이어와 값이 든 열, 입력 종류(자동 판별 가능)를 고릅니다. 도형 없는 표도 됩니다. 점·면 레이어는 "도형 위치"를 고르면 그 지점의 필지를 찾습니다.',
       '붙일 결과를 고릅니다: 주소·PNU, 법정동, 시도·시군구·읍면동·리 코드, 행정동, 우편번호·위치, 도로명주소·건물 유무, 필지 실재·토지 속성(면적·공시지가는 숫자 열).',
       '원본은 그대로 두고 결과 열을 붙인 새 레이어가 추가됩니다. 위치로 점 레이어, 필지 경계(연속지적도)로 면 레이어도 만들 수 있습니다(EPSG:4326).',
     ],
@@ -131,13 +133,13 @@ const services = [
 
       <section class="part" aria-labelledby="server">
         <h2 id="server">서버 고르기</h2>
-        <p class="prose">플러그인의 기본 서버는 공개 서버(<code>{{ site }}</code>)입니다. 외부로 내보낼 수 없는 자료는 저장소를 받아 직접 설치한 서버 주소를 플러그인의 <strong>서버</strong> 칸에 넣습니다. 직접 설치한 서버의 <code>/qgis/plugins.xml</code>은 그 서버의 플러그인 파일을 가리킵니다.</p>
+        <p class="prose">플러그인은 공개 서버(<code>{{ site }}</code>)를 씁니다. 화면에 서버 칸은 없습니다. 외부로 내보낼 수 없는 자료는 저장소를 받아 서버를 직접 설치하고, QGIS <strong>설정 → 옵션 → 고급</strong>의 고급 설정 편집기에서 <code>geo_web_bridge/server_override</code>·<code>geo_address_link/server_override</code>를 그 서버 주소로 넣습니다(패널에 개발 서버로 표시).</p>
         <p class="prose small muted">공개 서버에 올린 원본·결과는 운영자가 정리할 때까지 보관되고 결과 주소를 아는 사람은 열 수 있습니다. 민감한 자료는 공개 서버에 올리지 마세요.</p>
         <details class="dev">
           <summary>개발·시험 (저장소를 받은 경우)</summary>
           <ul class="small limits">
-            <li><code>npm run qgis:dev</code> — 이 PC의 QGIS 프로필에 저장소의 플러그인을 바로가기로 연결하고, 두 플러그인을 켜고, 서버 칸을 <code>http://localhost:3000</code>으로 맞춥니다(QGIS가 꺼져 있을 때). 코드를 고친 뒤 QGIS를 다시 켜면 반영됩니다. 되돌리기는 <code>npm run qgis:dev -- --remove</code>.</li>
-            <li><code>npm run test:qgis</code> — 설치된 QGIS로 흐름 시험(내보내기 → 실제 변환 → 결과 레이어, 주소·코드 연계)과 데스크톱 시험(임시 프로필로 띄워 메뉴·대화상자)을 돌립니다. 서버는 <code>QGIS_TEST_URL</code>(기본 로컬).</li>
+            <li><code>npm run qgis:dev</code> — 이 PC의 QGIS 프로필에 저장소의 플러그인을 바로가기로 연결하고, 두 플러그인을 켜고, 숨은 설정 <code>server_override</code>를 <code>http://localhost:3000</code>으로 맞춥니다(QGIS가 꺼져 있을 때). 코드를 고친 뒤 QGIS를 다시 켜면 반영됩니다. 되돌리기는 <code>npm run qgis:dev -- --remove</code>.</li>
+            <li><code>npm run test:qgis</code> — 설치된 QGIS로 흐름 시험(내보내기 → 실제 변환 → 결과 레이어, 주소·코드 연계)과 데스크톱 시험(임시 프로필로 띄워 메뉴·오른쪽 패널·닫기)을 돌립니다. 서버는 <code>QGIS_TEST_URL</code>(기본 로컬).</li>
           </ul>
         </details>
       </section>
