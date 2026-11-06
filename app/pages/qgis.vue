@@ -43,6 +43,7 @@ const plugins = [
     ],
     notes: [
       '같은 이름이 여러 곳이면 임의로 고르지 않고 "확인 사항" 열에 후보를 남깁니다. 옛 시도명·코드를 바꾸거나 빠진 상위 단계를 채운 경우도 적습니다.',
+      '패널 아래에 기준자료(법정동·행정동 코드)의 마지막 확인·변경 시각이 나옵니다. 서버가 하루 한 번 자동으로 확인합니다.',
       '위치·우편번호·도로명주소는 외부 조회(VWorld)라 20줄씩, 공개 서버는 접속자별 하루 2,000줄. 끄면 사전만으로 200줄씩, 한도 없이 변환합니다.',
       '코드는 문자열 열로 넣어 앞자리 0과 19자리 PNU가 깨지지 않습니다. 열 이름은 Shapefile 10자 제한에 맞추고 한글 별칭을 붙입니다.',
     ],
@@ -139,7 +140,7 @@ const services = [
           <summary>개발·시험 (저장소를 받은 경우)</summary>
           <ul class="small limits">
             <li><code>npm run qgis:dev</code> — 이 PC의 QGIS 프로필에 저장소의 플러그인을 바로가기로 연결하고, 두 플러그인을 켜고, 숨은 설정 <code>server_override</code>를 <code>http://localhost:3000</code>으로 맞춥니다(QGIS가 꺼져 있을 때). 코드를 고친 뒤 QGIS를 다시 켜면 반영됩니다. 되돌리기는 <code>npm run qgis:dev -- --remove</code>.</li>
-            <li><code>npm run test:qgis</code> — 설치된 QGIS로 흐름 시험(내보내기 → 실제 변환 → 결과 레이어, 주소·코드 연계)과 데스크톱 시험(임시 프로필로 띄워 메뉴·오른쪽 패널·닫기)을 돌립니다. 서버는 <code>QGIS_TEST_URL</code>(기본 로컬).</li>
+            <li><code>npm run test:qgis</code> — 설치된 QGIS로 흐름 시험(내보내기 → 실제 변환 → 결과 레이어, 주소·코드 연계)과 데스크톱 시험을 돌립니다. 데스크톱 시험은 임시 프로필에서만 서버를 시험 서버로 바꾸고 패널을 사람이 쓰듯 조작합니다(예시 불러오기 → 변환, 직접 검색·지도에서 찍기·레이어 값). <code>QGIS_SHOTS=폴더</code>면 단계별 화면을 저장합니다. 서버는 <code>QGIS_TEST_URL</code>(기본 로컬).</li>
           </ul>
         </details>
       </section>

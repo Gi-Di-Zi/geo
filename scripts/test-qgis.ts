@@ -69,15 +69,16 @@ if (process.platform === 'win32' && desktop !== python && existsSync(desktop)) {
     symlinkSync(join(root, 'qgis', id), join(pluginDir, id), 'junction')
   }
 
-  // 실행기는 start /B로 띄우고 바로 끝난다 → 결과 파일을 기다린다 (최대 3분, 확인 스크립트가 쓰고 스스로 끝낸다)
-  run(desktop, ['--profiles-path', work, '--nologo', '--noversioncheck', '--code', join(root, 'tests/qgis/desktop_check.py')], { ...process.env, GEO_CHECK_OUT: out, QT_QPA_PLATFORM: 'offscreen' })
-  const until = Date.now() + 180_000
+  // 실행기는 start /B로 띄우고 바로 끝난다 → 결과 파일을 기다린다 (최대 10분, 확인 스크립트가 쓰고 스스로 끝낸다).
+  // 사용 시험은 임시 프로필에서만 서버를 시험 서버로 바꾼다 (사용자 QGIS 설정은 그대로). QGIS_SHOTS=<폴더>면 단계별 화면 저장
+  run(desktop, ['--profiles-path', work, '--nologo', '--noversioncheck', '--code', join(root, 'tests/qgis/desktop_check.py')], { ...process.env, GEO_CHECK_OUT: out, GEO_SERVER: server, GEO_SHOT_DIR: process.env.QGIS_SHOTS ?? '', QT_QPA_PLATFORM: 'offscreen' })
+  const until = Date.now() + 600_000
 
   while (!existsSync(out) && Date.now() < until) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000)
-  const text = existsSync(out) ? readFileSync(out, 'utf8') : '결과 없음 (3분 안에 QGIS가 확인 스크립트를 끝내지 못함)'
+  const text = existsSync(out) ? readFileSync(out, 'utf8') : '결과 없음 (10분 안에 QGIS가 확인 스크립트를 끝내지 못함)'
 
   console.log(text)
-  desktopOk = text.includes('패널 탭: 1') && plugins.every(id => text.includes(`${id}: load=True start=True`) && new RegExp(`${id} 패널: .* right=True visible=True action=True`).test(text) && text.includes(`${id} 닫기: closed=True action=False errors=0`))
+  desktopOk = text.includes('패널 탭: 1') && text.includes('사용 시험 끝') && !text.includes('FAIL ') && plugins.every(id => text.includes(`${id}: load=True start=True`) && new RegExp(`${id} 패널: .* right=True visible=True action=True`).test(text) && text.includes(`${id} 닫기: closed=True action=False errors=0`))
 }
 
 // 바로가기를 먼저 끊고 지운다 (저장소의 플러그인 원본은 그대로)

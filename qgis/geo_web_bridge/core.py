@@ -26,8 +26,8 @@ def code(value):
 
 
 def safe_name(text):
-    """파일 이름에 못 쓰는 글자만 바꾼다 (한글 유지)"""
-    return re.sub(r'[\\/:*?"<>|\s]+', '_', text).strip('_') or 'layer'
+    """파일·GeoPackage 레이어 이름: 글자(한글 포함)·숫자·밑줄만. GDAL GPKG는 공백·기호(. · # 등)가 든 레이어 이름을 거부한다"""
+    return re.sub(r'\W+', '_', text).strip('_') or 'layer'
 
 
 def export_layer(layer, folder, selected_only=False):
@@ -103,7 +103,7 @@ def fetch_sample(server, sample, folder, report=lambda text, percent=None: None)
 
 def sample_layer(path, sample):
     """받은 예시 파일 → QGIS 레이어 (이름: 확장자 예시 · 파일 이름)"""
-    name = f'{sample["ext"]} 예시 · {os.path.splitext(os.path.basename(path))[0]}'
+    name = f'{os.path.splitext(os.path.basename(path))[0]} (예시 {sample["ext"]})'
     layer = QgsRasterLayer(path, name) if sample['kind'] == 'raster' else QgsVectorLayer(path, name, 'ogr')
     if not layer.isValid():
         raise ServerError(f'예시 파일을 열지 못함: {path}')

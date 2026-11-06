@@ -24,10 +24,10 @@ nginx는 Geo 전용 Docker DNS 이름 `coolify-proxy`로 해석되는 앞단 프
 
 ## 주소·코드 연계 (작업자)
 
-nginx는 `/api/link/`의 즉시 변환·조회·경계 경로(resolve·boundary·references/update는 POST, capabilities·regions·references는 GET)만 작업자로 넘기고 접속자별 초당 5건(버스트 20)으로 제한한다. 작업자 미들웨어도 같은 목록만 받는다. CSV·XLSX 업로드·일괄 작업 경로는 공개하지 않는다(MCP도 공개 모드에서는 일괄 작업·파일 도구를 등록하지 않는다).
+nginx는 `/api/link/`의 즉시 변환·조회·경계 경로(resolve·boundary는 POST, capabilities·regions·references는 GET)만 작업자로 넘기고 접속자별 초당 5건(버스트 20)으로 제한한다. 작업자 미들웨어도 같은 목록만 받는다. CSV·XLSX 업로드·일괄 작업 경로는 공개하지 않는다(MCP도 공개 모드에서는 일괄 작업·파일 도구를 등록하지 않는다).
 
 작업자에 필요한 것:
-- 기준 사전: `GEO_DATA_DIR`(업로드와 같은 데이터 폴더) 아래 `reference/link`. `LINK_REFERENCE_DIR`·`LINK_ADMINISTRATIVE_DIR`·`LINK_DATA_DIR`가 있으면 그쪽. 작업자가 뜰 때 사전이 없으면 공개 원천(행정표준코드관리시스템·행정안전부, 키 없음)에서 자동으로 받는다(server/plugins/link-reference.ts, 빈 폴더에서 약 2초). 끄려면 `LINK_REFERENCE_AUTOSTART=0`, 작업자 키 없는 단일 서버는 `=1`. 이후 갱신은 /link/reference 화면의 업데이트(한국 날짜 하루 한 번, 같은 날 요청은 공유).
+- 기준 사전: `GEO_DATA_DIR`(업로드와 같은 데이터 폴더) 아래 `reference/link`. `LINK_REFERENCE_DIR`·`LINK_ADMINISTRATIVE_DIR`·`LINK_DATA_DIR`가 있으면 그쪽. 작업자가 뜰 때 사전이 없으면 공개 원천(행정표준코드관리시스템·행정안전부, 키 없음)에서 자동으로 받는다(server/plugins/link-reference.ts, 빈 폴더에서 약 2초). 끄려면 `LINK_REFERENCE_AUTOSTART=0`, 작업자 키 없는 단일 서버는 `=1`. 이후에는 작업자가 하루 한 번 자동으로 확인한다(뜰 때 + 1시간마다 "오늘 확인했는가"를 보고 안 했으면 확인, 한국 날짜 기준, 원본이 같으면 다시 적용하지 않음). 마지막 확인·변경 시각은 /link·/link/reference 화면과 QGIS 주소·코드 연계 패널에 보인다. QGIS 웹 지도 변환 플러그인의 예시 목록 `/api/qgis/samples`는 앱이 답한다(nginx에서 GET만 허용).
 - VWorld 키: 작업자 환경변수 `VWORLD_KEY`(지오코더·검색 API). 2D 데이터 API(법정동 경계 SHP, 연속지적도 = 필지 실재·경계·좌표 → 필지, 도로명주소 건물 = 건물 유무·도로명주소)와 국가중점데이터(토지특성)는 키에 등록한 서비스 URL을 `VWORLD_DOMAIN`에 글자 그대로 넣어야 한다. 없으면 그 항목만 이용 불가로 표시되고 다른 결과는 그대로다. 필지 단위 결과는 필지마다 원천을 3번 더 부른다(같은 PNU는 한 번). 키가 없으면 위치·우편번호·경계는 설정 필요로 표시되고 코드·지번주소 변환은 그대로 된다.
 - 외부 원천을 부르는 조회(위치·우편번호·경계, 도로명주소)는 접속자(X-Real-IP)별 하루 2,000줄(작업자 메모리 기록, 재시작 시 초기화). 사전만 쓰는 변환은 세지 않는다.
 

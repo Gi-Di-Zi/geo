@@ -34,6 +34,13 @@ for i, (x, y) in enumerate([(197000, 552000), (198000, 551500), (199500, 553000)
 points.dataProvider().addFeatures(features)
 path, fmt = viz.export_layer(points, work)
 check('벡터 내보내기 GeoPackage', fmt == 'vector-2d/gpkg' and os.path.getsize(path) > 0, path)
+# GDAL GPKG는 공백·기호가 든 레이어 이름을 거부한다 → 글자·숫자·밑줄만 (예시 레이어 이름 같은 경우)
+odd = QgsVectorLayer('Point?crs=EPSG:4326&field=a:integer', '.fgb 예시 · 시험 #1 (복사)', 'memory')
+odd_feature = QgsFeature(odd.fields())
+odd_feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(127, 37)))
+odd.dataProvider().addFeatures([odd_feature])
+odd_path, _ = viz.export_layer(odd, work)
+check('기호가 든 레이어 이름도 GeoPackage로', os.path.basename(odd_path) == 'fgb_예시_시험_1_복사.gpkg', odd_path)
 log = []
 info, folder, base = viz.convert(server, path, fmt, {'viewer': 'maplibre', 'priority': 'balanced', 'form': 'files'}, os.path.join(work, 'files'), report=lambda t, p=None: log.append(t))
 primary = info['primary']
@@ -199,9 +206,11 @@ added = [layer.name() for layer in QgsProject.instance().mapLayers().values() if
 check('직접 검색 → 점·필지 레이어', len(added) == 2 and iface.active is not None, str(added))
 web = loaded[0].dock
 web.fill_samples(list(samples.values()))
-check('예시 목록 → 패널', web.sample.count() == len(samples) and web.sample.currentData()['id'] in samples and web.sample_note.text().startswith('출처'), web.sample_note.text())
+check('예시 목록 → 패널', web.sample.count() == len(samples) and web.sample.currentData()['id'] in samples and '출처' in web.sample_note.text(), web.sample_note.text())
 for plugin in loaded:
     plugin.unload()
+same_ui = [open(os.path.join(repo, p, 'ui.py'), encoding='utf-8').read() for p in ('geo_web_bridge', 'geo_address_link')]
+check('두 플러그인의 ui.py가 같음 (따로 설치되므로 복사본)', same_ui[0] == same_ui[1])
 print('메뉴:', iface.menus)
 print('실패:', failed)
 # QGIS 종료 처리(exitQgis)는 화면 없는 실행에서 0이 아닌 코드로 끝날 수 있다 → 결과를 낸 뒤 바로 끝낸다

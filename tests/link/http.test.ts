@@ -234,16 +234,16 @@ test('전체 결과는 HTTP·MCP에서 같은 항목별 상태를 반환하고 �
   assert.equal(capabilities.structuredContent.allResultsMaxRows, 20)
 })
 
-test('기준자료 상태·업데이트와 경계 출력은 요청 경계를 검사한다', async () => {
+test('기준자료 상태(자동 확인 시각)와 경계 출력은 요청 경계를 검사한다', async () => {
   const c = client(), response = await c.request('/api/link/references')
   assert.equal(response.status, 200)
   const status = await response.json()
   assert.equal(status.timeZone, 'Asia/Seoul')
   assert.equal(status.sources.length, 2)
   assert.ok(status.sources.every((source: any) => source.version && 'sourceDate' in source && 'checkedAt' in source && 'activatedAt' in source))
-  // 공개 요청에서 강제 갱신을 허용하지 않아 당일 적용 제한을 우회할 수 없다.
-  assert.equal((await c.request('/api/link/references/update', { force: true })).status, 400)
-  assert.equal((await c.request('/api/link/references/update', {}, { Origin: 'https://attacker.invalid' })).status, 403)
+  assert.ok('lastCheckedAt' in status && 'lastUpdatedAt' in status)
+  // 갱신은 서버가 하루 한 번 자동으로 한다. 요청으로 갱신하는 경로는 없다
+  assert.equal((await c.request('/api/link/references/update', {})).status, 404)
   for (const body of [{ codes: ['../secret'] }, { codes: [] }, { codes: ['1111010100'], crs: 'EPSG:5179' }]) assert.equal((await c.request('/api/link/boundary', body)).status, 400)
   assert.equal((await c.request('/api/link/boundary', { codes: ['1111010100'] }, { Origin: 'https://attacker.invalid' })).status, 403)
 })

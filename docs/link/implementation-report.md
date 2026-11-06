@@ -81,7 +81,7 @@ PNU가 정해진 줄(외부 조회·`options.details`, 기본 켬)에 필지 단
 
 ### 한국 날짜 기준 공유 업데이트
 
-`server/services/link/reference-updates.ts`가 `GET /api/link/references`, `POST /api/link/references/update`와 기준자료 화면의 공통 상태를 관리한다. 한국 시간(`Asia/Seoul`)의 당일 기록을 영속 경로 `.data/reference/link/updates/`에 저장하고, `LINK_REFERENCE_UPDATE_DIR`로 변경할 수 있다. 모든 사용자가 같은 기록을 읽고 동시 요청은 같은 실행을 공유한다. 시도 번호 파일의 독점 생성으로 같은 공유 경로를 쓰는 서버 프로세스의 중복 실행도 막는다.
+`server/services/link/reference-updates.ts`가 `GET /api/link/references`와 기준자료 화면의 공통 상태를 관리하고, `server/plugins/link-reference.ts`가 하루 한 번 자동으로 확인한다(2026-11-06, 수동 `POST /api/link/references/update`는 제거). 상태에는 `lastCheckedAt`(마지막 확인)·`lastUpdatedAt`(마지막 변경)이 있다. 한국 시간(`Asia/Seoul`)의 당일 기록을 영속 경로 `.data/reference/link/updates/`에 저장하고, `LINK_REFERENCE_UPDATE_DIR`로 변경할 수 있다. 모든 사용자가 같은 기록을 읽고 동시 요청은 같은 실행을 공유한다. 시도 번호 파일의 독점 생성으로 같은 공유 경로를 쓰는 서버 프로세스의 중복 실행도 막는다.
 
 당일 확인한 자료는 다시 다운로드·반영하지 않는다. 새 확인에서 원문이 같으면 `checkedAt`만 갱신하고 기존 활성 버전·반영 시각을 보존한다. 실패·중단 때는 이전 정상본을 유지하며 5분 재시도 대기 후 실패한 원천만 다시 확인한다. 출처의 기준일(`sourceDate`), 확인 시각(`checkedAt`), 반영 시각(`activatedAt`/`ingestedAt`)은 서로 다른 값이다. 갱신 대상은 로컬 법정동·행정동/관할 사전이며 카카오 주소 검색이나 VWorld의 실시간 위치·경계 서비스를 로컬로 갱신하는 버튼은 아니다. 운영 자동 스케줄은 설치하지 않았다.
 

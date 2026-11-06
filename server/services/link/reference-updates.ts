@@ -52,7 +52,10 @@ interface SourceStatus extends ReferenceUpdateInfo {
 }
 
 interface ReferenceUpdateStatus {
-  day: string; timeZone: 'Asia/Seoul'; state: State; canUpdate: boolean; retryAt?: string; message: string; sources: SourceStatus[]
+  day: string; timeZone: 'Asia/Seoul'; state: State; canUpdate: boolean; retryAt?: string; message: string
+  /** 마지막으로 공식 제공처를 확인한 시각(바뀐 것이 없어도) · 자료가 바뀌어 적용된 시각 (출처들 중 가장 늦은 것) */
+  lastCheckedAt: string | null; lastUpdatedAt: string | null
+  sources: SourceStatus[]
 }
 
 const alive = (pid: number) => {
@@ -132,8 +135,10 @@ export function createReferenceUpdater(config: { directory: string; sources: Ref
     const canUpdate = !checking && !done && stamp >= retryTime
     const state: State = checking ? 'checking' : done ? 'done' : failed ? 'failed' : 'ready'
 
-    const snapshot: ReferenceUpdateStatus = { day, timeZone: 'Asia/Seoul', state, canUpdate, ...(retryTime > stamp && { retryAt: new Date(retryTime).toISOString() }),
-      message: checking ? '기준자료를 확인하고 있습니다. 중복 요청은 같은 실행을 공유합니다.' : done ? '오늘 기준자료 확인을 마쳤습니다. 같은 자료는 다시 적용하지 않습니다.' : retryTime > stamp ? '업데이트에 실패했습니다. 5분 뒤 다시 시도할 수 있습니다.' : failed ? '이전 정상 자료를 유지하고 있습니다. 업데이트를 다시 시도할 수 있습니다.' : '공식 제공처의 새 자료를 확인할 수 있습니다.', sources }
+    const latestOf = (key: 'checkedAt' | 'activatedAt') => sources.flatMap(source => source[key] ? [source[key]] : []).sort().at(-1) ?? null
+
+    const snapshot: ReferenceUpdateStatus = { day, timeZone: 'Asia/Seoul', state, canUpdate, ...(retryTime > stamp && { retryAt: new Date(retryTime).toISOString() }), lastCheckedAt: latestOf('checkedAt'), lastUpdatedAt: latestOf('activatedAt'),
+      message: checking ? '기준자료를 확인하고 있습니다.' : done ? '오늘 기준자료 확인을 마쳤습니다. 같은 자료는 다시 적용하지 않습니다.' : failed ? '확인에 실패해 이전 정상 자료를 유지하고 있습니다. 다음 자동 확인에서 다시 시도합니다.' : '오늘 아직 확인하지 않았습니다. 곧 자동으로 확인합니다.', sources }
 
     return { snapshot, attempt }
   }

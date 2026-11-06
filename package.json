@@ -23,7 +23,7 @@
     "link:maintenance": "node --env-file-if-exists=.env scripts/link-maintenance.ts",
     "test:link": "node scripts/test-link.ts",
     "test:link:unit": "node --test tests/link/core.test.ts tests/link/reference.test.ts tests/link/administrative.test.ts tests/link/administrative-service.test.ts tests/link/reference-updates.test.ts tests/link/location.test.ts tests/link/location-resolve.test.ts tests/link/all.test.ts tests/link/boundary.test.ts tests/link/files.test.ts tests/link/jobs.test.ts tests/link/chunks.test.ts",
-    "test:reference-updates": "node --test tests/link/reference-updates.test.ts",
+    "test:reference-updates": "node --test tests/link/reference-updates.test.ts tests/link/reference-schedule.test.ts",
     "lint": "node scripts/lint-scope.mjs",
     "test:lint": "node --test scripts/lint-scope.test.mjs",
     "predev": "npm run lint",

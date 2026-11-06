@@ -7,7 +7,7 @@ import re
 from osgeo import ogr
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer, QgsWkbTypes
 
-from .client import ServerError, post_json
+from .client import ServerError, get_json, post_json
 
 SEARCH_LIMIT = 20
 # 직접 검색의 좌표 줄: "경도, 위도" (EPSG:4326, 소수점 필수 → 코드와 헷갈리지 않게)
@@ -103,6 +103,11 @@ def resolve(server, values, input_type='auto', lookups=True, report=lambda text,
         for value, row in zip(part, batch['rows']):
             results[value] = row
     return results, stopped
+
+
+def reference_status(server):
+    """기준자료(법정동·행정동 사전) 상태: lastCheckedAt(마지막 확인)·lastUpdatedAt(마지막 변경). 서버가 하루 한 번 자동으로 확인한다"""
+    return get_json(f'{server.rstrip("/")}/api/link/references')
 
 
 def search(server, lines, lookups=True, report=lambda text, percent=None: None, canceled=lambda: False):

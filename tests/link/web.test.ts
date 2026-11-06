@@ -217,12 +217,14 @@ test('결과 좌표계는 행별로 즉시 바꾸며 원본 좌표·다른 결�
   assert.equal(requests.length, 2); assert.equal(boundaryCalls.length, 0)
 })
 
-test('기준자료는 별도 페이지에 있으며 오늘 확인한 자료는 재적용할 수 없다', { timeout: 30_000 }, async t => {
+test('기준자료는 별도 페이지에 있고 자동 확인의 마지막 확인·변경 시각을 보여 준다', { timeout: 30_000 }, async t => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true }); t.after(() => browser.close())
   const page = await browser.newPage()
-  await page.route('**/api/link/references', route => route.fulfill({ json: { day: '2026-10-30', state: 'done', canUpdate: false, message: '오늘 공식 기준자료 확인을 마쳤습니다.', sources: [{ id: 'legal', label: '법정동코드', available: true, source: '브라우저 테스트 공식 자료 fixture', sourceUrl: 'https://example.invalid/legal', version: 'web-reference-fixture', count: 3, sourceDate: null, checkedAt: '2026-10-30T00:00:00.000Z', activatedAt: '2026-10-29T00:00:00.000Z', state: 'unchanged' }] } }))
-  await openTool(page); await page.getByRole('link', { name: '기준 자료·업데이트 →', exact: true }).click(); await expect(page).toHaveURL(`${baseURL}/link/reference`)
-  await expect(page.getByRole('heading', { name: '기준자료', exact: true })).toBeVisible(); await expect(page.getByRole('button', { name: '오늘 확인 완료', exact: true })).toBeDisabled(); await expect(page.getByText('원천에서 제공하지 않음', { exact: true })).toBeVisible()
+  await page.route('**/api/link/references', route => route.fulfill({ json: { day: '2026-10-30', state: 'done', canUpdate: false, message: '오늘 공식 기준자료 확인을 마쳤습니다.', lastCheckedAt: '2026-10-30T00:00:00.000Z', lastUpdatedAt: '2026-10-29T00:00:00.000Z', sources: [{ id: 'legal', label: '법정동코드', available: true, source: '브라우저 테스트 공식 자료 fixture', sourceUrl: 'https://example.invalid/legal', version: 'web-reference-fixture', count: 3, sourceDate: null, checkedAt: '2026-10-30T00:00:00.000Z', activatedAt: '2026-10-29T00:00:00.000Z', state: 'unchanged' }] } }))
+  await openTool(page); await expect(page.locator('.reference-times')).toHaveText('기준자료 매일 자동 확인 · 마지막 확인 2026. 10. 30. 오전 9:00 · 마지막 변경 2026. 10. 29. 오전 9:00')
+  await page.getByRole('link', { name: '기준 자료·업데이트 →', exact: true }).click(); await expect(page).toHaveURL(`${baseURL}/link/reference`)
+  await expect(page.getByRole('heading', { name: '기준자료', exact: true })).toBeVisible(); await expect(page.getByText('매일 자동 확인', { exact: true })).toBeVisible(); await expect(page.getByRole('button', { name: /업데이트|확인 완료/ })).toHaveCount(0)
+  await expect(page.locator('.times')).toContainText('2026. 10. 30. 오전 9:00:00'); await expect(page.getByText('원천에서 제공하지 않음', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: '← 주소·코드 변환', exact: true }).click(); await expect(page).toHaveURL(`${baseURL}/link`)
 })
 
