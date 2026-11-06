@@ -1,0 +1,17 @@
+[general]
+name=geo-web-bridge 웹 지도 변환
+qgisMinimumVersion=3.28
+qgisMaximumVersion=4.99
+description=레이어를 OpenLayers·MapLibre·Deck.gl·CesiumJS용 웹 결과로 변환합니다 (결과 파일 + 적용 코드, 또는 바로 열리는 HTML 지도).
+about=QGIS 레이어(2D 벡터·래스터)를 geo-web-bridge 서버(공개 서버 https://geospatial.kro.kr 또는 직접 설치한 서버)로 보내 대상 웹 지도 라이브러리와 목적에 맞는 결과로 변환합니다. 벡터는 GeoPackage, 래스터는 GeoTIFF로 보내므로 좌표계를 따로 고를 필요가 없습니다. 결과는 GeoJSON·MVT·PMTiles·COG·래스터 타일 등이며, 라이브러리별 적용 코드나 지도 페이지(index.html)·라이브러리를 한 폴더로 묶은 HTML 지도로 받습니다. 공개 서버는 파일 200MB, 접속자별 하루 1GiB까지입니다. 레이어 스타일은 아직 결과에 옮기지 않습니다.
+version=0.1.0
+author=Gi-Di-Zi
+email=142295278+Gi-Di-Zi@users.noreply.github.com
+homepage=https://geospatial.kro.kr/qgis
+tracker=https://github.com/Gi-Di-Zi/geo/issues
+repository=https://github.com/Gi-Di-Zi/geo
+tags=web,webmap,export,openlayers,maplibre,deck.gl,cesium,geojson,vector tiles,pmtiles,cog
+category=Web
+icon=icon.svg
+experimental=False
+deprecated=False

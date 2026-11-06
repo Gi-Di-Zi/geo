@@ -57,7 +57,8 @@ export default defineNuxtConfig({
   nitro: {
     // SDK 자산의 raw import를 외부 패키지 경로로 바꾸면 Nitro가 파일을 읽지 못한다.
     externals: { inline: ['@modelcontextprotocol/ext-apps'] },
-    prerender: { crawlLinks: true, routes: ['/'] },
+    // /qgis/ 아래(플러그인 zip·plugins.xml)는 서버 경로가 매번 응답 → 미리 그린 파일로 굳히지 않는다
+    prerender: { crawlLinks: true, routes: ['/'], ignore: ['/qgis/'] },
     // MCP App 화면에 SDK를 통째로 넣는다 (CDN 없이 뜨게). 설치된 버전 그대로 → useStorage('assets:mcp-sdk')
     serverAssets: [{ baseName: 'mcp-sdk', dir: fileURLToPath(new URL('./node_modules/@modelcontextprotocol/ext-apps/dist/src', import.meta.url)), pattern: 'app-with-deps.js' }],
   },

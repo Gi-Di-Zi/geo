@@ -35,6 +35,8 @@ const files = [
   'app/pages/viz/[category]/[format]/[[step]].vue',
   'scripts/pipeline.ts',
   'scripts/standalone-lib.ts',
+  'scripts/qgis-plugins.ts',
+  'server/routes/qgis/[file].get.ts',
   'scripts/lint-scope.mjs',
   'scripts/lint-scope.test.mjs',
   'tests/viz/mcp-app.test.ts',

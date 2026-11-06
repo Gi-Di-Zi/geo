@@ -25,7 +25,8 @@ CI는 GitHub Actions 대신 자체 서버에서 실행한다. [`deploy/selfhost-
 | --- | --- |
 | `npm run test:viz` | 실행 중인 dev/preview 서버와 Chrome 또는 `VIZ_BROWSER_PATH`. 탐색·모바일 표시·MCP 리소스 검증이며 실제 지도 데이터 변환 성공을 대신하지 않는다. |
 | `npm run test:mcp-app` | 실행 중인 MCP/웹 서버, 브라우저, 파일 업로드·실제 변환 작업자와 변환 도구. 서비스 발행 검사는 별도 GeoServer/PostGIS와 명시적 서비스 허용이 필요하다. 공개 파일 전용 환경에서는 서비스 발행 성공으로 보고하지 않는다. |
-| `npm run test:snippets` | 예시 결과(`/data`·`/svc`)를 제공하는 사이트(`VIZ_TEST_URL`)와 Chrome. AI·웹이 주는 적용 코드를 그대로 번들·실행해 뷰어×결과 종류마다 그려지는지, 타일은 최대 줌보다 확대해도 비지 않는지 확인한다. 픽셀 판정은 거칠어 `SNIPPET_SHOTS` 화면을 눈으로도 본다. |
+| `npm run test:snippets` | 예시 결과(`/data`·`/svc`)를 제공하는 사이트(`VIZ_TEST_URL`)와 Chrome. AI·웹이 주는 적용 코드를 그대로 번들·실행해 뷰어×결과 종류마다 그려지는지, 타일은 최대 줌보다 확대해도 비지 않는지, 독립 HTML 지도(index.html·lib·data)가 열리는지, GeoServer WMTS 범위가 GeoWebCache 격자 안인지 확인한다. 픽셀 판정은 거칠어 `SNIPPET_SHOTS` 화면을 눈으로도 본다. |
+| `tests/qgis/plugins_test.py` | QGIS Python(`python-qgis-ltr.bat` 등)과 실제 변환 작업자가 있는 서버. QGIS 플러그인 두 개의 레이어 내보내기·변환·결과 레이어·주소·코드 연계·메뉴·대화상자를 확인한다. QGIS 3.44에서 실행했고, QGIS 4.3(Qt6)은 `qgis/qgis:latest` 컨테이너에서 네트워크 없이 받아 둔 결과로 같은 화면·레이어 경로를 확인했다. |
 | `npm run test:link` | 개발 서버·브라우저·공식 사전과 HTTP/MCP 연결. 주소 제공자와 공식 자료의 실제 가용성 검증은 격리된 통합 환경에서 별도로 수행한다. |
 | `npm run check` | 수집·변환한 실제 샘플과 서비스. 운영 원본·DB에 연결한 일반 PR 검사로 실행하지 않는다. |
 

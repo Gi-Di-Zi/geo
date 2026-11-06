@@ -4,7 +4,7 @@
 
 **공개 사이트:** [geospatial.kro.kr](https://geospatial.kro.kr) · [데이터 시각화](https://geospatial.kro.kr/viz) · [내 파일 업로드](https://geospatial.kro.kr/viz/upload) · [AI 연결 안내](https://geospatial.kro.kr/ai)
 
-[다른 도구와의 차이](#compare) · [작업 범위](#scope) · [MCP Apps 연결 방법(베타)](#mcp-apps) · [주소·코드 연계](#link) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
+[다른 도구와의 차이](#compare) · [작업 범위](#scope) · [MCP Apps 연결 방법(베타)](#mcp-apps) · [주소·코드 연계](#link) · [QGIS 플러그인](#qgis) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
 
 <a id="compare"></a>
 ## 다른 도구와의 차이
@@ -17,6 +17,7 @@
 | [Mapbox MCP](https://github.com/mapbox/mcp-server) | 요청에 담긴 GeoJSON을 Mapbox GL 지도로 대화 안에 표시, 지오코딩·경로 | 파일 변환·타일 생성 없음 |
 | [gdal-mcp](https://pypi.org/project/gdal_mcp) · [gis-mcp](https://github.com/mahdin75/gis-mcp) | 로컬 실행, 형식 변환·재투영·공간 분석 | PMTiles·MVT·3D Tiles·점군·CityGML·IFC 결과와 대화 안 화면 없음 |
 | Felt·CARTO 등 플랫폼 MCP | 플랫폼에 데이터를 가져와 지도 발행 | 결과가 플랫폼 안에 머묾. 플랫폼 계정 필요 |
+| [qgis2web](https://plugins.qgis.org/plugins/qgis2web/) · [MapSplat](https://plugins.qgis.org/plugins/mapsplat/) (QGIS 플러그인, 2026-11-06 확인) | QGIS 프로젝트 → OpenLayers·Leaflet 또는 MapLibre+PMTiles 정적 웹 지도 | 이 프로젝트의 QGIS 플러그인은 4개 라이브러리 중 고른 대상용 결과 파일 + 적용 코드 또는 HTML 지도를 주고, 웹·AI와 같은 서버 규칙을 씁니다. 3D(점군·CityGML·IFC)는 웹·AI 쪽에서 |
 
 이 프로젝트의 기준:
 
@@ -157,6 +158,18 @@ MCP Apps를 표시하지 못하는 클라이언트도 `geo_identify(stage)` → 
 - **범위:** PNU는 형식 조합이며 실제 필지 존재(지적 대장)는 확인하지 않습니다. 도로명주소의 PNU는 건물의 대표지번이며, 여러 필지에 걸친 건물은 관련지번이 더 있을 수 있습니다.
 - **한도:** 위치까지 한 번에 받는 변환은 20줄, 코드·주소만은 200줄. 공개 서버는 외부 원천을 부르는 조회를 접속자별 하루 2,000줄로 제한합니다.
 - **AI:** MCP `geo_link_resolve`에 줄 단위 `text`와 `options={target:"all"}`.
+
+<a id="qgis"></a>
+## QGIS 플러그인
+
+QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https://geospatial.kro.kr/qgis/plugins.xml` 하나를 추가하면 두 플러그인을 설치·업데이트합니다. QGIS 3.28 이상(QGIS 4 포함)이고 추가 Python 패키지는 필요 없습니다.
+
+| 플러그인 | 하는 일 |
+|---|---|
+| geo-web-bridge 웹 지도 변환 | 레이어(2D 벡터·래스터)를 대상 라이브러리·목적에 맞는 웹 결과로. 결과 파일 + 적용 코드 또는 바로 열리는 HTML 지도로 받고, 결과(GeoJSON·타일 폴더·COG)를 QGIS에 다시 불러와 확인. 레이어 좌표계를 그대로 보내 좌표계를 고를 일이 없음 |
+| geo-web-bridge 주소·코드 연계 | 속성 표의 PNU·법정동코드·행정동코드·지번주소·도로명주소 열을 주소·PNU·단계별 코드·행정동·우편번호·위치로 바꿔 새 레이어에 붙이고, 위치로 점 레이어도. 원본은 바꾸지 않음. 외부 조회를 끄면 사전만으로 200줄씩 한도 없이 |
+
+플러그인 원본은 [qgis/](qgis), 저장소(zip·plugins.xml)는 빌드 때 [scripts/qgis-plugins.ts](scripts/qgis-plugins.ts)가 만듭니다. 서버 칸에 직접 설치한 서버 주소를 넣으면 외부로 보낼 수 없는 자료도 같은 규칙으로 변환합니다.
 
 <a id="deployment"></a>
 ## 배포 상태
