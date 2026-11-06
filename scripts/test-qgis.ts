@@ -1,6 +1,6 @@
 // 이 PC에 설치된 QGIS로 플러그인 시험 두 가지:
 //   1) 흐름: QGIS Python(화면 없음)으로 tests/qgis/plugins_test.py — 내보내기 → 실제 서버 변환 → 결과 레이어, 주소·코드 연계, 메뉴·대화상자
-//   2) 데스크톱(Windows): 임시 프로필에 플러그인 바로가기를 두고 QGIS 데스크톱을 화면 없이 띄워 tests/qgis/desktop_check.py — 시작·웹 메뉴·대화상자
+//   2) 데스크톱(Windows): 임시 프로필에 플러그인 바로가기를 두고 QGIS 데스크톱을 화면 없이 띄워 tests/qgis/desktop_check.py — 시작·웹 메뉴·대화상자·닫기
 // 서버 = QGIS_TEST_URL (기본 http://localhost:3000, 실제 변환 작업자가 있어야 함). QGIS Python = QGIS_PYTHON 또는 자동으로 찾기. 사용자 프로필은 건드리지 않는다
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync } from 'node:fs'
@@ -77,7 +77,7 @@ if (process.platform === 'win32' && desktop !== python && existsSync(desktop)) {
   const text = existsSync(out) ? readFileSync(out, 'utf8') : '결과 없음 (3분 안에 QGIS가 확인 스크립트를 끝내지 못함)'
 
   console.log(text)
-  desktopOk = plugins.every(id => text.includes(`${id}: load=True start=True`) && new RegExp(`${id} 대화상자: .* visible=True`).test(text))
+  desktopOk = plugins.every(id => text.includes(`${id}: load=True start=True`) && new RegExp(`${id} 대화상자: .* visible=True`).test(text) && text.includes(`${id} 닫기: closed=True errors=0`))
 }
 
 // 바로가기를 먼저 끊고 지운다 (저장소의 플러그인 원본은 그대로)

@@ -157,7 +157,7 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
         <p class="eyebrow">국내 주소·코드 연계</p>
         <h1>주소·코드 변환</h1>
         <p class="lead">주소나 코드를 넣으면 주소·우편번호·PNU·법정동·행정동·위치를 한 번에 보여줍니다.</p>
-        <p class="input-hint">속성 표 전체는 <NuxtLink to="/qgis">QGIS 플러그인</NuxtLink>으로 열 단위로 바꿉니다.</p>
+        <p class="input-hint">속성 표 전체는 <NuxtLink to="/qgis">QGIS 플러그인</NuxtLink>(개발 중 · 실험 버전)으로 열 단위로 바꿉니다.</p>
       </header>
       <form class="converter" @submit.prevent="submit">
         <template v-if="mode === 'search'">

@@ -164,7 +164,9 @@ PNU가 정해진 줄에는 필지 단위 결과도 붙습니다: **필지 실재
 <a id="qgis"></a>
 ## QGIS 플러그인
 
-QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https://geospatial.kro.kr/qgis/plugins.xml` 하나를 추가하면 두 플러그인을 설치·업데이트합니다. QGIS 3.28 이상(QGIS 4 포함)이고 추가 Python 패키지는 필요 없습니다.
+> **개발 중:** 두 플러그인은 실험 버전(`experimental=True`)입니다. 아직 충분히 시험하지 않아 오류가 날 수 있습니다.
+
+QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https://geospatial.kro.kr/qgis/plugins.xml` 하나를 추가하고 설정 탭의 "실험적인 플러그인도 표시"를 켜면 두 플러그인을 설치·업데이트합니다. QGIS 3.28 이상(QGIS 4 포함)이고 추가 Python 패키지는 필요 없습니다.
 
 | 플러그인 | 하는 일 |
 |---|---|

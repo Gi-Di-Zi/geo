@@ -41,7 +41,7 @@ class ConvertTask(QgsTask):
 class Dialog(QDialog):
     def __init__(self, iface):
         super().__init__(iface.mainWindow())
-        self.iface, self.task, self.done = iface, None, None
+        self.iface, self.task, self.last = iface, None, None
         self.setWindowTitle('웹 지도로 변환 — geo-web-bridge')
         self.setMinimumWidth(560)
         settings = QgsSettings()
@@ -93,9 +93,9 @@ class Dialog(QDialog):
             button.setEnabled(False)
         self.run_button.clicked.connect(self.start)
         self.cancel_button.clicked.connect(lambda: self.task and self.task.cancel())
-        self.open_folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.done['folder'])))
-        self.open_map.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(self.done['info']['view'])))
-        self.copy_code.clicked.connect(lambda: QGuiApplication.clipboard().setText(self.done['code']))
+        self.open_folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(self.last['folder'])))
+        self.open_map.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(self.last['info']['view'])))
+        self.copy_code.clicked.connect(lambda: QGuiApplication.clipboard().setText(self.last['code']))
         buttons = QHBoxLayout()
         for button in (self.run_button, self.cancel_button, self.open_folder, self.open_map, self.copy_code):
             buttons.addWidget(button)
@@ -128,7 +128,7 @@ class Dialog(QDialog):
         self.cancel_button.setEnabled(True)
         self.task = ConvertTask(server, path, fmt, intent, out_dir)
         self.task.progressChanged.connect(lambda value: (self.bar.setValue(int(value)), self.status.setText(self.task.message)))
-        self.task.taskCompleted.connect(self.finished)
+        self.task.taskCompleted.connect(self.completed)
         self.task.taskTerminated.connect(self.failed)
         QgsApplication.taskManager().addTask(self.task)
 
@@ -137,7 +137,7 @@ class Dialog(QDialog):
         self.run_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
 
-    def finished(self):
+    def completed(self):
         info, folder, base = self.task.result
         self.run_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
@@ -145,7 +145,7 @@ class Dialog(QDialog):
         html = info.get('intent', {}).get('form') == 'html'
         usage = next((u for u in info.get('usages', []) if html and info.get('site') == u.get('site')), None) or next(iter(info.get('usages', [])), None)
         code = usage['code'] if usage else ''
-        self.done = {'info': info, 'folder': folder, 'code': code}
+        self.last = {'info': info, 'folder': folder, 'code': code}
         lines = [f'저장 위치: {folder}', f'지도 화면(서버 사본): {info["view"]}']
         if html:
             lines.append('index.html이 있는 폴더를 정적 웹 서버(npx serve 등)로 열거나 정적 호스팅에 폴더째 올리세요 (README.txt).')

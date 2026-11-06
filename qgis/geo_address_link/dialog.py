@@ -140,16 +140,16 @@ class Dialog(QDialog):
         details = lookups and (bool(DETAIL_FIELDS & set(self.names())) or self.parcels.isChecked())
         self.task = LinkTask(server, values, 'location' if by_geometry else self.input_type.currentData(), lookups, details)
         self.task.progressChanged.connect(lambda value: (self.bar.setValue(int(value)), self.status.setText(self.task.message)))
-        self.task.taskCompleted.connect(self.finished)
-        self.task.taskTerminated.connect(lambda: self.done(self.task.error or '변환을 끝내지 못했습니다.'))
+        self.task.taskCompleted.connect(self.completed)
+        self.task.taskTerminated.connect(lambda: self.settle(self.task.error or '변환을 끝내지 못했습니다.'))
         QgsApplication.taskManager().addTask(self.task)
 
-    def done(self, text):
+    def settle(self, text):
         self.status.setText(text)
         self.run_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
 
-    def finished(self):
+    def completed(self):
         layer = self.layer.currentLayer()
         same, dots, lots = build_layers(layer, self.items, self.task.results, self.names(), self.points.isChecked() and self.points.isEnabled(), self.parcels.isChecked() and self.parcels.isEnabled())
         QgsProject.instance().addMapLayer(same)
@@ -160,5 +160,5 @@ class Dialog(QDialog):
         ok = sum(1 for r in rows if r.get('status') == 'ok')
         pick = sum(1 for r in rows if r.get('status') == 'needs_selection')
         self.bar.setValue(100)
-        self.done(f'완료: 서로 다른 값 {len(rows)}개 중 정상 {ok}, 후보 선택 필요 {pick}, 그 밖 {len(rows) - ok - pick}. "{same.name()}" 레이어를 추가했습니다.'
+        self.settle(f'완료: 서로 다른 값 {len(rows)}개 중 정상 {ok}, 후보 선택 필요 {pick}, 그 밖 {len(rows) - ok - pick}. "{same.name()}" 레이어를 추가했습니다.'
                   + (f' 중단: {self.task.stopped}' if self.task.stopped else ''))
