@@ -5,9 +5,10 @@ import { formatLocation, parseLocation, transformLocation } from '#shared/link/l
 useHead({ title: '주소·코드 변환', meta: [{ name: 'description', content: 'PNU·법정동코드·행정동코드·지번·도로명주소·좌표를 넣으면 주소·코드·위치·우편번호를 한 번에. 경계 SHP 다운로드.' }, { name: 'referrer', content: 'no-referrer' }] })
 type SearchAddress = { address: string; jibunAddress: string; legalCode: string }
 const detectedNames: Record<LinkResult['inputType'], string> = { pnu: 'PNU', code: '법정동코드', administrative: '행정동코드', address: '주소', location: '좌표', postcode: '우편번호' }
+// 도로명주소·필지·건물·토지 속성은 PNU가 정해지고 위치 조회를 켠 줄에만 있다
 const resultKinds: { id: LinkConversionKey; name: string }[] = [
-  { id: 'address', name: '주소' }, { id: 'postcode', name: '우편번호' }, { id: 'pnu', name: 'PNU' }, { id: 'legal_region', name: '법정동코드' },
-  { id: 'administrative_region', name: '행정동코드' }, { id: 'location', name: '위치' },
+  { id: 'address', name: '주소' }, { id: 'road_address', name: '도로명주소' }, { id: 'postcode', name: '우편번호' }, { id: 'pnu', name: 'PNU' }, { id: 'legal_region', name: '법정동코드' },
+  { id: 'administrative_region', name: '행정동코드' }, { id: 'location', name: '위치' }, { id: 'parcel', name: '필지' }, { id: 'building', name: '건물' }, { id: 'land', name: '토지 속성' },
 ]
 const regionLevels = [['sido', '시도'], ['sigungu', '시군구'], ['eupmyeondong', '읍면동'], ['ri', '리']] as const
 const mode = ref<'search' | 'location'>('search'), text = ref(''), searchedAddress = ref<SearchAddress>()
@@ -78,6 +79,14 @@ async function choose(row: LinkResult, kind: LinkConversionKey, candidateId: str
     selections.value = Object.fromEntries(Object.entries(selections.value).map(([key, values]) => [key, key === 'administrative_region' ? values : Object.fromEntries(Object.entries(values || {}).filter(([id]) => id !== row.inputId))]))
   } else selections.value = { ...selections.value, [kind]: { ...selections.value[kind], [row.inputId]: candidateId } }
   await run()
+}
+/** 필지 경계를 GeoJSON 파일로 (결과에 받은 도형 그대로, EPSG:4326) */
+function downloadParcel(row: LinkResult) {
+  const parcel = row.conversions?.parcel
+  if (!parcel?.geometry) return
+  const feature = { type: 'Feature', properties: { pnu: row.output.pnu, address: row.output.address, ...parcel.details, source: 'VWorld 연속지적도 (참고 도면)' }, geometry: parcel.geometry }
+  const url = URL.createObjectURL(new Blob([JSON.stringify({ type: 'FeatureCollection', features: [feature] })], { type: 'application/geo+json' })), anchor = document.createElement('a')
+  anchor.href = url; anchor.download = 'parcel-' + row.output.pnu + '.geojson'; anchor.click(); URL.revokeObjectURL(url)
 }
 async function downloadBoundary(row: LinkResult) {
   const legal = row.conversions?.legal_region
@@ -174,9 +183,9 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
         <div class="table-scroll"><table aria-label="검색 결과"><thead><tr><th scope="col">입력</th><th scope="col">결과</th></tr></thead><tbody>
           <tr v-for="row in batch.rows" :key="row.id"><td class="original">{{ row.original.주소 || row.value || '(빈 값)' }}<small v-if="batch.options.inputType === 'auto' && row.value.trim()" class="detected">{{ detectedNames[row.inputType] }}로 인식</small></td><td>
             <dl v-if="row.conversions" class="result-fields">
-              <div v-for="kind in resultKinds" :key="kind.id" class="result-field" :data-conversion="kind.id">
+              <div v-for="kind in resultKinds.filter(k => row.conversions?.[k.id])" :key="kind.id" class="result-field" :data-conversion="kind.id">
                 <dt>{{ kind.name }}</dt><dd>
-                  <span v-if="resultValue(row, kind.id)" class="value" :class="{ identifier: kind.id !== 'address' }">{{ resultValue(row, kind.id) }}</span>
+                  <span v-if="resultValue(row, kind.id)" class="value" :class="{ identifier: ['pnu', 'legal_region', 'administrative_region', 'location', 'postcode'].includes(kind.id) }">{{ resultValue(row, kind.id) }}</span>
                   <label v-if="kind.id === 'location' && row.conversions.location?.status === 'ok'" class="location-crs">좌표계<select :value="locationView(row).crs" :aria-label="row.inputId + ' 위치 결과 좌표계'" :disabled="busy" @change="changeLocationCrs(row, $event)"><option v-for="[code, name] in coordinateSystems" :key="code" :value="code">{{ name }} · {{ code }}</option></select></label>
                   <p v-if="kind.id === 'location' && locationView(row).error" class="row-error" role="alert">{{ locationView(row).error }}</p>
                   <template v-if="kind.id === 'legal_region' && row.conversions.legal_region?.status === 'ok'">
@@ -184,6 +193,9 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
                     <button class="btn boundary" type="button" :disabled="busy || downloads[row.id]?.busy || !row.conversions.legal_region.code" @click="downloadBoundary(row)">{{ downloads[row.id]?.busy ? '경계 다운로드 중…' : '법정동 경계 SHP 다운로드' }}</button>
                     <p v-if="downloads[row.id]?.error" class="row-error" role="alert">{{ downloads[row.id].error }}</p><p v-if="downloads[row.id]?.message" class="input-hint" role="status">{{ downloads[row.id].message }}</p>
                   </template>
+                  <ul v-if="(kind.id === 'land' || kind.id === 'parcel') && row.conversions[kind.id]?.details" class="region-levels"><li v-for="[name, value] in Object.entries(row.conversions[kind.id]?.details || {})" :key="name"><span>{{ name }}</span><code>{{ value }}</code></li></ul>
+                  <button v-if="kind.id === 'parcel' && row.conversions.parcel?.geometry" class="btn boundary" type="button" @click="downloadParcel(row)">필지 경계 GeoJSON 다운로드</button>
+                  <p v-if="(kind.id === 'parcel' || kind.id === 'building') && row.conversions[kind.id]?.status === 'ok' && row.conversions[kind.id]?.warnings[0]" class="input-hint">{{ row.conversions[kind.id]?.warnings[0] }}</p>
                   <p v-for="issue in row.conversions[kind.id]?.errors || []" :key="issue.code" class="row-issue">{{ issue.message }}</p>
                   <p v-if="!row.conversions[kind.id]?.value && !row.conversions[kind.id]?.errors.length && !row.conversions[kind.id]?.candidates.length" class="muted">확인할 수 없습니다.</p>
                   <ul v-if="row.conversions[kind.id]?.candidates.length" class="candidates"><li v-for="candidate in row.conversions[kind.id].candidates" :key="candidate.id"><span>{{ candidate.name }} <small>{{ candidate.code }}</small></span><button class="btn" type="button" :disabled="busy" :aria-label="kind.name + ': ' + candidate.name + ' 선택'" @click="choose(row, kind.id, candidate.id)">선택</button></li></ul>
@@ -196,7 +208,7 @@ onBeforeUnmount(() => { live = false; generation++; clearTimeout(linkedTimer) })
           </td></tr>
         </tbody></table></div>
       </section>
-      <footer class="support-note"><p>법정동과 행정동은 서로 다른 사전으로 조회합니다. 실제 필지 존재는 확인하지 않습니다.</p><NuxtLink to="/link/reference">기준 자료·업데이트 →</NuxtLink></footer>
+      <footer class="support-note"><p>법정동과 행정동은 서로 다른 사전으로 조회합니다. 필지 존재·경계는 연속지적도(참고 도면), 건물은 도로명주소가 부여된 건물, 토지 속성은 토지특성 기준입니다.</p><NuxtLink to="/link/reference">기준 자료·업데이트 →</NuxtLink></footer>
     </div>
   </div>
 </template>

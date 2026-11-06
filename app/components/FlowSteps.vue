@@ -4,7 +4,7 @@ import type { FormatSpec } from '#shared/types'
 /**
  * 상단 막대. 예시(확장자) 안(spec 있음): 프로젝트 이름 | 유형·확장자 · 4단계 (어느 단계로든 오감).
  * 그 밖: 프로젝트 이름들 (세로 구분선, 지금 화면은 밑줄. 누르면 그 첫 화면, 기획 중인 자리는 이름만).
- * 오른쪽 끝: 소개(/)로 돌아가는 화살표(소개 화면에선 숨김) + AI 연결(MCP)
+ * 오른쪽 끝: QGIS 연결 + AI 연결(MCP) + 소개(/)로 돌아가는 화살표(소개 화면에선 숨김)
  */
 const props = defineProps<{ spec?: FormatSpec; step?: FlowStep }>()
 const route = useRoute()
@@ -21,7 +21,7 @@ const viz = vizProject
         <p class="where">
           <NuxtLink :to="{ path: viz.base, query: { type: cat.id } }" class="chip" title="확장자 다시 고르기"><span class="chip-dot" />{{ cat.name }}</NuxtLink>
           <strong class="ext">{{ spec.extensions[0] }}</strong>
-          <span class="name">{{ spec.name }}</span>
+          <span class="name" :title="spec.name">{{ spec.name }}</span>
         </p>
         <ol class="steps">
           <li v-for="(s, i) in flow" :key="s.id" :class="{ done: i < at, now: i === at }" :title="s.text">
@@ -37,11 +37,15 @@ const viz = vizProject
           <span v-else class="project soon" :title="p.summary">{{ p.name }}</span>
         </li>
       </ul>
-      <!-- 오른쪽: 화면별 버튼(slot) + AI 연결(MCP, 사이트 공용이라 어느 프로젝트에서나 같은 자리) + 맨 끝 소개로 화살표 -->
+      <!-- 오른쪽: 화면별 버튼(slot) + QGIS 연결·AI 연결(MCP) (사이트 공용이라 어느 프로젝트에서나 같은 자리) + 맨 끝 소개로 화살표 -->
       <div class="extra">
         <slot />
-        <NuxtLink to="/ai" class="mcp" :aria-current="route.path === '/ai' ? 'page' : undefined">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z" /></svg>AI 연결 (MCP) <small class="status">베타</small>
+        <!-- 예시 화면은 단계가 길어 한 줄에 들어가게 아이콘만 (이름은 툴팁·화면 낭독) -->
+        <NuxtLink to="/qgis" class="mcp" :class="{ icon: spec }" title="QGIS 연결 (플러그인·결과 주소·공간 서비스)" aria-label="QGIS 연결" :aria-current="route.path === '/qgis' ? 'page' : undefined">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3 9l9 5 9-5zM3 14l9 5 9-5" /></svg><template v-if="!spec">QGIS 연결</template>
+        </NuxtLink>
+        <NuxtLink to="/ai" class="mcp" :class="{ icon: spec }" title="AI 연결 (MCP Apps, 베타)" aria-label="AI 연결 (MCP)" :aria-current="route.path === '/ai' ? 'page' : undefined">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z" /></svg><template v-if="!spec">AI 연결 (MCP) <small class="status">베타</small></template>
         </NuxtLink>
         <NuxtLink v-if="route.path !== '/'" to="/" class="home" title="소개로" aria-label="소개로">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m0 0 6-6m-6 6 6 6" /></svg>
@@ -59,7 +63,7 @@ const viz = vizProject
 .brand + .where, .projects li + li { padding-left: 16px; border-left: 1px solid var(--rule); }
 .where { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ext { color: var(--c); }
-.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16rem; }
+.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8rem; }
 .steps { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 4px; }
 .steps li { display: flex; align-items: center; gap: 4px; }
 .steps li + li::before { content: ''; width: 20px; height: 2px; background: var(--rule); }
@@ -90,6 +94,7 @@ const viz = vizProject
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid var(--rule); border-radius: 999px;
   font-size: var(--fs-0); font-weight: 600; color: var(--ink); background: var(--surface); text-decoration: none; white-space: nowrap;
 }
+.mcp.icon { justify-content: center; width: 32px; height: 32px; padding: 0; }
 .mcp:hover, .mcp:focus-visible { border-color: var(--ink-2); }
 .mcp[aria-current='page'] { background: var(--ink); border-color: var(--ink); color: #fff; }
 .mcp svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }

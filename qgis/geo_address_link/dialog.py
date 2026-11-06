@@ -3,7 +3,7 @@ from qgis.core import Qgis, QgsApplication, QgsMapLayerProxyModel, QgsProject, Q
 from qgis.gui import QgsFieldComboBox, QgsMapLayerComboBox
 from qgis.PyQt.QtWidgets import QCheckBox, QComboBox, QDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QProgressBar, QPushButton, QVBoxLayout
 
-from .core import ALWAYS, GROUPS, INPUT_TYPES, build_layers, resolve
+from .core import ALWAYS, DETAIL_FIELDS, GROUPS, INPUT_TYPES, build_layers, geometry_value, resolve, wgs84
 
 SETTINGS = 'geo_address_link'
 DEFAULT_SERVER = 'https://geospatial.kro.kr'
@@ -14,14 +14,15 @@ CAN_CANCEL = QgsTask.Flag.CanCancel if hasattr(QgsTask, 'Flag') else QgsTask.Can
 
 
 class LinkTask(QgsTask):
-    def __init__(self, server, values, input_type, lookups):
+    def __init__(self, server, values, input_type, lookups, details):
         super().__init__('주소·코드 연계 (geo-web-bridge)', CAN_CANCEL)
         self.args = (server, values, input_type, lookups)
+        self.details = details
         self.message, self.results, self.stopped, self.error = '', {}, None, None
 
     def run(self):
         try:
-            self.results, self.stopped = resolve(*self.args, report=self.report, canceled=self.isCanceled)
+            self.results, self.stopped = resolve(*self.args, report=self.report, canceled=self.isCanceled, details=self.details)
             return True
         except Exception as error:
             self.error = str(error)
@@ -52,15 +53,17 @@ class Dialog(QDialog):
             self.input_type.addItem(text, value)
         self.groups = []
         group_box = QVBoxLayout()
-        for title, names in GROUPS:
+        for title, names, external in GROUPS:
             box = QCheckBox(title)
             box.setChecked(True)
-            self.groups.append((box, names))
+            self.groups.append((box, names, external))
             group_box.addWidget(box)
-        self.lookups = QCheckBox('위치·우편번호·도로명주소까지 찾기 (외부 조회: 20줄씩, 공개 서버는 하루 2,000줄)')
+        self.lookups = QCheckBox('외부 조회: 위치·우편번호·도로명주소·건물·필지·토지 속성 (20줄씩, 공개 서버는 하루 2,000줄)')
         self.lookups.setChecked(settings.value(f'{SETTINGS}/lookups', 'true') == 'true')
         self.points = QCheckBox('위치로 점 레이어도 만들기 (EPSG:4326)')
         self.points.setChecked(True)
+        self.parcels = QCheckBox('필지 경계 레이어도 만들기 (연속지적도 참고 도면, EPSG:4326)')
+        self.parcels.setChecked(False)
         self.lookups.toggled.connect(self.sync)
         self.server = QLineEdit(settings.value(f'{SETTINGS}/server', DEFAULT_SERVER))
         self.server.setToolTip('공개 서버 또는 직접 설치한 geo-web-bridge 주소')
@@ -73,6 +76,7 @@ class Dialog(QDialog):
         form.addRow('붙일 결과', group_box)
         form.addRow('', self.lookups)
         form.addRow('', self.points)
+        form.addRow('', self.parcels)
         form.addRow('서버', self.server)
 
         self.bar = QProgressBar()
@@ -95,19 +99,29 @@ class Dialog(QDialog):
         self.sync()
 
     def sync(self):
-        self.points.setEnabled(self.lookups.isChecked())
-        self.groups[-1][0].setEnabled(self.lookups.isChecked())
+        on = self.lookups.isChecked()
+        self.points.setEnabled(on)
+        self.parcels.setEnabled(on)
+        for box, _, external in self.groups:
+            if external:
+                box.setEnabled(on)
 
     def names(self):
-        return ALWAYS + [name for box, names in self.groups if box.isChecked() and box.isEnabled() for name in names]
+        return ALWAYS + [name for box, names, _ in self.groups if box.isChecked() and box.isEnabled() for name in names]
 
     def start(self):
         layer, field = self.layer.currentLayer(), self.field.currentField()
-        if not layer or not field:
+        if not layer or (not field and self.input_type.currentData() != 'geometry'):
             return self.status.setText('레이어와 값 열을 고르세요.')
         features = layer.getSelectedFeatures() if self.selected.isChecked() else layer.getFeatures()
-        # 피처는 화면 스레드에서 읽어 둔다 (작업 스레드는 서버 호출만)
-        self.items = [(f, str(f[field]).strip() if f[field] is not None and str(f[field]).strip() not in ('', 'NULL') else '') for f in features]
+        # 피처는 화면 스레드에서 읽어 둔다 (작업 스레드는 서버 호출만). 도형 위치 = 피처의 위치(경위도)로 그 지점의 필지
+        by_geometry = self.input_type.currentData() == 'geometry'
+        if by_geometry and not layer.isSpatial():
+            return self.status.setText('도형이 없는 레이어는 도형 위치를 쓸 수 없습니다.')
+        if by_geometry and not self.lookups.isChecked():
+            return self.status.setText('도형 위치로 필지를 찾으려면 외부 조회를 켜세요.')
+        transform = wgs84(layer) if by_geometry else None
+        self.items = [(f, geometry_value(f, transform)) if by_geometry else (f, str(f[field]).strip() if f[field] is not None and str(f[field]).strip() not in ('', 'NULL') else '') for f in features]
         values = [value for _, value in self.items]
         unique = len(set(v for v in values if v))
         if not unique:
@@ -122,7 +136,9 @@ class Dialog(QDialog):
         self.bar.setValue(0)
         self.run_button.setEnabled(False)
         self.cancel_button.setEnabled(True)
-        self.task = LinkTask(server, values, self.input_type.currentData(), lookups)
+        # 필지 단위 결과는 그 열을 고르거나 필지 경계 레이어를 만들 때만 묻는다 (필지마다 원천 3번 더)
+        details = lookups and (bool(DETAIL_FIELDS & set(self.names())) or self.parcels.isChecked())
+        self.task = LinkTask(server, values, 'location' if by_geometry else self.input_type.currentData(), lookups, details)
         self.task.progressChanged.connect(lambda value: (self.bar.setValue(int(value)), self.status.setText(self.task.message)))
         self.task.taskCompleted.connect(self.finished)
         self.task.taskTerminated.connect(lambda: self.done(self.task.error or '변환을 끝내지 못했습니다.'))
@@ -135,10 +151,11 @@ class Dialog(QDialog):
 
     def finished(self):
         layer = self.layer.currentLayer()
-        same, dots = build_layers(layer, self.items, self.task.results, self.names(), self.points.isChecked() and self.points.isEnabled())
+        same, dots, lots = build_layers(layer, self.items, self.task.results, self.names(), self.points.isChecked() and self.points.isEnabled(), self.parcels.isChecked() and self.parcels.isEnabled())
         QgsProject.instance().addMapLayer(same)
-        if dots is not None:
-            QgsProject.instance().addMapLayer(dots)
+        for extra in (dots, lots):
+            if extra is not None:
+                QgsProject.instance().addMapLayer(extra)
         rows = [r for r in self.task.results.values()]
         ok = sum(1 for r in rows if r.get('status') == 'ok')
         pick = sum(1 for r in rows if r.get('status') == 'needs_selection')

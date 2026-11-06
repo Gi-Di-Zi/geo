@@ -30,7 +30,8 @@ function preview(batch: LinkBatch) {
   return { ...batch, options: modelOptions(batch.options), rows: batch.rows.slice(0, 10).map(row => ({ ...row,
     original: Object.fromEntries(Object.entries(row.original).slice(0, 10).map(([k, v]) => [k.slice(0, 100), v.slice(0, 300)])),
     value: row.value.slice(0, 300), candidates: row.candidates.slice(0, 10),
-    ...(row.conversions && { conversions: Object.fromEntries(Object.entries(row.conversions).map(([key, result]) => [key, { ...result, candidates: result.candidates.slice(0, 10) }])) }),
+    // 필지 경계 도형은 모델 문맥에 넣지 않는다 (앱 화면은 _meta.linkResult의 전체 결과로 그린다)
+    ...(row.conversions && { conversions: Object.fromEntries(Object.entries(row.conversions).map(([key, { geometry, ...result }]) => [key, { ...result, candidates: result.candidates.slice(0, 10), ...(geometry && { geometry: { type: geometry.type, omitted: true } }) }])) }),
   })), returned: Math.min(batch.rows.length, 10), total: batch.summary.total, truncated: batch.summary.total > Math.min(batch.rows.length, 10), previewOnly: true }
 }
 const answer = (data: Record<string, unknown>, message: string, meta?: Record<string, unknown>) => ({
@@ -52,7 +53,7 @@ export function registerLinkTools(server: McpServer, origin: string, owner: stri
     const info = await capabilities()
     return answer({ ...info, web: `${origin}/link`, referenceWeb: `${origin}/link/reference`, app: LINK_APP, modelPreviewRows: 10 }, `입력·출력: PNU·법정동코드 / 행정동코드 / 주소 / 위치 / 우편번호(출력. 입력은 웹 주소 검색). 경계 SHP는 출력 전용이며 VWorld 키와 등록 서비스 URL(VWORLD_DOMAIN) 설정이 필요합니다. PNU 앞 2·5·8·10자리는 법정구역 코드이며 행정동과 다릅니다. 법정동 기준 ${info.reference.version}, 행정동 기준 ${info.administrative.version}. 웹 ${origin}/link`)
   }))
-  registerAppTool(server, 'geo_link_resolve', { title: '주소·코드 변환', description: '입력은 auto(기본: 줄마다 PNU·법정동·행정동·주소 자동 판별), pnu_legal(PNU·법정동코드), administrative(행정동코드), address(주소), location(X,Y). target=all로 주소·PNU·법정동 단계코드·행정동·위치·우편번호를 한 번에 조회한다. 5자리 숫자는 실제 시군구코드가 아니면 우편번호로 보며, 우편번호로 주소를 찾는 것은 웹 주소 검색에서 한다(최대 20행). 각 conversions 항목의 상태·후보·오류는 독립적이다. conversionSelections에 결과 항목별 후보를 지정한다. sourceCrs·outputCrs로 EPSG 지정. SHP는 변환 시 조회하지 않고 앱·웹의 별도 다운로드 버튼으로 받는다. 위치·우편번호·도로명주소가 필요 없으면 options.lookups=false(사전만, 한 번에 200행). 기존 단일 target도 유지한다. 입력이 없으면 화면. 모델 미리보기 최대 10행.', inputSchema: input, annotations: { readOnlyHint: true, openWorldHint: false }, _meta: ui }, safe(async args => {
+  registerAppTool(server, 'geo_link_resolve', { title: '주소·코드 변환', description: '입력은 auto(기본: 줄마다 PNU·법정동·행정동·주소 자동 판별), pnu_legal(PNU·법정동코드), administrative(행정동코드), address(주소), location(X,Y). target=all로 주소·PNU·법정동 단계코드·행정동·위치·우편번호를 한 번에 조회하고, PNU가 정해진 줄은 필지 실재·경계(연속지적도), 도로명주소·건물 유무(필지에 등록된 도로명주소 건물), 토지 속성(지목·면적·용도지역·이용상황·공시지가)도 준다(options.details, 기본 켬). 좌표(inputType location)는 그 좌표가 들어 있는 필지를 찾는다. 5자리 숫자는 실제 시군구코드가 아니면 우편번호로 보며, 우편번호로 주소를 찾는 것은 웹 주소 검색에서 한다(최대 20행). 각 conversions 항목의 상태·후보·오류는 독립적이다. conversionSelections에 결과 항목별 후보를 지정한다. sourceCrs·outputCrs로 EPSG 지정. SHP는 변환 시 조회하지 않고 앱·웹의 별도 다운로드 버튼으로 받는다. 위치·우편번호·도로명주소가 필요 없으면 options.lookups=false(사전만, 한 번에 200행). 기존 단일 target도 유지한다. 입력이 없으면 화면. 모델 미리보기 최대 10행.', inputSchema: input, annotations: { readOnlyHint: true, openWorldHint: false }, _meta: ui }, safe(async args => {
     if (args.text === undefined && args.rows === undefined && !args.uploadId) return answer({ mode: 'input', origin, web: `${origin}/link` }, `주소나 코드를 넣으면 유형을 자동으로 판별해 주소·PNU·법정동·행정동·위치를 한 번에 확인합니다. SHP는 별도 다운로드 버튼을 사용하세요. 화면 미지원 환경은 text와 options={target:"all"}로 호출하거나(좌표는 inputType:"location") ${origin}/link 를 이용하세요.`, { ownerSession: true })
     chargeLinkLookups(client, args)
     const batch = await resolveInput(args, access(args.uploadToken))

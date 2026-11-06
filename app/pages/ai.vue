@@ -34,7 +34,7 @@ const tools = [
   ['geo_convert', '추천(방식 생략) 또는 직접 고른 방식으로 작업을 시작합니다. 서버가 조건을 다시 확인하고 맞지 않으면 시작하지 않습니다.'],
   ['geo_status', '처리 단계·오류, 완료된 주력 결과물·내려받기·리소스 URL·적용 코드·결과 파일 검사, 서비스 만료 시각을 확인합니다.'],
   ['geo_formats', '받는 확장자, 파일 변환 방식, 뷰어별 지원을 확인합니다.'],
-  ['geo_link_resolve', '주소·코드 연계: PNU·법정동·행정동코드·지번·도로명주소·좌표를 넣으면 주소·PNU·단계 코드·행정동·위치·우편번호를 한 번에 줍니다(target=all, 한 번에 20줄). 입력이 없으면 연계 화면을 엽니다.'],
+  ['geo_link_resolve', '주소·코드 연계: PNU·법정동·행정동코드·지번·도로명주소·좌표를 넣으면 주소·PNU·단계 코드·행정동·위치·우편번호와 필지 실재·경계·토지 속성·건물 유무·도로명주소를 한 번에 줍니다(target=all, 한 번에 20줄). 입력이 없으면 연계 화면을 엽니다.'],
   ['geo_link_regions', '법정동·행정동 코드와 이름을 찾습니다.'],
   ['geo_link_capabilities', '주소·코드 기준자료 버전·지원 범위·한도를 확인합니다.'],
 ]
@@ -46,7 +46,6 @@ const tools = [
     <main class="wrap page">
       <h1>AI 연결 (MCP Apps) <small class="beta">베타</small></h1>
       <p class="prose lead">쓸 웹 지도 라이브러리와 목적을 말하면 → 파일을 올리고 → 서버가 맞는 변환을 추천하고 → 확인·변경한 조건으로 변환해 → 그 라이브러리에 바로 쓸 결과 파일·주소·적용 코드를 받습니다. 변환 도구 이름을 몰라도 됩니다.</p>
-      <p class="prose small muted">QGIS에서 쓰려면 <NuxtLink to="/qgis">QGIS 플러그인</NuxtLink>을 설치하세요. 같은 서버·규칙을 씁니다.</p>
       <p class="prose beta-note">MCP Apps 연동은 베타 기능입니다. 대화 안 화면과 파일 내려받기 지원은 호스트에 따라 달라집니다. 연결이 원활하지 않으면 <NuxtLink to="/viz/upload">웹 업로드</NuxtLink>를 이용하세요. 웹 업로드도 같은 추천 규칙을 씁니다.</p>
       <p class="addr">연결 주소 <code>{{ endpoint }}</code> <button class="btn" type="button" @click="copy('endpoint', endpoint)">{{ copied === 'endpoint' ? '복사됨' : '복사' }}</button></p>
 

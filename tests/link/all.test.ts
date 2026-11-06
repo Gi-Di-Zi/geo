@@ -138,6 +138,40 @@ test('도로명주소는 원천의 건물 대표지번 PNU·건물 위치·우�
   assert.notEqual(other!.output.pnu, '1111011900100010000'); assert.notEqual(partial!.output.pnu, '1111011900100010000')
 })
 
+test('필지 단위 결과: 필지 실재·경계, 건물 유무·도로명주소, 토지 속성 — 지적에 없는 지번은 건물·토지를 묻지 않는다', async () => {
+  const geometry = { type: 'MultiPolygon', coordinates: [[[[126.97, 37.58], [126.98, 37.58], [126.98, 37.59], [126.97, 37.58]]]] }
+  let asked = 0
+  const details = {
+    parcelByPnu: async (pnu: string) => (pnu === '1111010100100010000' ? { pnu, jibun: '1', jimok: '대', geometry, checkedAt: 't' } : undefined),
+    buildingsOn: async () => { asked++; return [{ id: '1111010100100010000000001', name: '청운빌라', part: '1동', floors: 3, road: '서울특별시 종로구 자하문로 1' }] },
+    landOf: async () => { asked++; return { year: '2026', values: { 지목: '대', 면적: '100㎡', 용도지역: '제1종일반주거지역', 이용상황: '단독' }, checkedAt: 't' } },
+  }
+  const batch = await resolveAllRows([row('1111010100100010000'), row('1111010100199990000', '2')], { inputType: 'pnu_legal' }, fixture, administrative, { ...provider, ...details })
+  const [found, missing] = batch.rows
+  assert.equal(found!.parcel, 'matched'); assert.equal(found!.conversions!.parcel?.geometry?.type, 'MultiPolygon')
+  assert.equal(found!.output.road_address, '서울특별시 종로구 자하문로 1'); assert.equal(found!.output.building, '있음'); assert.equal(found!.output.building_count, '1')
+  assert.equal(found!.output.land_zone, '제1종일반주거지역'); assert.match(found!.conversions!.building?.value ?? '', /청운빌라 1동 3층/)
+  assert.equal(missing!.parcel, 'no_match_in_dataset'); assert.equal(missing!.conversions!.building?.errors[0]?.code, 'PARCEL_NOT_IN_CADASTRE')
+  assert.equal(asked, 2)
+  // 건물이 없는 필지: 건물 '없음', 도로명주소는 없음으로 알림
+  const empty = await resolveAllRows([row('1111010100100010000')], { inputType: 'pnu_legal' }, fixture, administrative, { ...provider, ...details, buildingsOn: async () => [] })
+  assert.equal(empty.rows[0]!.conversions!.building?.value, '없음'); assert.equal(empty.rows[0]!.conversions!.road_address?.errors[0]?.code, 'NO_BUILDING_ROAD')
+  // details=false면 묻지 않는다
+  const off = await resolveAllRows([row('1111010100100010000')], { inputType: 'pnu_legal', details: false }, fixture, administrative, { ...provider, ...details })
+  assert.equal(off.rows[0]!.conversions!.parcel, undefined)
+})
+
+test('좌표 → 그 좌표가 들어 있는 필지(연속지적도): PNU처럼 처리하고 위치는 입력 좌표 그대로', async () => {
+  const parcelAt = async () => ({ pnu: '1111010100100010000', jibun: '1', jimok: '대', checkedAt: 't' })
+  const batch = await resolveAllRows([row('126.9701, 37.5801')], { inputType: 'location', sourceCrs: 'EPSG:4326' }, fixture, administrative, { ...provider, parcelAt })
+  const result = batch.rows[0]!
+  assert.equal(result.inputType, 'location'); assert.equal(result.output.pnu, '1111010100100010000')
+  assert.equal(result.output.location_method, 'input_point'); assert.equal(result.output.x, '126.9701')
+  // 필지가 없는 곳(도로·바다)은 기존 역조회
+  const road = await resolveAllRows([row('126.9701, 37.5801')], { inputType: 'location', sourceCrs: 'EPSG:4326' }, fixture, administrative, { ...provider, parcelAt: async () => undefined })
+  assert.ok(!road.rows[0]!.warnings.some(w => w.includes('연속지적도')))
+})
+
 test('외부 조회 끔(lookups=false): 위치 원천을 부르지 않고 사전 결과만, 한 번에 200줄까지', async () => {
   let calls = 0
   const counting = { forwardLocation: async () => { calls++; return point }, reverseLocation: async () => { calls++; return found } }

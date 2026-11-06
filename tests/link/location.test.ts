@@ -121,5 +121,5 @@ test('키 미설정·응답 크기·동시 호출 상한을 적용한다', async
   await withProvider(async () => { active++; maximum = Math.max(maximum, active); await new Promise(done => setTimeout(done, 5)); active--; return forward() }, async () => {
     await Promise.all(Array.from({ length: 8 }, (_, i) => forwardLocation('조회 ' + i, 'region')))
   })
-  assert.equal(maximum, 2)
+  assert.equal(maximum, 4)
 })

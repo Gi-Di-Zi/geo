@@ -84,8 +84,8 @@ table.dataProvider().addFeatures(rows)
 items = [(f, str(f['입력']).strip() if f['입력'] not in (None, '') else '') for f in table.getFeatures()]
 results, stopped = link.resolve(server, [v for _, v in items], 'auto', True)
 check('연계: 서로 다른 값만 조회', len(results) == 5 and stopped is None, str(len(results)))
-names = link.ALWAYS + [n for _, group in link.GROUPS for n in group]
-same, dots = link.build_layers(table, items, results, names, points=True)
+names = link.ALWAYS + [n for _, group, _ in link.GROUPS for n in group]
+same, dots, lots = link.build_layers(table, items, results, names, points=True, parcels=True)
 by_input = {f['입력']: f for f in same.getFeatures()}
 check('연계: PNU는 문자열 그대로', by_input['서울 강남구 테헤란로 152']['g_pnu'] == '1168010100107370000', str(by_input['서울 강남구 테헤란로 152']['g_pnu']))
 check('연계: 행정동 확정(역조회)', by_input['서울 강남구 테헤란로 152']['g_hjd_nm'] == '서울특별시 강남구 역삼1동', str(by_input['서울 강남구 테헤란로 152']['g_hjd_nm']))
@@ -95,6 +95,25 @@ check('연계: 빈 값은 empty', by_input[''] ['g_status'] == 'empty' if '' in 
 check('연계: 원본 행 수 유지', same.featureCount() == len(values), str(same.featureCount()))
 check('연계: 위치 점 레이어', dots is not None and dots.featureCount() >= 4, str(dots and dots.featureCount()))
 check('연계: 별칭(한글)', same.attributeAlias(same.fields().indexOf('g_pnu')) == 'PNU')
+teheran = by_input['서울 강남구 테헤란로 152']
+check('연계: 도로명주소·건물 유무', teheran['g_road'] == '서울특별시 강남구 테헤란로 152' and teheran['g_bld'] == '있음' and teheran['g_bld_n'] == 1, f"{teheran['g_road']} {teheran['g_bld']} {teheran['g_bld_n']}")
+check('연계: 필지 실재·토지 속성(면적 숫자)', teheran['g_parcel'] == '있음' and teheran['g_jimok'] == '대' and isinstance(teheran['g_area'], float) and teheran['g_area'] > 10000, f"{teheran['g_parcel']} {teheran['g_jimok']} {teheran['g_area']} {teheran['g_zone']}")
+check('연계: 필지 경계 레이어', lots is not None and lots.featureCount() >= 3 and all(f.geometry().area() > 0 for f in lots.getFeatures()), str(lots and lots.featureCount()))
+
+# 4-1) 도형 위치 → 그 지점의 필지: EPSG:5186 점 (역삼동 737 안)
+from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform  # noqa: E402
+
+to5186 = QgsCoordinateTransform(QgsCoordinateReferenceSystem('EPSG:4326'), QgsCoordinateReferenceSystem('EPSG:5186'), QgsProject.instance())
+spot = QgsVectorLayer('Point?crs=EPSG:5186&field=이름:string', '측량점', 'memory')
+feature = QgsFeature(spot.fields())
+feature.setAttributes(['점1'])
+feature.setGeometry(QgsGeometry.fromPointXY(to5186.transform(QgsPointXY(127.03651, 37.50003))))
+spot.dataProvider().addFeatures([feature])
+spot_items = [(f, link.geometry_value(f, link.wgs84(spot))) for f in spot.getFeatures()]
+spot_results, _ = link.resolve(server, [v for _, v in spot_items], 'location', True)
+spot_layer, _, _ = link.build_layers(spot, spot_items, spot_results, names)
+spot_row = next(spot_layer.getFeatures())
+check('연계: 도형 위치(EPSG:5186 점) → 필지 PNU', spot_row['g_pnu'] == '1168010100107370000' and spot_row['g_bld'] == '있음', f"{spot_items[0][1]} → {spot_row['g_pnu']}")
 
 # 5) 외부 조회 끔: 200줄씩, 위치 없음
 many = ['1111010100100010000'] + [f'11110101001{n:08d}' for n in range(1, 30)]

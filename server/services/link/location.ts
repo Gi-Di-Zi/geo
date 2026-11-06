@@ -8,10 +8,18 @@ export const LOCATION_SOURCE_URL = 'https://www.vworld.kr/dev/v4dv_geocoderguide
 const ENDPOINT = 'https://api.vworld.kr/req/address'
 // 검색 API: 도로명주소 → 건물의 대표지번 PNU(id)·우편번호·건물 좌표, 행정구역 → 대표점(시도청·시군구청 등)
 const SEARCH = 'https://api.vworld.kr/req/search'
+// 2D 데이터 API: 연속지적도(LP_PA_CBND_BUBUN, 필지 경계·지목·공시지가), 도로명주소 건물(LT_C_SPBD, 건물관리번호 앞 19자리 = 필지 PNU)
+const DATA = 'https://api.vworld.kr/req/data'
+// 국가중점데이터: 토지특성(지목·면적·용도지역·이용상황·지형·도로접면·공시지가). 응답에 response 감싸개가 없다
+const LAND = 'https://api.vworld.kr/ned/data/getLandCharacteristics'
 const BASE: Record<string, Record<string, string>> = {
   [ENDPOINT]: { service: 'address', version: '2.0', crs: 'EPSG:4326', format: 'json', errorFormat: 'json', simple: 'false', refine: 'false' },
   [SEARCH]: { service: 'search', request: 'search', version: '2.0', crs: 'EPSG:4326', format: 'json', errorFormat: 'json', size: '10' },
+  [DATA]: { service: 'data', request: 'GetFeature', version: '2.0', crs: 'EPSG:4326', format: 'json', geometry: 'false', attribute: 'true', size: '100' },
+  [LAND]: { format: 'json', numOfRows: '50', pageNo: '1' },
 }
+// 데이터·국가중점 API는 키에 등록한 서비스 주소(domain)를 함께 보내야 한다
+const domain = () => (process.env.VWORLD_DOMAIN || process.env.PUBLIC_URL || '').trim()
 const key = () => process.env.VWORLD_KEY?.trim() || process.env.NUXT_PUBLIC_VWORLD_KEY?.trim() || ''
 const metadata = (method: 'address_point' | 'region_representative' | 'reverse_geocoded', checkedAt: string) => ({ source: LOCATION_SOURCE, sourceUrl: LOCATION_SOURCE_URL, sourceDate: null, checkedAt, method })
 type Meta = ReturnType<typeof metadata>
@@ -21,8 +29,9 @@ const cache = new Map<string, { expires: number; data: unknown }>(), pending = n
 let active = 0
 const waiting: Array<() => void> = []
 async function limited<T>(run: () => Promise<T>) {
-  if (active >= 2) {
-    if (waiting.length >= 40) throw new LocationError('GEOCODER_BUSY', '위치 조회 요청이 많습니다. 잠시 뒤 다시 시도하세요.', 'unavailable')
+  // 동시 4건, 대기 200건: 필지 단위 결과는 줄마다 원천을 3번 더 부른다(20줄 × 6건)
+  if (active >= 4) {
+    if (waiting.length >= 200) throw new LocationError('GEOCODER_BUSY', '위치 조회 요청이 많습니다. 잠시 뒤 다시 시도하세요.', 'unavailable')
     await new Promise<void>(resolve => waiting.push(resolve))
   } else active++
   try { return await run() } finally { const next = waiting.shift(); if (next) next(); else active-- }
@@ -37,7 +46,7 @@ async function request(parameters: Record<string, string>, endpoint = ENDPOINT):
   if (existing) return existing as Promise<Record<string, any>>
   const operation = limited(async () => {
     const url = new URL(endpoint)
-    for (const [name, value] of Object.entries({ ...BASE[endpoint], ...parameters, key: apiKey })) url.searchParams.set(name, value)
+    for (const [name, value] of Object.entries({ ...BASE[endpoint], ...parameters, key: apiKey, ...((endpoint === DATA || endpoint === LAND) && domain() && { domain: domain() }) })) url.searchParams.set(name, value)
     let response: Response
     try { response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(10_000) }) }
     catch { throw new LocationError('GEOCODER_UNAVAILABLE', '위치 조회 원천에 연결하지 못했습니다. 잠시 뒤 다시 시도하세요.', 'unavailable') }
@@ -51,7 +60,7 @@ async function request(parameters: Record<string, string>, endpoint = ENDPOINT):
       for await (const part of response.body as unknown as AsyncIterable<Uint8Array>) { if ((size += part.length) > 1024 ** 2) throw new Error('size'); parts.push(part) }
       value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(parts)))
     } catch { throw new LocationError('GEOCODER_INVALID_RESPONSE', '위치 조회 원천의 응답 형식이나 크기를 확인할 수 없습니다.', 'unavailable') }
-    const data = value && typeof value === 'object' && 'response' in value ? (value as { response: Record<string, any> }).response : undefined
+    const data = value && typeof value === 'object' && 'response' in value ? (value as { response: Record<string, any> }).response : endpoint === LAND && value && typeof value === 'object' ? { status: 'OK', result: value } : undefined
     if (!data || typeof data !== 'object') throw new LocationError('GEOCODER_INVALID_RESPONSE', '위치 조회 원천의 응답 형식이 올바르지 않습니다.', 'unavailable')
     if (data.status === 'NOT_FOUND') throw new LocationError('GEOCODER_NO_MATCH', '지원하는 원천에서 대응하는 위치·주소를 찾지 못했습니다.', 'not_found')
     if (data.status !== 'OK') {
@@ -75,7 +84,7 @@ function korea(point: { lon: number; lat: number }) {
   return point
 }
 export function getLocationCapabilities() {
-  return { state: key() ? 'available' : 'setup_required', crs: LOCATION_CRS, source: LOCATION_SOURCE, sourceUrl: LOCATION_SOURCE_URL, axisOrder: 'X=easting/longitude, Y=northing/latitude', maxRows: 20, globalConcurrency: 2, cacheSeconds: 60, warning: '주소 좌표와 구역 대표점은 필지 중심점·관할 경계의 확정값이 아닙니다.' }
+  return { state: key() ? 'available' : 'setup_required', crs: LOCATION_CRS, source: LOCATION_SOURCE, sourceUrl: LOCATION_SOURCE_URL, axisOrder: 'X=easting/longitude, Y=northing/latitude', maxRows: 20, globalConcurrency: 4, cacheSeconds: 60, warning: '주소 좌표와 구역 대표점은 필지 중심점·관할 경계의 확정값이 아닙니다.' }
 }
 export interface RoadMatch { pnu: string; road: string; parcel: string; building: string; postcode?: string; lon: number; lat: number; checkedAt: string }
 /** 도로명주소 검색 (VWorld 검색 API, 도로명주소 DB): 건물마다 대표지번 PNU·도로명·지번·우편번호·건물 좌표. 같은 주소의 동(본관·신관)은 PNU가 같다 */
@@ -124,4 +133,62 @@ export async function reverseLocation(input: LocationPoint): Promise<ReverseLoca
     legalCode: code(parcel?.structure?.level4LC), administrativeCode: code(parcel?.structure?.level4AC) || code(road?.structure?.level4AC),
     // 원천이 지번 뒤에 지목 약자(학·대 등)를 붙이는 경우가 있어 지번만 남긴다.
     postcode: zip(road?.zipcode) || zip(parcel?.zipcode), parcelNumber: text(parcel?.structure?.level5).replace(/[가-힣]+$/, ''), warning: '원천의 역지오코딩 주소·관할 코드입니다. 경계선의 포함 관계나 실제 필지 존재를 확정하지 않습니다.' }
+}
+
+export interface ParcelInfo { pnu: string; jibun: string; jimok: string; price?: number; priceYear?: string; geometry?: { type: string; coordinates: unknown }; checkedAt: string }
+export interface BuildingInfo { id: string; name: string; part: string; floors?: number; road: string }
+export interface LandInfo { year: string; values: Record<string, string>; checkedAt: string }
+const notFound = (error: unknown) => error instanceof LocationError && error.status === 'not_found'
+const feature = (data: Record<string, any>) => (Array.isArray(data.result?.featureCollection?.features) ? data.result.featureCollection.features : []) as Array<{ properties: Record<string, any>; geometry?: { type: string; coordinates: unknown } }>
+function parcelOf(item: { properties: Record<string, any>; geometry?: { type: string; coordinates: unknown } } | undefined, checkedAt: string): ParcelInfo | undefined {
+  const p = item?.properties
+  if (!p || typeof p.pnu !== 'string' || !/^\d{19}$/.test(p.pnu)) return undefined
+  // jibun = "737 대"·"178-1대"·"산 2-1임": 지번 + 지목 약자(띄어쓰기는 필지마다 다름)
+  const [, jibun = text(p.jibun), jimok = ''] = /^(.*?\d)\s*([가-힣]+)$/.exec(text(p.jibun)) ?? []
+  const price = Number(p.jiga)
+  return { pnu: p.pnu, jibun, jimok, ...(price > 0 && { price, priceYear: text(p.gosi_year) }), ...(item?.geometry && { geometry: item.geometry }), checkedAt }
+}
+/** 연속지적도에서 PNU의 필지 (경계 도형 포함). 없으면 undefined = 지적에 없는 지번 */
+export async function parcelByPnu(pnu: string): Promise<ParcelInfo | undefined> {
+  if (!/^\d{19}$/.test(pnu)) return undefined
+  try {
+    const data = await request({ data: 'LP_PA_CBND_BUBUN', attrFilter: `pnu:=:${pnu}`, geometry: 'true', size: '1' }, DATA)
+    return parcelOf(feature(data).find(item => item.properties?.pnu === pnu), data.checkedAt)
+  } catch (error) { if (notFound(error)) return undefined; throw error }
+}
+/** 좌표(경위도)가 들어 있는 필지 (연속지적도 점 검색). 도로·하천 등 필지가 없으면 undefined */
+export async function parcelAt(point: { lon: number; lat: number }): Promise<ParcelInfo | undefined> {
+  korea(point)
+  try {
+    const data = await request({ data: 'LP_PA_CBND_BUBUN', geomFilter: `POINT(${point.lon} ${point.lat})`, size: '1' }, DATA)
+    return parcelOf(feature(data)[0], data.checkedAt)
+  } catch (error) { if (notFound(error)) return undefined; throw error }
+}
+/** 필지에 등록된 건물 (도로명주소 건물, 건물관리번호 앞 19자리 = PNU). 도로명주소가 부여된 건물만 */
+export async function buildingsOn(pnu: string): Promise<BuildingInfo[]> {
+  if (!/^\d{19}$/.test(pnu)) return []
+  try {
+    const data = await request({ data: 'LT_C_SPBD', attrFilter: `bd_mgt_sn:like:${pnu}` }, DATA)
+    return feature(data).flatMap(({ properties: p }) => {
+      if (typeof p?.bd_mgt_sn !== 'string' || !p.bd_mgt_sn.startsWith(pnu)) return []
+      const floors = Number(p.gro_flo_co)
+      return [{ id: p.bd_mgt_sn, name: text(p.buld_nm), part: text(p.buld_nm_dc), ...(floors > 0 && { floors }), road: [text(p.sido), text(p.sigungu), text(p.rd_nm), text(p.buld_no)].filter(Boolean).join(' ') }]
+    })
+  } catch (error) { if (notFound(error)) return []; throw error }
+}
+/** 토지특성 (가장 최근 기준연도): 지목·면적·용도지역·이용상황·지형·도로접면·공시지가 */
+export async function landOf(pnu: string): Promise<LandInfo | undefined> {
+  if (!/^\d{19}$/.test(pnu)) return undefined
+  let data: Record<string, any>
+  try { data = await request({ pnu }, LAND) } catch (error) { if (notFound(error)) return undefined; throw error }
+  const rows: Array<Record<string, any>> = Array.isArray(data.result?.landCharacteristicss?.field) ? data.result.landCharacteristicss.field : []
+  const last = rows.filter(row => row.pnu === pnu).sort((a, b) => String(a.stdrYear).localeCompare(String(b.stdrYear))).at(-1)
+  if (!last) return undefined
+  const area = Number(last.lndpclAr), price = Number(last.pblntfPclnd)
+  const values: Record<string, string> = {
+    지목: text(last.lndcgrCodeNm), 면적: area > 0 ? `${area.toLocaleString('ko-KR')}㎡` : '', 용도지역: [text(last.prposArea1Nm), text(last.prposArea2Nm)].filter(v => v && v !== '지정되지않음').join(', '),
+    이용상황: text(last.ladUseSittnNm), 지형높이: text(last.tpgrphHgCodeNm), 지형형상: text(last.tpgrphFrmCodeNm), 도로접면: text(last.roadSideCodeNm), 공시지가: price > 0 ? `${price.toLocaleString('ko-KR')}원/㎡` : '',
+  }
+  // 값이 없거나 '지정되지않음'인 항목은 뺀다
+  return { year: text(last.stdrYear), values: Object.fromEntries(Object.entries(values).filter(([, v]) => v && v !== '지정되지않음')), checkedAt: data.checkedAt }
 }

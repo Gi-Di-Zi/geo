@@ -1,12 +1,12 @@
 import { canonicalName, levelCode, parsePnu, resolveRows, referenceMetadata } from '../../../shared/link/core.ts'
-import { formatLocation, LocationError, parseLocation, transformLocation } from '../../../shared/link/location.ts'
+import { formatLocation, LocationError, parseLocation, toWgs84, transformLocation } from '../../../shared/link/location.ts'
 import { linkConversionKeys, linkOptionsSchema } from '../../../shared/link/types.ts'
 import type { InputRow, LinkBatch, LinkConversion, LinkConversionKey, LinkOptions, LinkRegion, LinkResult, ReferenceSnapshot } from '../../../shared/link/types.ts'
 import type { AdministrativeSnapshot } from '../../../shared/link/administrative.ts'
 import { resolveAdministrativeRows } from './administrative.ts'
 import { resolveLocationRows } from './location-resolve.ts'
-import { forwardLocation, reverseLocation, searchRoad } from './location.ts'
-import type { RoadMatch } from './location.ts'
+import { buildingsOn, forwardLocation, landOf, parcelAt, parcelByPnu, reverseLocation, searchRoad } from './location.ts'
+import type { BuildingInfo, LandInfo, ParcelInfo, RoadMatch } from './location.ts'
 import { LinkServiceError } from './files.ts'
 
 function conversion(key: LinkConversionKey, row: LinkResult): LinkConversion {
@@ -69,13 +69,91 @@ async function postcodeOf(input: InputRow, inputType: string, parts: Record<Link
   }
 }
 
+/** 외부 원천. 필지 단위 함수(parcelAt 등)가 없으면 그 결과를 만들지 않는다 (시험·외부 조회 끔) */
+interface Provider {
+  forwardLocation: typeof forwardLocation
+  reverseLocation: typeof reverseLocation
+  searchRoad?: typeof searchRoad
+  parcelAt?: typeof parcelAt
+  parcelByPnu?: typeof parcelByPnu
+  buildingsOn?: typeof buildingsOn
+  landOf?: typeof landOf
+}
+
+const detail = (status: LinkConversion['status'], value: string, extra: Partial<LinkConversion> = {}): LinkConversion => ({ status, value, errors: [], warnings: [], candidates: [], evidence: [], ...extra })
+// 키·도메인·한도 문제는 원천의 사유 그대로, 그 밖은 어느 항목인지 알 수 있게
+const failed = (reason: unknown, code: string, label: string): LinkConversion => detail('unavailable', '', { errors: [{ code, message: reason instanceof LocationError && /AUTH|LIMIT|BUSY|SETUP/.test(reason.code) ? reason.message : `${label} 원천을 확인하지 못했습니다. 잠시 뒤 다시 시도하세요.` }] })
+const skipped = (code: string) => detail('not_found', '', { errors: [{ code, message: '연속지적도에 없는 지번이라 확인하지 않았습니다.' }] })
+const settled = <T>(result: PromiseSettledResult<T>) => (result.status === 'fulfilled' ? { value: result.value } : { error: result.reason as unknown })
+
+/**
+ * PNU가 정해진 줄의 필지 단위 결과 (같은 PNU는 한 번만): 필지 실재·경계(연속지적도), 필지에 등록된 건물의 유무·도로명주소(도로명주소 건물),
+ * 토지 속성(토지특성). 원천 장애는 그 항목에만 남기고 다른 결과는 지우지 않는다
+ */
+async function addDetails(rows: LinkResult[], provider: Provider) {
+  const pnus = [...new Set(rows.flatMap(row => (row.conversions?.pnu.status === 'ok' && /^\d{19}$/.test(row.output.pnu) ? [row.output.pnu] : [])))]
+  const found = new Map(await Promise.all(pnus.map(async pnu => {
+    // 필지가 지적에 없으면 건물·토지 속성은 묻지 않는다 (없는 지번에 '건물 없음'으로 답하지 않게, 원천 호출도 아낌)
+    const [parcel] = await Promise.allSettled([provider.parcelByPnu?.(pnu)])
+    const absent = parcel.status === 'fulfilled' && !parcel.value
+    const [buildings, land] = await Promise.allSettled([absent ? undefined : provider.buildingsOn?.(pnu) ?? [], absent ? undefined : provider.landOf?.(pnu)])
+
+    return [pnu, { absent, parcel: settled<ParcelInfo | undefined>(parcel), buildings: settled<BuildingInfo[] | undefined>(buildings), land: settled<LandInfo | undefined>(land) }] as const
+  })))
+
+  for (const row of rows) {
+    const d = found.get(row.output.pnu)
+    if (!d || !row.conversions) continue
+    const { absent, parcel, buildings, land } = d
+    const out = row.output
+
+    if ('error' in parcel) row.conversions.parcel = failed(parcel.error, 'PARCEL_UNAVAILABLE', '연속지적도')
+    else if (!parcel.value) {
+      row.parcel = 'no_match_in_dataset'; out.parcel_exists = '없음'
+      row.conversions.parcel = detail('not_found', '', { errors: [{ code: 'PARCEL_NOT_IN_CADASTRE', message: '연속지적도에 없는 지번입니다. 분할·합병으로 없어졌거나 잘못된 지번일 수 있습니다.' }] })
+    } else {
+      const p = parcel.value
+      row.parcel = 'matched'; out.parcel_exists = '있음'; out.jimok = p.jimok
+      row.conversions.parcel = detail('ok', ['있음', p.jimok && `지목 ${p.jimok}`].filter(Boolean).join(' · '), { code: p.pnu, ...(p.geometry && { geometry: p.geometry }), details: { 지번: p.jibun, ...(p.jimok && { 지목: p.jimok }) },
+        warnings: ['연속지적도는 지적도를 이어 붙인 참고 도면입니다. 법적 경계·면적은 지적공부로 확인하세요.'], evidence: ['VWorld 연속지적도(LP_PA_CBND_BUBUN); 조회 시각 ' + p.checkedAt] })
+    }
+
+    if (absent) { row.conversions.building = skipped('PARCEL_NOT_IN_CADASTRE'); row.conversions.road_address = skipped('PARCEL_NOT_IN_CADASTRE'); row.conversions.land = skipped('PARCEL_NOT_IN_CADASTRE'); continue }
+
+    if ('error' in buildings) {
+      row.conversions.building = failed(buildings.error, 'BUILDING_UNAVAILABLE', '도로명주소 건물'); row.conversions.road_address = failed(buildings.error, 'BUILDING_UNAVAILABLE', '도로명주소 건물')
+    } else {
+      const list = buildings.value ?? []
+      const roads = [...new Set(list.map(b => b.road).filter(Boolean))]
+      out.building = list.length ? '있음' : '없음'; out.building_count = String(list.length)
+      out.building_names = list.map(b => [b.name, b.part].filter(Boolean).join(' ')).filter(Boolean).join(', ')
+      out.road_address = roads.join(' / ')
+      const note = ['도로명주소가 부여된 건물 기준입니다. 미등록 건물은 없음으로 나올 수 있습니다.']
+      const evidence = ['VWorld 도로명주소 건물(LT_C_SPBD, 건물관리번호 앞 19자리 = PNU)']
+      row.conversions.building = detail('ok', list.length ? `있음 ${list.length}동: ${list.map(b => [b.name || '이름 없음', b.part].filter(Boolean).join(' ') + (b.floors ? ` ${b.floors}층` : '')).join(', ')}` : '없음', { code: String(list.length), warnings: note, evidence })
+      row.conversions.road_address = roads.length
+        ? detail('ok', roads.join(' / '), { code: roads[0], warnings: roads.length > 1 ? ['한 필지에 건물이 여럿이라 도로명주소도 여럿입니다.'] : [], evidence })
+        : detail('not_found', '', { errors: [{ code: 'NO_BUILDING_ROAD', message: '이 필지에 등록된 건물이 없어 도로명주소가 없습니다.' }], evidence })
+    }
+
+    if ('error' in land) row.conversions.land = failed(land.error, 'LAND_UNAVAILABLE', '토지특성')
+    else if (!land.value) row.conversions.land = detail('not_found', '', { errors: [{ code: 'LAND_NOT_FOUND', message: '토지특성 자료가 없는 필지입니다.' }] })
+    else {
+      const v = land.value.values
+      Object.assign(out, { land_year: land.value.year, land_area: v.면적 ?? '', land_zone: v.용도지역 ?? '', land_use: v.이용상황 ?? '', land_price: v.공시지가 ?? '' })
+      if (v.지목) out.jimok = v.지목
+      row.conversions.land = detail('ok', [v.용도지역, v.이용상황, v.면적].filter(Boolean).join(' · '), { details: { 기준연도: land.value.year, ...v }, evidence: ['VWorld 국가중점데이터 토지특성; 조회 시각 ' + land.value.checkedAt] })
+    }
+  }
+}
+
 /** 각 변환의 확인·실패를 보존하고 SHP 원천은 다운로드를 요청할 때만 조회한다. 자동 입력은 행마다 유형을 정해 같은 유형끼리 조회한다. */
 export async function resolveAllRows(inputs: InputRow[], provided: Partial<LinkOptions>, legal: ReferenceSnapshot, administrative: AdministrativeSnapshot,
-  given: { forwardLocation: typeof forwardLocation; reverseLocation: typeof reverseLocation; searchRoad?: typeof searchRoad } = { forwardLocation, reverseLocation, searchRoad }): Promise<LinkBatch> {
+  given: Provider = { forwardLocation, reverseLocation, searchRoad, parcelAt, parcelByPnu, buildingsOn, landOf }): Promise<LinkBatch> {
   const options = linkOptionsSchema.parse({ ...provided, target: 'all' })
   // 외부 조회 끔(lookups=false): 위치·우편번호·도로명주소·행정동 역조회 없이 사전만 → 한 번에 200줄 (위치 원천을 부르면 '꺼짐'으로 표시)
   const off = () => Promise.reject(new LocationError('LOOKUP_OFF', '외부 조회(위치·우편번호·도로명주소)를 끈 변환입니다.', 'unavailable'))
-  const provider = options.lookups ? given : { forwardLocation: off, reverseLocation: off }
+  const provider: Provider = options.lookups ? given : { forwardLocation: off, reverseLocation: off }
   if (inputs.length > (options.lookups ? 20 : 200)) throw new LinkServiceError('ALL_ROW_LIMIT', options.lookups ? '위치까지 받는 전체 결과는 위치 조회 한도에 따라 한 번에 20개까지 가능합니다. 외부 조회를 끄면(lookups=false) 200개까지.' : '전체 결과는 한 번에 200개까지 가능합니다.', 413)
   if (options.deduplicate || options.expandCandidates) throw new LinkServiceError('ALL_ROW_OPTIONS_UNSUPPORTED', '전체 결과는 원본 행을 유지하며 후보를 선택합니다. 중복 제거·후보 펼침은 지원하지 않습니다.')
   const forward = new Map<string, ReturnType<typeof forwardLocation>>(), reverse = new Map<string, ReturnType<typeof reverseLocation>>()
@@ -100,7 +178,19 @@ export async function resolveAllRows(inputs: InputRow[], provided: Partial<LinkO
   const search = provider.searchRoad
   const roads = await Promise.all(inputs.map((input, index) => search && types[index] === 'address' && ROAD.test(input.value) ? roadOf(input.value, search).catch(() => undefined) : undefined))
   roads.forEach((road, index) => { if (road) types[index] = 'pnu_legal' })
-  const effective = inputs.map((input, index) => roads[index] ? { ...input, value: roads[index]!.pnu } : input)
+  // 좌표 → 그 좌표가 들어 있는 필지(연속지적도): 찾으면 PNU처럼 처리하고 위치는 입력 좌표 그대로. 도로·하천처럼 필지가 없으면 기존 역조회
+  const at = provider.parcelAt
+  const spots = await Promise.all(inputs.map(async (input, index) => {
+    if (!at || types[index] !== 'location') return undefined
+    try {
+      const point = toWgs84(parseLocation(input.value, options.sourceCrs || 'EPSG:4326'))
+      const parcel = await at({ lon: point.lon, lat: point.lat })
+
+      return parcel && { parcel, lon: point.lon, lat: point.lat }
+    } catch { return undefined }
+  }))
+  spots.forEach((spot, index) => { if (spot) types[index] = 'pnu_legal' })
+  const effective = inputs.map((input, index) => roads[index] ? { ...input, value: roads[index]!.pnu } : spots[index] ? { ...input, value: spots[index]!.parcel.pnu } : input)
   const byRow: Partial<Record<LinkConversionKey, LinkResult>>[] = inputs.map(() => ({}))
   await Promise.all([...new Set(types)].map(async inputType => {
     const indexes = types.flatMap((type, index) => type === inputType ? [index] : []), group = indexes.map(index => effective[index]!)
@@ -117,13 +207,15 @@ export async function resolveAllRows(inputs: InputRow[], provided: Partial<LinkO
       batch.rows.forEach((row, n) => { byRow[indexes[n]!]![key] = row })
     }))
   }))
-  // 도로명주소: 위치는 필지 대표점 대신 원천의 건물 좌표, 우편번호는 도로명주소 DB 값
-  roads.forEach((road, index) => {
-    const location = byRow[index]!.location
-    if (!road || !location) return
-    const point = transformLocation({ x: road.lon, y: road.lat, crs: 'EPSG:4326' }, options.outputCrs || 'EPSG:4326')
-    byRow[index]!.location = { ...location, status: 'ok', format: 'valid', errors: [], candidates: [], warnings: ['도로명주소 DB의 건물 위치입니다. 필지 중심점이 아닙니다.'], evidence: ['VWorld 검색 API (도로명주소); 조회 시각 ' + road.checkedAt],
-      output: { code: formatLocation(point), x: String(point.x), y: String(point.y), crs: point.crs, longitude: String(road.lon), latitude: String(road.lat), code_kind: 'location', location_method: 'building_point' } }
+  // 위치: 도로명주소는 필지 대표점 대신 원천의 건물 좌표, 좌표 입력은 입력 좌표 그대로. 우편번호는 도로명주소 DB 값
+  inputs.forEach((_, index) => {
+    const location = byRow[index]!.location, road = roads[index], spot = spots[index]
+    const fixed = road ? { lon: road.lon, lat: road.lat, method: 'building_point', note: '도로명주소 DB의 건물 위치입니다. 필지 중심점이 아닙니다.', evidence: 'VWorld 검색 API (도로명주소); 조회 시각 ' + road.checkedAt }
+      : spot ? { lon: spot.lon, lat: spot.lat, method: 'input_point', note: '입력 좌표입니다. 이 좌표가 들어 있는 필지를 연속지적도에서 찾았습니다.', evidence: 'VWorld 연속지적도 (좌표가 들어 있는 필지); 조회 시각 ' + spot.parcel.checkedAt } : undefined
+    if (!fixed || !location) return
+    const point = transformLocation({ x: fixed.lon, y: fixed.lat, crs: 'EPSG:4326' }, options.outputCrs || 'EPSG:4326')
+    byRow[index]!.location = { ...location, status: 'ok', format: 'valid', errors: [], candidates: [], warnings: [fixed.note], evidence: [fixed.evidence],
+      output: { code: formatLocation(point), x: String(point.x), y: String(point.y), crs: point.crs, longitude: String(fixed.lon), latitude: String(fixed.lat), code_kind: 'location', location_method: fixed.method } }
   })
   const postcodes = await Promise.all(inputs.map((input, index): Promise<LinkConversion> | LinkConversion => {
     const road = roads[index]
@@ -154,12 +246,14 @@ export async function resolveAllRows(inputs: InputRow[], provided: Partial<LinkO
     }
     const errors = [...new Map(values.flatMap(value => value.errors).map(error => [error.code + ':' + error.message, error])).values()]
     const road = roads[index]
-    const roadNotes = road ? [`도로명주소 ${road.road}의 건물 대표지번으로 PNU를 정했습니다. 여러 필지에 걸친 건물은 관련지번이 더 있을 수 있습니다.`, ...(road.filled ? ['입력에 없는 시도·시군구를 도로명주소 검색 결과에서 채웠습니다.'] : [])] : []
-    return { ...parts.address, id: input.id, inputId: input.id, original: { ...input.original }, value: input.value, ...road && { inputType: 'address' as const }, status, format: Object.values(parts).some(part => part.format === 'valid') ? 'valid' : parts.address.format, pnu: output.pnu, regionCode: output.legal_code, address: output.address, parcel: 'not_checked', output, conversions, candidates: [], errors,
+    const roadNotes = road ? [`도로명주소 ${road.road}의 건물 대표지번으로 PNU를 정했습니다. 여러 필지에 걸친 건물은 관련지번이 더 있을 수 있습니다.`, ...(road.filled ? ['입력에 없는 시도·시군구를 도로명주소 검색 결과에서 채웠습니다.'] : [])]
+      : spots[index] ? ['좌표가 들어 있는 필지(연속지적도)로 PNU를 정했습니다.'] : []
+    return { ...parts.address, id: input.id, inputId: input.id, original: { ...input.original }, value: input.value, ...road && { inputType: 'address' as const }, ...spots[index] && { inputType: 'location' as const }, status, format: Object.values(parts).some(part => part.format === 'valid') ? 'valid' : parts.address.format, pnu: output.pnu, regionCode: output.legal_code, address: output.address, parcel: 'not_checked', output, conversions, candidates: [], errors,
       warnings: [...new Set([...roadNotes, ...values.flatMap(value => value.warnings)])], evidence: [...new Set(values.flatMap(value => value.evidence))] }
   })
+  if (options.details && provider.parcelByPnu) await addDetails(rows, provider)
   const summary: LinkBatch['summary'] = { ok: 0, needs_selection: 0, invalid: 0, not_found: 0, unavailable: 0, total: rows.length, input: inputs.length, omittedDuplicates: 0 }, errors: Record<string, number> = {}
   for (const row of rows) { summary[row.status]++; for (const error of row.errors) errors[error.code] = (errors[error.code] || 0) + 1 }
   const version = legal.version + '+' + administrative.version + '+vworld-geocoder-2'
-  return { schemaVersion: '1', ruleVersion: 'geo-link-v1', version, options, rows, summary, errors, reference: { ...referenceMetadata(legal), version, warning: '전체 행 상태와 각 결과의 확인 상태는 별개입니다. 실제 필지 존재는 확인하지 않았습니다.' } }
+  return { schemaVersion: '1', ruleVersion: 'geo-link-v1', version, options, rows, summary, errors, reference: { ...referenceMetadata(legal), version, warning: options.lookups && options.details ? '전체 행 상태와 각 결과의 확인 상태는 별개입니다. 필지 존재는 연속지적도(참고 도면)로 확인했습니다.' : '전체 행 상태와 각 결과의 확인 상태는 별개입니다. 실제 필지 존재는 확인하지 않았습니다.' } }
 }
