@@ -4,7 +4,7 @@ import os
 import sys
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-from qgis.core import QgsApplication, QgsFeature, QgsField, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer  # noqa: E402
+from qgis.core import QgsApplication, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer  # noqa: E402
 
 repo, server, work = sys.argv[1:4]
 sys.path.insert(0, repo)

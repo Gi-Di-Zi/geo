@@ -2,10 +2,10 @@
  * 이 사이트의 프로젝트. 주소 앞부분(base)마다 다른 프로젝트, 헤더는 프로젝트 이름을 나란히, 소개(/)는 나란한 펼침 패널.
  * base 없음 = 기획 중인 자리 (헤더·카드에 이름만, 누를 수 없음). MCP(/mcp)·API(/api)는 사이트에 하나로 함께 쓴다
  */
-type Project = { id: string; name: string; base?: string; summary: string; thumb?: string; status?: string }
+type Project = { id: string; name: string; base?: string; summary: string; status?: string }
 
 /** 공간 데이터 시각화 도구 (/viz). 예시 화면 헤더의 프로젝트 이름·돌아가기 주소 */
-export const vizProject = { id: 'viz', name: '공간 데이터 시각화 도구', base: '/viz', summary: '공개 원본을 수집·전처리·웹 변환하고, 처리 방식과 지도·3D 결과를 비교', thumb: 'thumbs/model-3d-citygml.webp' }
+export const vizProject = { id: 'viz', name: '공간 데이터 시각화 도구', base: '/viz', summary: '공개 원본을 수집·전처리·웹 변환하고, 처리 방식과 지도·3D 결과를 비교' }
 
 export const linkProject = { id: 'link', name: '국내 주소·코드 연계 도구', base: '/link', summary: 'PNU·법정동·행정동코드·지번·도로명주소·좌표를 서로 변환. 주소·코드·위치·우편번호에 필지 경계·건물 유무·토지 속성까지' }
 

@@ -77,11 +77,11 @@ npm.cmd run link:reference -- --import C:\reference\legal-codes.zip
 
 ## 갱신과 보관 운영 상태
 
-`/link/reference`의 업데이트 버튼은 한국 날짜(`Asia/Seoul`, KST) 기준 당일 상태를 서버에 저장한다. 법정동·행정동/관할 자료의 확인 기록은 모든 사용자가 공유한다. 같은 당일 확인이 끝났으면 다시 적용하지 않으며, 진행 중 동시 요청은 같은 실행을 공유한다. `.data/reference/link/updates/<한국 날짜>/<시도 번호>.json`을 독점 생성해 같은 경로를 쓰는 서버 프로세스 사이에서도 중복 실행을 막는다. 경로는 `LINK_REFERENCE_UPDATE_DIR`로 변경할 수 있다. 실패·중단 시 이전 정상본을 계속 사용하며 5분 대기 후 실패한 원천만 재시도한다.
+기준자료 확인(서버의 하루 한 번 자동 확인)은 한국 날짜(`Asia/Seoul`, KST) 기준 당일 상태를 서버에 저장하고, `/link/reference`는 그 상태를 보여 준다. 법정동·행정동/관할 자료의 확인 기록은 모든 사용자가 공유한다. 같은 당일 확인이 끝났으면 다시 적용하지 않으며, 진행 중 동시 요청은 같은 실행을 공유한다. `.data/reference/link/updates/<한국 날짜>/<시도 번호>.json`을 독점 생성해 같은 경로를 쓰는 서버 프로세스 사이에서도 중복 실행을 막는다. 경로는 `LINK_REFERENCE_UPDATE_DIR`로 변경할 수 있다. 실패·중단 시 이전 정상본을 계속 사용하며 5분 대기 후 실패한 원천만 재시도한다.
 
 `sourceDate`는 제공처의 자료 기준일, `checkedAt`은 마지막 확인 시각, `activatedAt`/`ingestedAt`은 로컬 반영 시각이다. 당일 재확인이나 같은 원문 수신 때문에 기준일·반영 시각을 오늘로 바꾸지 않는다. 법정동 전체자료는 기준일 미제공이고 행정동 확보본의 기준일은 `2026-10-12`다.
 
-운영 자동 확인은 서버가 한다(2026-11-06부터): `server/plugins/link-reference.ts`가 뜰 때와 1시간마다 오늘(한국 날짜) 확인 기록을 보고, 없으면 두 원천을 확인한다. 화면의 수동 업데이트 버튼과 `POST /api/link/references/update`는 없앴다. CLI(`npm.cmd run link:reference -- --check`, `npm.cmd run link:administrative -- --check`)는 서버 없이 확인할 때 쓴다. 각 명령도 한국 날짜당 한 번 확인하고 `checks/`에 `updated / no_change / failed` 등을 기록한다. 운영자가 같은 날 명시적으로 재확인하려면 CLI의 `--force`를 사용한다. 화면의 실패 재시도는 5분 대기 후 제공한다. 원천 자체가 매일 새로 발행된다고 표현하지 않는다.
+운영 자동 확인은 서버가 한다(2026-11-06부터): `server/plugins/link-reference.ts`가 뜰 때와 1시간마다 오늘(한국 날짜) 확인 기록을 보고, 없으면 두 원천을 확인한다. 화면의 수동 업데이트 버튼과 `POST /api/link/references/update`는 없앴다. CLI(`npm.cmd run link:reference -- --check`, `npm.cmd run link:administrative -- --check`)는 서버 없이 확인할 때 쓴다. 각 명령도 한국 날짜당 한 번 확인하고 `checks/`에 `updated / no_change / failed` 등을 기록한다. 운영자가 같은 날 명시적으로 재확인하려면 CLI의 `--force`를 사용한다. 자동 확인이 실패하면 5분 뒤부터 다음 자동 확인(1시간 간격)에서 다시 시도한다. 원천 자체가 매일 새로 발행된다고 표현하지 않는다.
 
 사용자 파일·결과는 기본 24시간 후 API 접근을 차단한다. `LINK_JOB_TTL_MS`로 조정할 수 있다. `npm.cmd run link:maintenance`는 만료 건수 inventory를 출력한다. 전역 삭제 금지 합의에 따라 물리 삭제는 구현·실행하지 않았고 정기 삭제 스케줄도 설치하지 않았다. 접근 만료와 디스크 삭제는 다르며, 운영 전 저장공간·보관 정책을 정해야 한다. 기준 사전은 사용자 임시파일의 보관 대상에 포함하지 않는다.
 

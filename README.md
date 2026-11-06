@@ -175,7 +175,7 @@ QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https:/
 
 플러그인 없이도 [QGIS 연결 안내](https://geospatial.kro.kr/qgis)의 방법으로 결과 주소(GeoJSON·PMTiles·COG·타일·3D Tiles)와 예시 공간 서비스(WMS·WMTS·WFS·OGC API Features·벡터 타일)를 QGIS에 바로 엽니다(QGIS 3.44에서 확인).
 
-플러그인 원본은 [qgis/](qgis), 저장소(zip·plugins.xml)는 빌드 때 [scripts/qgis-plugins.ts](scripts/qgis-plugins.ts)가 만들고, plugins.xml의 내려받기 주소는 응답하는 서버 주소로 채웁니다. 서버 칸에 직접 설치한 서버 주소를 넣으면 외부로 보낼 수 없는 자료도 같은 규칙으로 변환합니다. 개발: `npm run qgis:dev`(이 PC의 QGIS에 바로가기로 연결·켜기·로컬 서버), `npm run test:qgis`(흐름 + 데스크톱 시험).
+플러그인 원본은 [qgis/](qgis), 저장소(zip·plugins.xml)는 빌드 때 [scripts/qgis-plugins.ts](scripts/qgis-plugins.ts)가 만들고, plugins.xml의 내려받기 주소는 응답하는 서버 주소로 채웁니다. 외부로 보낼 수 없는 자료는 서버를 직접 설치하고 QGIS 고급 설정 `geo_web_bridge/server_override`·`geo_address_link/server_override`에 그 주소를 넣습니다. 개발: `npm run qgis:dev`(이 PC의 QGIS에 바로가기로 연결·켜기·로컬 서버), `npm run test:qgis`(흐름 시험 + 패널을 조작하는 데스크톱 사용 시험).
 
 <a id="deployment"></a>
 ## 배포 상태

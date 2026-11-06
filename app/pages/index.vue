@@ -96,7 +96,6 @@ async function show(id: string) {
                   <nav class="go" aria-label="시작">
                     <NuxtLink to="/viz" class="btn-go main">공간 데이터 시각화 도구 →</NuxtLink>
                     <NuxtLink to="/viz#examples" class="btn-go">대표 예시 3개 →</NuxtLink>
-                    <a href="https://github.com/Gi-Di-Zi/geo" class="btn-go">GitHub 저장소 →</a>
                   </nav>
                 </header>
 
