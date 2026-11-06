@@ -46,6 +46,38 @@ test('적용 코드에 빈 값(undefined·NaN·빈 좌표)이 끼지 않는다',
   assert.deepEqual(bad, [])
 })
 
+test('GeoServer WMTS 결과의 bounds가 GeoWebCache 타일 범위를 넘지 않는다 (넘으면 MapLibre가 격자 밖 타일을 요청해 400)', async () => {
+  const caps = await (await fetch(`${base}/svc/geoserver/gwc/service/wmts?REQUEST=GetCapabilities`)).text()
+  const mercY = (lat: number) => (180 - (180 / Math.PI) * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360))) / 360
+  const bad: string[] = []
+
+  for (const o of specs.filter(s => !s.closed).flatMap(s => s.recipes.flatMap(r => r.outputs))) {
+    const layer = /gwc\/service\/wmts.*LAYER=([^&]+)/.exec(o.path)?.[1]
+    // 행·열 범위 = WMTS TileMatrixLimits (행은 위부터 = XYZ y)
+    const set = caps.split('<Layer>').find(l => l.includes(`<ows:Identifier>${layer}<`))?.split('<TileMatrixSetLink>').find(l => l.includes('<TileMatrixSet>EPSG:900913<'))
+
+    if (!layer || !o.bounds) continue
+
+    if (!set) { bad.push(`${layer}: GeoWebCache 레이어 없음`); continue }
+
+    const [w, s, e, n] = o.bounds
+
+    for (const [, z, ...lim] of set.matchAll(/EPSG:900913:(\d+)<\/TileMatrix>\s*<MinTileRow>(\d+)<\/MinTileRow>\s*<MaxTileRow>(\d+)<\/MaxTileRow>\s*<MinTileCol>(\d+)<\/MinTileCol>\s*<MaxTileCol>(\d+)/g)) {
+      const k = 2 ** Number(z)
+      const [r0, r1, c0, c1] = lim.map(Number)
+
+      // 최대 줌 위로는 요청하지 않고 확대만
+      if (Number(z) < (o.minzoom ?? 0) || Number(z) > (o.maxzoom ?? 22)) continue
+      // MapLibre TileBounds.contains와 같은 계산: floor(최소) ~ ceil(최대) 미만
+      const asked = [Math.floor(((180 + w) / 360) * k), Math.ceil(((180 + e) / 360) * k) - 1, Math.floor(mercY(n) * k), Math.ceil(mercY(s) * k) - 1]
+
+      if (asked[0] < c0 || asked[1] > c1 || asked[2] < r0 || asked[3] > r1) { bad.push(`${layer} z${z}: 요청 x${asked[0]}-${asked[1]} y${asked[2]}-${asked[3]}, 격자 x${c0}-${c1} y${r0}-${r1}`); break }
+    }
+  }
+
+  assert.deepEqual(bad, [])
+})
+
 const prelude: Record<ViewerId, string> = {
   ol: "import VectorLayer_ from 'ol/layer/Vector'\nimport VectorSource_ from 'ol/source/Vector'\nconst basemap = new VectorLayer_({ source: new VectorSource_() })\n",
   maplibre: "const baseStyle = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } }] }\n",

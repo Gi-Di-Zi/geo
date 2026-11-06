@@ -102,7 +102,7 @@ export default {
         code: `import pandas as pd\ndf = pd.read_csv('${RAW}', encoding='cp949', dtype=str)\ndf['lat'], df['lon'] = pd.to_numeric(df['위도'], errors='coerce'), pd.to_numeric(df['경도'], errors='coerce')\ndf = df[(df['관리도시명'] == '서울BIS') & df['lat'].between(33, 39) & df['lon'].between(124, 132)]\ndf = gpd.GeoDataFrame(df[['정류장번호', '정류장명', '모바일단축번호']].set_axis(['id', 'name', 'ars'], axis=1), geometry=gpd.points_from_xy(df['lon'], df['lat']), crs=4326)`,
       },
     }),
-    ...serverRecipes({ category: 'attribute', layer: 'stops', preprocess, work: '/work/stops.gpkg', geom: 'point', bounds: [126.43, 37.18, 127.19, 37.83] }),
+    ...serverRecipes({ category: 'attribute', layer: 'stops', preprocess, work: '/work/stops.gpkg', geom: 'point', bounds: [126.434013, 37.184719, 127.187302, 37.829449] }),
   ],
   alternatives: [
     { tool: 'mapshaper', cmd: 'mapshaper -i molit_bus_stops.csv encoding=cp949 -points x=경도 y=위도 -o format=geojson stops.geojson', note: '인코딩 지정 + 좌표 열 → 점, 명령 한 줄.' },

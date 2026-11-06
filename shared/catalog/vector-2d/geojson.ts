@@ -76,7 +76,7 @@ export default {
       bounds: [126.809, 37.451, 127.157, 37.660],
     }),
     tippecanoeRecipe({ work: '/work/areas.gpkg', layer: 'areas', minzoom: 10, maxzoom: 15, key: 'name || label', preprocess }),
-    ...serverRecipes({ category: 'vector-2d', layer: 'areas', preprocess, work: '/work/areas.gpkg', geom: 'polygon', bounds: [126.81, 37.45, 127.16, 37.66] }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'areas', preprocess, work: '/work/areas.gpkg', geom: 'polygon', bounds: [126.809693, 37.451244, 127.156327, 37.659741] }),
   ],
   alternatives: [
     { tool: 'mapshaper', cmd: 'mapshaper areas.geojson -simplify 10% -o areas_small.geojson', note: '경계 꼭짓점 축소 → 용량 절감.' },  ],

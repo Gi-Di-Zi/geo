@@ -62,7 +62,7 @@ export default {
       preprocess,
       bounds: [3.358, 50.750, 7.228, 53.555],
     }),
-    ...serverRecipes({ category: 'vector-2d', layer: 'provinces', preprocess, work: '/work/provinces.gpkg', geom: 'polygon', bounds: [3.3, 50.7, 7.3, 53.6] }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'provinces', preprocess, work: '/work/provinces.gpkg', geom: 'polygon', bounds: [3.358378, 50.750366, 7.227499, 53.554047] }),
   ],
   alternatives: [],
   upload: vectorUpload({ accept: ['.gml'], note: 'GML 파일 하나. 스키마(.xsd) 없어도 GDAL이 구조 추측.' }),

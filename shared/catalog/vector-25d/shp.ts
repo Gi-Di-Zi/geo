@@ -59,7 +59,7 @@ export default {
   ],
   recipes: [
     ...buildingRecipes(preprocess),
-    ...serverRecipes({ category: 'vector-25d', layer: 'buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [126.964, 37.402, 127.037, 37.466], height: 'height' }),
+    ...serverRecipes({ category: 'vector-25d', layer: 'buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [126.964126, 37.402015, 127.036118, 37.465252], height: 'height' }),
   ],
   alternatives: [],
   upload: buildingUpload({

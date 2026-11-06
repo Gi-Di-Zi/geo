@@ -204,7 +204,8 @@ test('공식 MCP Apps bridge: AI가 고른 뷰어로 열리고, 사용자가 바
 
   const browser = await chromium.launch({
     headless: true,
-    executablePath: process.env.VIZ_BROWSER_PATH || '/opt/google/chrome/chrome',
+    // channel chrome = Linux /opt/google/chrome/chrome, Windows·macOS 설치 경로
+    ...(process.env.VIZ_BROWSER_PATH ? { executablePath: process.env.VIZ_BROWSER_PATH } : { channel: 'chrome' }),
   })
 
   t.after(() => browser.close())

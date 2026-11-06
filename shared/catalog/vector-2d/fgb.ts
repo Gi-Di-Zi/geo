@@ -68,7 +68,7 @@ export default {
       preprocess: preprocess.slice(0, 1),
       input: { path: RAW, why: 'FlatGeobuf 직접 입력: GeoJSON 추출·도형 수정 없이 원본 그대로 (GeoJSON보다 읽기 빠름).' },
     }),
-    ...serverRecipes({ category: 'vector-2d', layer: 'countries', preprocess, work: '/work/countries.gpkg', geom: 'polygon', bounds: [-180, -85, 180, 85] }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'countries', preprocess, work: '/work/countries.gpkg', geom: 'polygon', bounds: [-180, -85.051128, 180, 83.645134] }),
   ],
   alternatives: [],
   upload: vectorUpload({ accept: ['.fgb'], note: 'FlatGeobuf 파일 하나.' }),

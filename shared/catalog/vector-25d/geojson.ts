@@ -63,7 +63,7 @@ export default {
   ],
   recipes: [
     ...buildingRecipes(preprocess, '원본도 GeoJSON — 문자열 높이→숫자, 빈 높이 9m, MultiPolygon 분해, 작은 구멍 메움, 좌표 7자리. 뷰어가 height만큼 바닥면 돌출.'),
-    ...serverRecipes({ category: 'vector-25d', layer: 'sf_buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [-122.421, 37.775, -122.39, 37.8], height: 'height' }),
+    ...serverRecipes({ category: 'vector-25d', layer: 'sf_buildings', preprocess, work: '/work/buildings.geojson', geom: 'polygon', bounds: [-122.420006, 37.775001, -122.390007, 37.8], height: 'height' }),
   ],
   alternatives: [
     { tool: 'py3dtiles', note: 'PostGIS 테이블 → 3D Tiles 직접 생성([postgres] 확장).' },

@@ -49,7 +49,7 @@ interface ServerVector {
   load?: Step
   /** any: 업로드처럼 도형 종류를 모를 때. 점·선·면 규칙을 dimension(geom)으로 나눈다 */
   geom: 'polygon' | 'point' | 'any'
-  /** 없으면(업로드) 실행 뒤 /out/bounds.json으로 채운다 */
+  /** 표의 실제 범위 (GeoServer 레이어 범위와 같게, 6자리 바깥 올림). 넓게 잡으면 MapLibre가 GeoWebCache 격자 밖 타일을 요청해 400. 없으면(업로드) 실행 뒤 /out/bounds.json으로 채운다 */
   bounds?: Bounds
   /** 높이 속성. 있으면 WFS·MVT 결과를 뷰어가 돌출 */
   height?: string

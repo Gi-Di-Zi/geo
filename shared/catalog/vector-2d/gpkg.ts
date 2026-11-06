@@ -86,7 +86,7 @@ export default {
         code: `df = gpd.read_file('${RAW}')\ndf = df.rename(columns={'시험장': 'name', '도로명 주소': 'address', '기술자격사용횟수': 'uses'})[['name', 'address', 'uses', 'geometry']]`,
       },
     }),
-    ...serverRecipes({ category: 'vector-2d', layer: 'sites', preprocess, work: '/work/sites.gpkg', geom: 'point', bounds: [124.67, 33.24, 129.57, 38.45] }),
+    ...serverRecipes({ category: 'vector-2d', layer: 'sites', preprocess, work: '/work/sites.gpkg', geom: 'point', bounds: [124.676681, 33.246639, 129.565445, 38.440396] }),
   ],
   alternatives: [],
   upload: vectorUpload({ accept: ['.gpkg'], note: '레이어가 여러 개면 하나로 병합.' }),

@@ -28,7 +28,7 @@ const gdalPreprocess: Step[] = [
 const TILE_COUNT = { layer: 'trdar', key: 'name', minzoom: 11, maxzoom: 16 }
 
 // 서버 레시피(GeoServer·martin): 추출만 하고 원본 좌표계(EPSG:5181) 그대로 상시 PostGIS에 적재 → 요청 좌표계로는 서버가 변환
-const BOUNDS: [number, number, number, number] = [126.964, 37.545, 127.016, 37.578]
+const BOUNDS: [number, number, number, number] = [126.964205, 37.545977, 127.015859, 37.57745]
 const serverLoad: Step = {
   title: 'PostGIS 적재 (원본 좌표계 유지)',
   why: '좌표계 변환 없이 EPSG:5181 그대로 → 서버가 요청마다 변환(국내 운영 DB의 흔한 형태). -sql: 10자로 잘린 필드 이름 → name·kind·gu·dong·area_m2. -nlt PROMOTE_TO_MULTI: Polygon·MultiPolygon 통일. -makevalid: 꼬인 도형 수정. -overwrite: 다시 실행 시 표 교체.',
