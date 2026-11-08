@@ -44,3 +44,13 @@ Coolify compose의 두 Nginx 설정 bind는 파일별 공개 환경변수 `GEO_P
 자동 배포기는 실제 CI source archive를 immutable release로 복원하고 두 파일 SHA를 검증한 뒤, 이 두 key에 release의 파일 경로만 설정한다. v2 key별 소유 ledger로 UUID·flags·갱신시각과 실제 이전 web bind를 확인한다. 이전 `GEO_RUNTIME_CONFIG_ROOT` key와 실패 operation·ledger는 삭제하거나 다시 실행하지 않는다. 기존 checkout·작업 데이터는 변경하지 않는다.
 
 원래 단일 배포 POST와 응답 유실 시 재호출 금지 계약을 유지한다. 완료 판정은 앱·작업자·공개 동작·데이터 보존과 함께 실제 web의 두 RO bind source 및 파일 SHA를 확인해야 한다. 이 소스 후보만으로 운영에 적용되지 않으며, adapter와 config/factory/issuer/task-CI의 검토된 pin을 먼저 반영하고 새 main revision을 게시한 뒤 기존 자체 CI·배포로 검증한다.
+
+## 공개 결과물과 완료 기록의 회귀 검증
+
+독립 HTML 지도 ZIP의 최상위 폴더는 업로드 표시명에서 POSIX·Windows 경로와 파일 확장자를 분리한 이름으로 만든다. 비어 있거나 점만 남는 이름은 `result`를 쓰며 Unicode 표시명은 유지한다. 실제 ZIP central directory의 모든 항목이 한 폴더 안에 남는 회귀 검증을 `test:recommend`에 포함한다. 원본 업로드와 작업 결과 파일의 이름·내용은 변경하지 않는다.
+
+공개 주소·코드 연계의 `lookups=false`는 전체 결과(`target=all`)의 사전 전용 모드다. 직접 위치·주소 원천을 호출하는 요청의 하루 행 한도를 해제하지 않는다. 입력 형식 오류·비정상 수치가 이미 사용한 한도를 초기화하지 않는지, 동시 요청이 같은 한도에서 차감되는지, 다음 UTC 날짜에 갱신되는지 함께 검증한다. 실제 VWorld 응답·기기별 QGIS 동작은 해당 환경에서 별도로 확인한다.
+
+호스트 배포 실행기의 DKB 완료 기록은 사용자 요구사항 원문 뒤의 검증된 자동 생성 기록 한 건만 교체한다. 전체 원문과 이전 기록은 비공개 사본으로 보존하고, 8,000 UTF-16 단위 한도 안에서 revision CAS와 전체 profile 재조회로 저장을 확인한다. 저장 응답이 끊겼을 때는 동일 소스·CI run·deployment와 저장된 intent를 대조해 GET으로 확인하며, 저장 여부가 불명확한 POST를 자동 반복하지 않는다. 이전 백업이 검증 완료된 상태와 미완료 백업 차단 상태도 구분한다.
+
+실제 배포 적용 순서는 검토한 호스트 실행기·설정 pin 적용, 새 소스 revision 게시, 자체 CI, 기존 Coolify의 단일 배포와 같은 revision의 앱·웹 설정·변환 작업자 검증이다. 이전 실패 실행의 intent와 영수증은 보존한다. 완료된 서비스 배포와 백업의 원격 전체 SHA·격리 복원 완료는 각각 기록한다.

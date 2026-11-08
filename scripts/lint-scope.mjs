@@ -12,8 +12,10 @@ const files = [
   'server/utils/catalog.ts',
   'server/utils/upload-storage.ts',
   'server/utils/job-files.ts',
+  'server/utils/standalone-archive.ts',
   'server/middleware/conversion-worker.ts',
   'server/services/link/reference-updates.ts',
+  'server/services/link/access.ts',
   'server/services/link/jobs.ts',
   'server/api/jobs.post.ts',
   'server/api/stage.ts',
@@ -49,6 +51,7 @@ const files = [
   'tests/viz/delivery.test.ts',
   'tests/viz/snippets.test.ts',
   'tests/link/reference-updates.test.ts',
+  'tests/link/location-resolve.test.ts',
   'tests/link/jobs.test.ts',
 ]
 

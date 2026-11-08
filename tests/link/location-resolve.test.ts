@@ -6,17 +6,33 @@ import { LocationError } from '../../shared/link/location.ts'
 import { resolveLocationRows } from '../../server/services/link/location-resolve.ts'
 import type { ForwardLocation, ReverseLocation } from '../../server/services/link/location.ts'
 import { fixture } from './fixtures/reference.ts'
+import { lookupRows } from '../../server/services/link/access.ts'
 
 const administrative: AdministrativeSnapshot = {
   version: 'location-admin-fixture', available: true, source: '위치 변환 테스트 fixture', sourceUrl: '', sourceDate: null, publishedAt: null, checkedAt: null, coverage: 'fixture', codeSystem: 'mois_administrative_region', codeLength: 10,
   regions: ['1111051500', '1111051600'].map((code, index) => ({ code, name: index ? '시험행정동' : '청운효자동', fullName: '서울특별시 종로구 ' + (index ? '시험행정동' : '청운효자동'), parentCode: '1111000000', level: 'eupmyeondong', status: 'active', createdAt: null, retiredAt: null })),
   relations: ['1111051500', '1111051600'].map(administrativeCode => ({ legalCode: '1111010100', administrativeCode, legalName: '서울특별시 종로구 청운동', verified: true, createdAt: null, retiredAt: null })),
 }
+
 const point: ForwardLocation = { x: 126.97, y: 37.58, lon: 126.97, lat: 37.58, crs: 'EPSG:4326', source: '위치 원천 fixture', sourceUrl: '', sourceDate: null, checkedAt: '2026-10-30T00:00:00.000Z', method: 'address_point', warning: '원천 주소 대표 좌표이며 필지 중심점으로 확인하지 않았습니다.' }
 const found: ReverseLocation = { ...point, method: 'reverse_geocoded', address: '서울특별시 종로구 청운동 1', parcelAddress: '서울특별시 종로구 청운동 1', roadAddress: '', addressType: 'parcel', legalCode: '1111010100', administrativeCode: '1111051500' }
 const row = (value: string, id = '1') => ({ id, value, original: { 원문: value } })
 const provider = { forwardLocation: async () => point, reverseLocation: async () => found }
 const resolve = async (value: string, options: Partial<LinkOptions>, service: NonNullable<Parameters<typeof resolveLocationRows>[4]> = provider) => (await resolveLocationRows([row(value)], options, fixture, administrative, service)).rows[0]!
+
+test('직접 위치 조회는 lookups=false로 외부 원천 행 한도를 우회하지 않는다', async () => {
+  let calls = 0
+  const options = { inputType: 'location', target: 'address', lookups: false } as const
+  const input = row('126.97, 37.58')
+
+  const result = await resolve(input.value, options, { ...provider, reverseLocation: async () => { calls++;
+
+ return found } })
+
+  assert.equal(result.status, 'ok')
+  assert.equal(calls, 1)
+  assert.equal(lookupRows({ rows: [input], options }), calls)
+})
 
 test('좌표계만 변환하면 외부 원천을 호출하지 않고 XY 순서와 입력 원문을 유지한다', async () => {
   const unused = async (): Promise<never> => { assert.fail('순수 좌표 변환은 원천 조회를 하지 않는다') }
@@ -57,9 +73,13 @@ test('도로명만 받은 위치에서 PNU나 법정동코드를 추측하지 �
 
 test('구역에서 조회한 좌표는 대표점이고 지번주소의 좌표와 구분한다', async () => {
   const calls: Array<[string, string | undefined]> = []
+
   const service = { ...provider, forwardLocation: async (address: string, kind?: 'parcel' | 'road' | 'region') => {
-    calls.push([address, kind]); return { ...point, method: kind === 'region' ? 'region_representative' as const : 'address_point' as const }
+    calls.push([address, kind]);
+
+ return { ...point, method: kind === 'region' ? 'region_representative' as const : 'address_point' as const }
   } }
+
   const region = await resolve('1111010100', { inputType: 'pnu_legal', target: 'location' }, service)
   assert.equal(region.output.location_method, 'region_representative'); assert.equal(region.pnu, '')
   assert.deepEqual(calls[0], ['서울특별시 종로구 청운동', 'region'])
@@ -71,8 +91,13 @@ test('구역에서 조회한 좌표는 대표점이고 지번주소의 좌표와
 
 test('한도 초과·손상·잘못된 좌표는 원천 조회 전에 차단한다', async () => {
   let calls = 0
-  const service = { ...provider, reverseLocation: async () => { calls++; return found } }
+
+  const service = { ...provider, reverseLocation: async () => { calls++;
+
+ return found } }
+
   await assert.rejects(() => resolveLocationRows(Array.from({ length: 21 }, (_, index) => row('126.97, 37.58', String(index))), { inputType: 'location', target: 'address' }, fixture, administrative, service), { code: 'LOCATION_ROW_LIMIT', statusCode: 413 })
+
   for (const value of ['37.58, 200', 'NaN, 37.58', '126.97, 37.58, 1']) assert.equal((await resolve(value, { inputType: 'location', target: 'address' }, service)).status, 'invalid')
   const damaged = await resolveLocationRows([{ ...row('126.97, 37.58'), issue: 'IDENTIFIER_PRECISION_LOSS' }], { inputType: 'location', target: 'address' }, fixture, administrative, service)
   assert.equal(damaged.rows[0]?.errors[0]?.code, 'IDENTIFIER_PRECISION_LOSS'); assert.equal(calls, 0)

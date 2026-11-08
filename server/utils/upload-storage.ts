@@ -37,6 +37,8 @@ export function dailyCounter(limit: number) {
   let today = ''
 
   return (client: string, amount: number, now = Date.now()) => {
+    if (!Number.isSafeInteger(amount) || amount < 0 || !Number.isFinite(now)) return false
+
     const day = new Date(now).toISOString().slice(0, 10)
 
     if (day !== today) { used.clear(); today = day }

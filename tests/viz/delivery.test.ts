@@ -9,11 +9,63 @@ import { serviceTtlMs, SERVICE_HOURS } from '../../shared/conversion.ts'
 import type { Job, ServiceRecord } from '../../shared/types.ts'
 import { checkBundle } from '../../server/utils/bundle-check.ts'
 import { serviceOf, serviceState, sweepServices } from '../../server/utils/service-expiry.ts'
-import { chargeDaily, DAILY_UPLOAD_BYTES } from '../../server/utils/upload-storage.ts'
-import { lookupRows } from '../../server/services/link/access.ts'
+import { chargeDaily, DAILY_UPLOAD_BYTES, dailyCounter } from '../../server/utils/upload-storage.ts'
+import { chargeLinkLookups, linkHttpError, lookupRows } from '../../server/services/link/access.ts'
+import { createError } from 'h3'
+import { z } from 'zod'
+import { once } from 'node:events'
+import { posix } from 'node:path'
+import archiver from 'archiver'
+import { standaloneArchiveFolder } from '../../server/utils/standalone-archive.ts'
 
 const HOUR = 3600_000
 const T0 = Date.parse('2026-11-02T00:00:00Z')
+
+const archiveNames = [
+  ['map.csv', 'map-cesium'], ['data.tar.gz', 'data.tar-cesium'],
+  ['a/../../outside.csv', 'outside-cesium'], ['a\\..\\..\\outside.csv', 'outside-cesium'],
+  ['/absolute/map.csv', 'map-cesium'], ['C:\\private\\map.csv', 'map-cesium'],
+  ['\\\\server\\share\\map.csv', 'map-cesium'], ['../..', 'result-cesium'],
+  ['', 'result-cesium'], ['.csv', 'result-cesium'], ['한글 🧭.csv', '한글 🧭-cesium'],
+  ['bad:name?.csv', 'bad_name_-cesium'], ['trailing. .csv', 'trailing-cesium'],
+] as const
+
+test('독립 HTML 지도 ZIP은 업로드 표시명에서 경로를 제거하고 Unicode 이름을 보존한다', () => {
+  for (const [name, expected] of archiveNames) assert.equal(standaloneArchiveFolder(name, 'cesium'), expected)
+})
+
+test('실제 archiver ZIP의 모든 항목은 안전한 단일 폴더 안에 남는다', async () => {
+  for (const [name, folder] of archiveNames) {
+    const archive = archiver('zip')
+    const chunks: Buffer[] = []
+
+    archive.on('data', (part: Buffer) => chunks.push(part))
+    const ended = once(archive, 'end')
+
+    archive.append('fixture HTML', { name: `${standaloneArchiveFolder(name, 'cesium')}/index.html` })
+    archive.append('fixture data', { name: `${standaloneArchiveFolder(name, 'cesium')}/data/result.csv` })
+    await archive.finalize()
+    await ended
+    const zip = Buffer.concat(chunks)
+    const footer = zip.length - 22
+
+    assert.equal(zip.readUInt32LE(footer), 0x06054b50)
+    assert.equal(zip.readUInt16LE(footer + 10), 2)
+    let offset = zip.readUInt32LE(footer + 16)
+
+    for (let index = 0; index < 2; index++) {
+      assert.equal(zip.readUInt32LE(offset), 0x02014b50)
+      const length = zip.readUInt16LE(offset + 28)
+      const path = zip.subarray(offset + 46, offset + 46 + length).toString('utf8')
+
+      assert.equal(posix.normalize(path), path)
+      assert.equal(path.startsWith(`${folder}/`), true)
+      assert.equal(path.includes('\\'), false)
+      assert.equal(path.split('/').includes('..'), false)
+      offset += 46 + length + zip.readUInt16LE(offset + 30) + zip.readUInt16LE(offset + 32)
+    }
+  }
+})
 
 async function jobsDir(t: test.TestContext) {
   const dir = await mkdtemp(join(tmpdir(), 'geo-jobs-'))
@@ -185,8 +237,68 @@ test('주소·코드 연계: 외부 원천(위치·우편번호·경계)을 부�
   assert.equal(lookupRows({ text: '1111010100100010000\n\n서울 강남구 테헤란로 152', options: { target: 'all' } }), 2)
   assert.equal(lookupRows({ rows: [{}, {}, {}], options: { inputType: 'location' } }), 3)
   assert.equal(lookupRows({ codes: ['11', '11110'] }), 2)
+  // lookups=false는 전체 결과의 사전 전용 모드다. 직접 위치 조회를 무료로 만들지는 않는다.
+  assert.equal(lookupRows({ rows: [{}, {}], options: { inputType: 'location', target: 'address', lookups: false } }), 2)
+  assert.equal(lookupRows({ rows: [{}, {}], options: { target: 'location', lookups: false } }), 2)
+  assert.equal(lookupRows({ rows: [{}, {}], options: { target: 'all', lookups: false } }), 0)
   // 사전만 쓰는 변환은 세지 않는다
   assert.equal(lookupRows({ text: '1111010100100010000', options: { target: 'pnu' } }), 0)
+})
+
+test('행 한도는 빈 입력·손상·NaN으로 초기화되지 않고 다음 UTC 날짜에만 갱신한다', () => {
+  const charge = dailyCounter(2)
+  const day = Date.parse('2026-11-08T00:00:00Z')
+
+  assert.equal(charge('fixture', 2, day), true)
+
+  for (const amount of [Number.NaN, -1, Infinity, 0.5]) assert.equal(charge('fixture', amount, day), false)
+  assert.equal(charge('fixture', 0, day), true)
+  assert.equal(charge('fixture', 1, Number.NaN), false)
+  assert.equal(charge('fixture', 1, day), false)
+  assert.equal(charge('fixture', 1, day + 24 * HOUR), true)
+  assert.equal(lookupRows({ rows: [], options: { target: 'location' } }), 0)
+
+  for (const raw of ['{"rows":"corrupt"}', '{"rows":[],"options":{"target":null}}']) {
+    assert.throws(() => lookupRows(JSON.parse(raw)), { code: 'INVALID_INPUT' })
+  }
+})
+
+test('공개 위치 한도는 동시 요청도 순차 차감하고 손상 입력이 소진된 한도를 돌려주지 않는다', async () => {
+  const originalMode = process.env.GEO_PUBLIC_CONVERSIONS
+  const originalClock = Date.now
+  const day = Date.parse('2026-11-08T00:00:00Z')
+
+  process.env.GEO_PUBLIC_CONVERSIONS = '1'
+  Date.now = () => day
+
+  try {
+    chargeLinkLookups('fixture-concurrent', { rows: Array.from({ length: 1998 }, () => ({})), options: { target: 'location' } })
+    const outcomes = await Promise.allSettled([1, 2, 3].map(() => Promise.resolve().then(() => chargeLinkLookups('fixture-concurrent', { rows: [{}], options: { target: 'location' } }))))
+
+    assert.equal(outcomes.filter(result => result.status === 'fulfilled').length, 2)
+    assert.equal(outcomes.filter(result => result.status === 'rejected').length, 1)
+    assert.throws(() => chargeLinkLookups('fixture-concurrent', JSON.parse('{"rows":"corrupt"}')), { code: 'INVALID_INPUT' })
+    assert.throws(() => chargeLinkLookups('fixture-concurrent', { rows: [{}], options: { target: 'location' } }), { code: 'DAILY_LOOKUP_LIMIT' })
+    Date.now = () => day + 24 * HOUR
+    chargeLinkLookups('fixture-concurrent', { rows: [{}], options: { target: 'location' } })
+  } finally {
+    Date.now = originalClock
+
+    if (originalMode === undefined) delete process.env.GEO_PUBLIC_CONVERSIONS
+    else process.env.GEO_PUBLIC_CONVERSIONS = originalMode
+  }
+})
+
+test('입력 검증·기존 HTTP 오류는 유지하고 예상하지 못한 오류 내용은 응답에 노출하지 않는다', () => {
+  const invalid = z.object({ value: z.string() }).safeParse({ value: 1 })
+
+  assert.equal(invalid.success, false)
+
+  if (!invalid.success) assert.throws(() => linkHttpError(invalid.error), { statusCode: 400 })
+  const original = createError({ statusCode: 409, statusMessage: 'fixture conflict' })
+
+  assert.throws(() => linkHttpError(original), error => error === original)
+  assert.throws(() => linkHttpError(new Error('fixture-private-value')), { statusCode: 500, message: '주소 연계 처리 중 오류가 발생했습니다.' })
 })
 
 

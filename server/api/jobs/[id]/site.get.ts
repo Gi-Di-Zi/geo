@@ -10,6 +10,7 @@ import { kindHosting } from '#shared/snippets'
 import { standalonePage, standaloneReadme, type StandaloneLib } from '#shared/standalone'
 import type { Job } from '#shared/types'
 import { viewers } from '#shared/viewers'
+import { standaloneArchiveFolder } from '../../../utils/standalone-archive.ts'
 
 export default defineEventHandler(async event => {
   setResponseHeaders(event, {
@@ -41,7 +42,7 @@ export default defineEventHandler(async event => {
   if (!existsSync(target)) throw createError({ statusCode: 404, statusMessage: '결과 파일 없음' })
 
   if (zip) await assertNoOutputLinks(target)
-  const folder = `${job.name.replace(/[.][^.]*$/, '') || 'result'}-${viewer.id}`
+  const folder = standaloneArchiveFolder(job.name, viewer.id)
 
   setResponseHeaders(event, {
     'content-type': 'application/zip',
