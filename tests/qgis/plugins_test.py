@@ -1,4 +1,4 @@
-# QGIS 플러그인(qgis/) 흐름 시험: QGIS Python(화면 없음)으로 내보내기 → 실제 서버 변환 → 결과 레이어, 주소·코드 연계(레이어 값·직접 검색) → 결과·점·필지 레이어, 예시 데이터, 메뉴·오른쪽 패널.
+# QGIS 플러그인(qgis/) 흐름 시험: QGIS Python(화면 없음)으로 내보내기 → 실제 서버 변환 → 결과 레이어·브라우저로 보기, 주소·코드 연계(속성 표·직접 검색) → 원본 열·새 레이어·점·필지 레이어, 예시 데이터, 메뉴·오른쪽 패널.
 # 실제 변환 작업자가 있는 서버가 필요하다 (docs/ci-cd.md). 사용(Windows): "%PROGRAMFILES%\QGIS 3.44.9\bin\python-qgis-ltr.bat" tests/qgis/plugins_test.py qgis http://localhost:3000 <빈 폴더>
 import os
 import sys
@@ -41,6 +41,8 @@ odd_feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(127, 37)))
 odd.dataProvider().addFeatures([odd_feature])
 odd_path, _ = viz.export_layer(odd, work)
 check('기호가 든 레이어 이름도 GeoPackage로', os.path.basename(odd_path) == 'fgb_예시_시험_1_복사.gpkg', odd_path)
+odd.setName('gpkg 건물')
+check('gpkg로 시작하는 레이어 이름(GDAL 예약어)도', os.path.getsize(viz.export_layer(odd, work)[0]) > 0)
 log = []
 info, folder, base = viz.convert(server, path, fmt, {'viewer': 'maplibre', 'priority': 'balanced', 'form': 'files'}, os.path.join(work, 'files'), report=lambda t, p=None: log.append(t))
 primary = info['primary']
@@ -57,6 +59,15 @@ usage = next(u for u in info2['usages'] if u['site'] == info2['site'])
 out2 = next(o for o in info2['outputs'] if o['id'] == usage['output'])
 layer2 = viz.result_layer(out2, base2, 'html-result')
 check('HTML 지도 data/ → QGIS 레이어', layer2 is not None and layer2.isValid(), out2['kind'])
+# 브라우저로 보기: 받은 폴더를 127.0.0.1로 (index.html·데이터·범위 요청)
+import urllib.request  # noqa: E402
+
+preview = viz.serve(folder2)
+at = f'http://127.0.0.1:{preview.server_address[1]}/'
+with urllib.request.urlopen(at) as page, urllib.request.urlopen(urllib.request.Request(at + 'data/' + viz.output_path(out2), headers={'Range': 'bytes=0-9'})) as part:
+    check('브라우저로 보기: index.html + 데이터 범위 요청', page.status == 200 and b'importmap' in page.read() and part.status == 206 and len(part.read()) == 10, f'{page.status} {part.status}')
+preview.shutdown()
+preview.server_close()
 
 # 3) 래스터: 작은 GeoTIFF(EPSG:4326) → 원본 그대로 올림 → 결과 → QGIS 레이어
 from osgeo import gdal, osr  # noqa: E402
@@ -106,6 +117,17 @@ teheran = by_input['서울 강남구 테헤란로 152']
 check('연계: 도로명주소·건물 유무', teheran['g_road'] == '서울특별시 강남구 테헤란로 152' and teheran['g_bld'] == '있음' and teheran['g_bld_n'] == 1, f"{teheran['g_road']} {teheran['g_bld']} {teheran['g_bld_n']}")
 check('연계: 필지 실재·토지 속성(면적 숫자)', teheran['g_parcel'] == '있음' and teheran['g_jimok'] == '대' and isinstance(teheran['g_area'], float) and teheran['g_area'] > 10000, f"{teheran['g_parcel']} {teheran['g_jimok']} {teheran['g_area']} {teheran['g_zone']}")
 check('연계: 필지 경계 레이어', lots is not None and lots.featureCount() >= 3 and all(f.geometry().area() > 0 for f in lots.getFeatures()), str(lots and lots.featureCount()))
+# 원본 속성 표에 열 추가 (편집 모드, 다시 실행해도 열이 늘지 않음, 실행 취소로 되돌림)
+before = len(table.fields())
+check('연계: 원본에 열 추가 가능 (메모리)', link.writable(table))
+link.add_columns(table, items, results, names)
+link.add_columns(table, items, results, names)
+row = next(f for f in table.getFeatures() if f['입력'] == '4211011200101000000')
+check('연계: 원본 속성 표에 결과 열 (편집 중)', table.isEditable() and len(table.fields()) == before + len(names) and row['g_pnu'] == '5111011200101000000', f'{len(table.fields())} {row["g_pnu"]}')
+_, again, _ = link.build_layers(table, items, results, names, points=True, copy=False)
+check('연계: 결과 열 있는 레이어로 다시 만들어도 열이 겹치지 않음', len(again.fields()) == before + len(names), str(len(again.fields())))
+table.rollBack()
+check('연계: 편집 취소로 원본 그대로', len(table.fields()) == before and not table.isEditable())
 
 # 4-1) 도형 위치 → 그 지점의 필지: EPSG:5186 점 (역삼동 737 안)
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform  # noqa: E402
@@ -143,7 +165,7 @@ results2, _ = link.resolve(server, many, 'pnu_legal', False)
 check('연계(외부 조회 끔): 30개 한 번에, 주소 있음', len(results2) == 30 and results2['1111010100100010000']['output']['address'] == '서울특별시 종로구 청운동 1')
 
 # 6) 화면: 두 플러그인을 가짜 iface로 등록하고 오른쪽 패널 생성 (둘은 탭으로), 직접 검색 결과 표시·레이어 추가
-from qgis.gui import QgsMapCanvas  # noqa: E402
+from qgis.gui import QgsMapCanvas, QgsMessageBar  # noqa: E402
 from qgis.PyQt.QtCore import Qt  # noqa: E402
 from qgis.PyQt.QtWidgets import QMainWindow  # noqa: E402
 
@@ -152,13 +174,16 @@ RIGHT = getattr(Qt, 'DockWidgetArea', Qt).RightDockWidgetArea
 
 class Iface:
     def __init__(self):
-        self.window, self.canvas, self.menus, self.active = QMainWindow(), QgsMapCanvas(), [], None
+        self.window, self.canvas, self.menus, self.active, self.bar = QMainWindow(), QgsMapCanvas(), [], None, QgsMessageBar()
 
     def mainWindow(self):
         return self.window
 
     def mapCanvas(self):
         return self.canvas
+
+    def messageBar(self):
+        return self.bar
 
     def addDockWidget(self, area, dock):
         self.window.addDockWidget(area, dock)
@@ -201,12 +226,17 @@ check('두 패널은 탭으로', len(iface.window.tabifiedDockWidgets(loaded[1].
 panel = loaded[1].dock
 panel.show_results(lines, found)
 check('직접 검색 결과 표시 (줄마다 항목)', panel.tree.topLevelItemCount() == 3 and panel.tree.topLevelItem(0).childCount() > 5, str(panel.tree.topLevelItemCount()))
+panel.lookups.setChecked(False)
+check('외부 조회 끄면 위치·필지 묶음 열은 빠짐', 'g_lon' not in panel.names() and 'g_parcel' not in panel.names() and 'g_pnu' in panel.names(), str(panel.names()))
+panel.lookups.setChecked(True)
+check('붙일 결과 기본 = 전부', panel.names() == link.ALWAYS + [n for _, group, _ in link.GROUPS for n in group])
 panel.add_search_layers()
 added = [layer.name() for layer in QgsProject.instance().mapLayers().values() if layer.name().startswith('주소·코드 검색')]
 check('직접 검색 → 점·필지 레이어', len(added) == 2 and iface.active is not None, str(added))
 web = loaded[0].dock
 web.fill_samples(list(samples.values()))
-check('예시 목록 → 패널', web.sample.count() == len(samples) and web.sample.currentData()['id'] in samples and '출처' in web.sample_note.text(), web.sample_note.text())
+menu = web.samples.actions()
+check('예시 목록 → 패널 메뉴', len(menu) == len(samples) and menu[0].data()['id'] in samples and '출처' in menu[0].toolTip(), menu[0].toolTip())
 for plugin in loaded:
     plugin.unload()
 same_ui = [open(os.path.join(repo, p, 'ui.py'), encoding='utf-8').read() for p in ('geo_web_bridge', 'geo_address_link')]

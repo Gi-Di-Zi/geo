@@ -2,7 +2,7 @@
 #  1) 두 플러그인 시작 → 웹 메뉴·오른쪽 패널(탭으로 겹침)·닫기(파이썬 오류 없음)
 #  2) 사용 시험: 이 임시 프로필에서만 서버를 시험 서버(GEO_SERVER)로 바꾸고, 사람이 쓰듯 패널을 조작한다
 #     웹 지도 변환 = 예시 목록 → 예시 불러오기(FGB·GeoTIFF) → 변환(결과 파일·HTML 지도) → 결과 레이어
-#     주소·코드 연계 = 기준자료 시각 → 직접 검색 → 점·필지 레이어 → 지도에서 찍기 → 레이어 값(주소 열·도형 위치) → 새 레이어
+#     주소·코드 연계 = 기준자료 시각 → 직접 검색 → 점·필지 레이어 → 지도에서 찍기 → 속성 표(주소 열 → 원본에 열, 도형 위치 → 새 레이어)
 #  GEO_SHOT_DIR가 있으면 단계마다 화면을 저장한다. Qt가 부르는 함수에서 난 파이썬 오류는 sys.excepthook으로 모아 실패로 센다
 import os
 import sys
@@ -80,22 +80,20 @@ try:
         web.raise_()
         web.folder.setFilePath(work)
         check('다시 열기 (메뉴)', web.isVisible())
-        check('예시 목록', wait(lambda: web.sample.count() > 5 and web.sample.itemData(0) is not None, 60), f'{web.sample.count()}개')
+        check('예시 메뉴', wait(lambda: len(web.samples.actions()) > 5 and bool(web.samples.actions()[0].data()), 60), f'{len(web.samples.actions())}개')
         shot('1-web-start', web)
 
         def use_sample(sample_id, ext):
-            index = next(i for i in range(web.sample.count()) if (web.sample.itemData(i) or {}).get('id') == sample_id)
-            web.sample.setCurrentIndex(index)
-            web.load_button.click()
-            loaded = wait(lambda: not web.progress.isVisible() and web.layer.currentLayer() is not None and web.layer.currentLayer().name().endswith(f'(예시 {ext})'))
+            next(a for a in web.samples.actions() if (a.data() or {}).get('id') == sample_id).trigger()
+            loaded = wait(lambda: web.run_button.isEnabled() and web.layer.currentLayer() is not None and web.layer.currentLayer().name().endswith(f'(예시 {ext})'))
             check(f'예시 {sample_id} 불러오기 → 레이어 선택됨', loaded, web.status.text())
 
         def convert(viewer, form, label):
             web.viewer.setCurrentIndex(web.viewer.findData(viewer))
-            next(b for b in web.forms.buttons() if b.property('form') == form).setChecked(True)
+            web.form.setCurrentIndex(web.form.findData(form))
             before = len(QgsProject.instance().mapLayers())
             web.run_button.click()
-            done = wait(lambda: not web.progress.isVisible(), 600) and web.status.tone == 'ok'
+            done = wait(lambda: web.run_button.isEnabled(), 600) and web.status.tone == 'ok'
             check(f'변환 {label}', done and web.result_box.isVisible(), web.status.text())
             return before
 
@@ -103,8 +101,9 @@ try:
         before = convert('maplibre', 'files', 'FGB → MapLibre 결과 파일')
         check('결과 레이어 추가', len(QgsProject.instance().mapLayers()) > before and 'maplibre' in web.output.toPlainText().lower(), web.output.toPlainText().split('\n')[0])
         shot('2-web-files')
+        check('파일 결과에는 브라우저로 보기 없음', not web.browse_button.isVisible())
         convert('ol', 'html', 'FGB → OpenLayers HTML 지도')
-        check('HTML 지도 폴더 (index.html)', bool(web.last_folder) and os.path.exists(os.path.join(web.last_folder, 'index.html')), str(web.last_folder))
+        check('HTML 지도 폴더 (index.html) + 브라우저로 보기', bool(web.last_folder) and os.path.exists(os.path.join(web.last_folder, 'index.html')) and web.browse_button.isVisible(), str(web.last_folder))
         use_sample('raster/tif', '.tif')
         before = convert('auto', 'files', 'GeoTIFF → 자동 추천')
         check('래스터 결과 레이어', any(isinstance(layer, QgsRasterLayer) and '·' in layer.name() for layer in QgsProject.instance().mapLayers().values()), web.status.text())
@@ -114,10 +113,10 @@ try:
         plugins['geo_address_link'].action.trigger()
         link = plugins['geo_address_link'].dock
         link.raise_()
-        check('기준자료 시각', wait(lambda: '마지막 확인' in link.reference.text(), 60), link.reference.text())
+        check('기준자료 시각', wait(lambda: '기준자료 확인' in link.reference.text(), 60), link.reference.text())
         link.query.setPlainText('서울 강남구 테헤란로 152\n1111010100100010000\n중구 태평로1가 31')
         link.search_button.click()
-        wait(lambda: not link.progress.isVisible())
+        wait(lambda: link.run_button.isEnabled())
         statuses = [link.tree.topLevelItem(i).text(0).split('  —  ')[-1] for i in range(link.tree.topLevelItemCount())]
         check('직접 검색 세 줄 (동명이인은 후보 선택)', statuses == ['정상', '정상', '후보 선택 필요'], str(statuses))
         shot('4-link-search', link)
@@ -129,7 +128,7 @@ try:
         check('지도에서 찍기 도구', canvas.mapTool() is link.picker)
         to_canvas = QgsCoordinateTransform(QgsCoordinateReferenceSystem('EPSG:4326'), canvas.mapSettings().destinationCrs(), QgsProject.instance())
         link.picker.canvasClicked.emit(to_canvas.transform(QgsPointXY(127.03651, 37.50003)), getattr(Qt, 'MouseButton', Qt).LeftButton)
-        wait(lambda: not link.progress.isVisible())
+        wait(lambda: link.run_button.isEnabled())
         top = link.tree.topLevelItem(0)
         pnu = next((top.child(i).text(1) for i in range(top.childCount()) if top.child(i).text(0) == 'PNU'), '') if top else ''
         check('지도에서 찍기 → 그 지점의 필지', pnu == '1168010100107370000', f'{top and top.text(0)} → {pnu}')
@@ -143,17 +142,19 @@ try:
             rows.append(feature)
         table.dataProvider().addFeatures(rows)
         QgsProject.instance().addMapLayer(table)
-        link.tabs.setCurrentIndex(1)
+        link.tabs.setCurrentIndex(0)
+        check('속성 표 탭이 첫 탭, 기본은 원본에 열 추가', link.tabs.tabText(0) == '속성 표' and link.target.currentData() == 'inplace', link.tabs.tabText(0))
         link.layer.setLayer(table)
         link.field.setField('주소')
         link.input_type.setCurrentIndex(link.input_type.findData('auto'))
         link.parcels.setChecked(True)
         link.run_button.click()
-        wait(lambda: not link.progress.isVisible())
-        result = layer_named('시험 주소표 (주소·코드)')
-        pnus = sorted(f['g_pnu'] for f in result.getFeatures() if f['g_pnu']) if result else []
-        check('레이어 값(주소 열) → 결과 열 레이어', result is not None and result.featureCount() == 4 and '1168010100107370000' in pnus and '5111011200101000000' in pnus, str(pnus))
-        check('레이어 값 → 필지 경계 레이어', layer_named('시험 주소표 (필지 경계)') is not None, link.status.text())
+        wait(lambda: link.run_button.isEnabled())
+        pnus = sorted(f['g_pnu'] for f in table.getFeatures() if f['g_pnu']) if table.fields().indexOf('g_pnu') >= 0 else []
+        # 열 위치만 본다 (외부 조회가 필요 없는 옛 강원 코드). 주소 → 위치는 직접 검색·지도에서 찍기 시험이 본다
+        check('속성 표(코드 열) → 원본 속성 표에 결과 열 (편집 중)', table.isEditable() and table.featureCount() == 4 and '5111011200101000000' in pnus
+              and layer_named('시험 주소표 (주소·코드)') is None, str(pnus))
+        check('속성 표 → 필지 경계 레이어', layer_named('시험 주소표 (필지 경계)') is not None, link.status.text())
         shot('5-link-layer', link)
 
         spot = QgsVectorLayer('Point?crs=EPSG:5186&field=이름:string', '시험 측량점', 'memory')
@@ -165,10 +166,12 @@ try:
         QgsProject.instance().addMapLayer(spot)
         link.layer.setLayer(spot)
         link.input_type.setCurrentIndex(link.input_type.findData('geometry'))
+        link.target.setCurrentIndex(link.target.findData('new'))
         link.run_button.click()
-        wait(lambda: not link.progress.isVisible())
+        wait(lambda: link.run_button.isEnabled())
         result = layer_named('시험 측량점 (주소·코드)')
-        check('레이어 값(도형 위치, EPSG:5186) → 필지 PNU', result is not None and next(result.getFeatures())['g_pnu'] == '1168010100107370000', link.status.text())
+        check('속성 표(도형 위치, EPSG:5186) → 새 레이어에 필지 PNU, 원본 그대로', result is not None and next(result.getFeatures())['g_pnu'] == '1168010100107370000'
+              and spot.fields().indexOf('g_pnu') < 0, link.status.text())
         iface.zoomToActiveLayer()
         shot('6-final')
         check('사용 중 파이썬 오류 없음', not hook_errors, ' / '.join(hook_errors))

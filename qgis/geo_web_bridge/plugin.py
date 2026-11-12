@@ -30,6 +30,7 @@ class Plugin:
         self.iface.removePluginWebMenu(MENU, self.action)
         self.iface.removeWebToolBarIcon(self.action)
         if self.dock is not None:
+            self.dock.stop_preview()
             self.iface.removeDockWidget(self.dock)
             self.dock.deleteLater()
             self.dock = None
