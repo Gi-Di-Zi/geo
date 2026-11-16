@@ -30,6 +30,8 @@ const files = [
   'app/pages/viz/study.vue',
   'app/components/StudyConcepts.vue',
   'app/components/StudyReview.vue',
+  'app/pages/viz/index.vue',
+  'app/layouts/default.vue',
   'app/pages/viz/upload.vue',
   'app/pages/viz/[category]/[format]/[[step]].vue',
   'scripts/pipeline.ts',
