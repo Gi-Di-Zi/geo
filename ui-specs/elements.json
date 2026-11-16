@@ -1,0 +1,64 @@
+{
+  "schema": "dkb-project-ui-elements-v1",
+  "projectId": "geo",
+  "organizationKind": "personal",
+  "sourceRevision": "8b433b0f0c1a2022f3d0fe31a9f09aca0ef198ab",
+  "specManifest": {
+    "path": "ui-specs/manifest.json",
+    "sha256": "2ceef227a8b908dc2f5cdf2074f2c6bc5b1ed366aece6b91681174298d130ee2"
+  },
+  "commonReference": "/admin/storybook/",
+  "elements": [
+    {
+      "componentId": "geo-elements-tool-chip",
+      "name": "ToolChip",
+      "source": {
+        "path": "app/components/ToolChip.vue",
+        "revision": "8b433b0f0c1a2022f3d0fe31a9f09aca0ef198ab",
+        "sha256": "a2e34e1dbb7bf06e1c00e237645ed69c4f6eaf42875153a6cf20345e9f73320e"
+      },
+      "storyFile": ".storybook/stories/ToolChip.stories.ts",
+      "storyIds": [
+        "geo-elements-tool-chip--known-tool",
+        "geo-elements-tool-chip--unknown-tool"
+      ],
+      "screenIds": [
+        "GEO-WEB-VIZ-CATEGORY-FORMAT-STEP"
+      ],
+      "scope": "project",
+      "platform": "web",
+      "data": "synthetic",
+      "liveApiCalls": false,
+      "nativeVerified": false
+    },
+    {
+      "componentId": "geo-elements-term-text",
+      "name": "TermText",
+      "source": {
+        "path": "app/components/TermText.vue",
+        "revision": "8b433b0f0c1a2022f3d0fe31a9f09aca0ef198ab",
+        "sha256": "1371ac26409198dafd95cb594063a5a1d463fedc6738135b139717e26a31ad56"
+      },
+      "storyFile": ".storybook/stories/TermText.stories.ts",
+      "storyIds": [
+        "geo-elements-term-text--explained",
+        "geo-elements-term-text--repeated-term",
+        "geo-elements-term-text--plain-text"
+      ],
+      "screenIds": [
+        "GEO-WEB-VIZ-CONCEPTS"
+      ],
+      "scope": "project",
+      "platform": "web",
+      "data": "synthetic",
+      "liveApiCalls": false,
+      "nativeVerified": false
+    }
+  ],
+  "boundary": {
+    "sourceComponentsChanged": false,
+    "businessBehaviorChanged": false,
+    "companyAssetsImported": false,
+    "authenticationConnected": false
+  }
+}

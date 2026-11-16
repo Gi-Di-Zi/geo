@@ -1,0 +1,30 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="요소/사용 기준" />
+
+# 프로젝트 실제 요소
+
+프로젝트 원본 Vue 컴포넌트를 합성 데이터로 확인하는 Story입니다. 업무 함수·원본 컴포넌트·인증·API·DB·AI 연결은 변경하지 않습니다. 전체 화면이나 실제 기기의 검수를 대신하지 않습니다.
+
+| 요소 | 원본 | 상태 수 |
+| --- | --- | ---: |
+| ToolChip | `app/components/ToolChip.vue` | 2 |
+| TermText | `app/components/TermText.vue` | 3 |
+
+## Story
+
+- [ToolChip: known-tool](./?path=/story/geo-elements-tool-chip--known-tool)
+- [ToolChip: unknown-tool](./?path=/story/geo-elements-tool-chip--unknown-tool)
+- [TermText: explained](./?path=/story/geo-elements-term-text--explained)
+- [TermText: repeated-term](./?path=/story/geo-elements-term-text--repeated-term)
+- [TermText: plain-text](./?path=/story/geo-elements-term-text--plain-text)
+
+## AI가 참고할 순서
+
+1. DKB의 공통·조직·프로젝트 규칙을 확인합니다.
+2. 이 프로젝트의 화면 정의서와 `ui-specs/manifest.json`을 읽고 관련 Screen ID를 확인합니다.
+3. `ui-specs/elements.json`의 원본 경로·Git 기준·SHA와 현재 소스를 대조합니다.
+4. 프로젝트 요소를 우선 재사용하고 [공통 요소와 업무 패턴](/admin/storybook/)은 별도 참고합니다. 회사 비공개 코드·자산을 개인 공통 요소로 복사하지 않습니다.
+5. 정상·빈 상태·오류·긴 문구·키보드·좁은 화면을 검수합니다. Story의 합성 자료를 승인된 업무 요구사항으로 간주하지 않습니다.
+
+원본 UI 명세와 기존 Story ID는 그대로 보존했습니다. 새 항목만 `요소/` 아래에서 관리하며 기존 전체 화면의 등록 상태를 완료로 승격하지 않습니다.
