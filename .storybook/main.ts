@@ -20,7 +20,7 @@ const config = {
       '~': `${root}app`,
     }
     value.resolve.dedupe = ['vue']
-    value.resolve.preserveSymlinks = true
+    value.resolve.preserveSymlinks = false
     value.server ??= {}
     value.server.fs ??= {}
     value.server.fs.allow = [root]
