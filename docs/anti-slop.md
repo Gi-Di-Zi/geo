@@ -24,6 +24,7 @@
 - `server/api/jobs/[id]/download/[output].ts`
 - `shared/conversion.ts`
 - `app/pages/ai.vue`, `app/pages/viz/upload.vue`, `app/pages/viz/[category]/[format]/[[step]].vue`의 SFC script
+- `app/pages/viz/study.vue`, `app/components/StudyConcepts.vue`, `app/components/StudyReview.vue`: 2026-11-16 학습 설명 확장 시 추가한 SFC
 - `scripts/pipeline.ts`
 - `scripts/lint-scope.mjs`, `scripts/lint-scope.test.mjs`
 - `tests/viz/mcp-app.test.ts`, `tests/viz/mcp-app-host.ts`

@@ -21,6 +21,7 @@ const recipeCount = open.reduce((n, f) => n + f.recipes.length, 0)
 
 // 상단 바로 가기: 설명 · 직접 실행 (AI 연결은 사이트 공용 → 헤더 오른쪽)
 const actions = [
+  { to: '/viz/study', label: '학습 정리', hint: '확장자·도구·DEM·좌표계 비교', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5' },
   { to: '/viz/why', label: '처음이라면', hint: '왜 다듬고 바꾸나, 그림으로 3분', icon: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z' },
   { to: '/viz/upload', label: '내 파일로 해 보기', hint: '파일 넣고 바로 변환', icon: 'M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15' },
 ]
