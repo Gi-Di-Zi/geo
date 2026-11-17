@@ -29,7 +29,7 @@
 </template>
 
 <style scoped>
-section { margin-top: 36px; }
+section { margin-top: 36px; scroll-margin-top: 100px; }
 h2 { font-size: var(--fs-3); margin-bottom: 12px; }
 h3 { margin-top: 20px; }
 p, ul, details { margin-top: 12px; }

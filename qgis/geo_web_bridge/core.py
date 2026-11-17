@@ -1,11 +1,16 @@
 # 변환 흐름 (화면 없음 → 시험 가능): 레이어 내보내기 → 서버 변환(POST /api/jobs) → 진행 확인(/info) → 내려받기·압축 풀기 → QGIS 레이어
 # 2D만: 벡터는 GeoPackage, 래스터는 GeoTIFF로 보낸다. 레이어의 좌표계가 파일에 들어가므로 서버에서 좌표계를 고를 일이 없다
 # 예시 데이터: 서버 카탈로그의 확장자별 공개 샘플 원본(/api/qgis/samples → /data/<유형>/<형식>/raw/)을 받아 레이어로
+# 브라우저로 보기: 받은 HTML 지도 폴더를 이 PC에서만 열리는 주소(127.0.0.1)로 낸다 (file://로는 브라우저가 데이터 읽기를 막는다)
+import io
 import os
 import re
+import threading
 import time
 import urllib.parse
 import zipfile
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 from qgis.core import (QgsDataSourceUri, QgsProject, QgsRasterFileWriter, QgsRasterLayer, QgsRasterPipe,
                        QgsVectorFileWriter, QgsVectorLayer, QgsVectorTileLayer)
@@ -40,7 +45,7 @@ def export_layer(layer, folder, selected_only=False):
         path = os.path.join(folder, f'{name}.gpkg')
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = 'GPKG'
-        options.layerName = name
+        options.layerName = f'layer_{name}' if name.lower().startswith('gpkg') else name  # GDAL: gpkg로 시작하는 이름은 예약어
         options.fileEncoding = 'UTF-8'
         options.onlySelectedFeatures = selected_only
         result = QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
@@ -161,6 +166,53 @@ def convert(server, path, fmt, intent, out_dir, report=lambda text, percent=None
         os.makedirs(os.path.dirname(target), exist_ok=True)
         download(primary['download'], target)
     return info, folder, folder
+
+
+class Static(SimpleHTTPRequestHandler):
+    """정적 파일 + 범위 요청(PMTiles·COG가 쓴다. 표준 http.server는 Range를 모른다) + gzip으로 저장된 타일 표시.
+    .js는 Windows 레지스트리 MIME(text/plain 등)을 타지 않게 고정 (모듈 스크립트는 JavaScript MIME이어야 실행된다)"""
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, '.js': 'text/javascript', '.mjs': 'text/javascript'}
+
+    def send_head(self):
+        path = self.translate_path(self.path)
+        if not os.path.isfile(path):
+            return super().send_head()  # 폴더(index.html·목록)·없는 파일
+        size = os.path.getsize(path)
+        start, end = 0, size - 1
+        match = re.fullmatch(r'bytes=(\d*)-(\d*)', self.headers.get('Range') or '')
+        ranged = bool(match and any(match.groups()))
+        if ranged:
+            first, last = match.groups()
+            start, end = (int(first), min(int(last or end), end)) if first else (max(size - int(last), 0), end)
+            if start > end:
+                self.send_error(416)
+                return None
+        file = open(path, 'rb')
+        gzipped = path.endswith(('.pbf', '.mvt', '.terrain')) and file.read(2) == b'\x1f\x8b'
+        file.seek(start)
+        self.send_response(206 if ranged else 200)
+        self.send_header('Content-Type', self.guess_type(path))
+        self.send_header('Content-Length', str(end - start + 1))
+        self.send_header('Accept-Ranges', 'bytes')
+        if ranged:
+            self.send_header('Content-Range', f'bytes {start}-{end}/{size}')
+        if gzipped:
+            self.send_header('Content-Encoding', 'gzip')
+        self.end_headers()
+        if not ranged:
+            return file
+        with file:
+            return io.BytesIO(file.read(end - start + 1))
+
+    def log_message(self, *args):
+        pass
+
+
+def serve(folder):
+    """폴더 → http://127.0.0.1:<빈 포트>/ (이 PC에서만). 데몬 스레드라 QGIS를 끄면 함께 끝난다. 돌려준 서버의 shutdown()으로 멈춘다"""
+    server = ThreadingHTTPServer(('127.0.0.1', 0), partial(Static, directory=folder))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
 
 
 def output_path(o):
