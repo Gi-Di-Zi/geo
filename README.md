@@ -2,7 +2,7 @@
 
 공간 데이터를 **수집 → 전처리 → 웹 형식 변환 → 지도·3D로 확인**하는 프로젝트입니다. 같은 원본을 파일 또는 공간 서버로 제공하는 방식과 웹 뷰어별 표현을 비교합니다.
 
-**공개 사이트:** [geospatial.kro.kr](https://geospatial.kro.kr) · [데이터 시각화](https://geospatial.kro.kr/viz) · [내 파일 업로드](https://geospatial.kro.kr/viz/upload) · [AI 연결 안내](https://geospatial.kro.kr/ai)
+**공개 사이트:** [geospatial.kro.kr](https://geospatial.kro.kr) · [데이터 시각화](https://geospatial.kro.kr/viz) · [내 파일 업로드](https://geospatial.kro.kr/viz/upload) · [AI 연결 안내](https://geospatial.kro.kr/ai) · [개념 정리노트](https://geospatial.kro.kr/notes)
 
 [다른 도구와의 차이](#compare) · [작업 범위](#scope) · [MCP Apps 연결 방법(베타)](#mcp-apps) · [주소·코드 연계](#link) · [QGIS 플러그인](#qgis) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
 

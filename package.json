@@ -44,7 +44,9 @@
     "pretest:snippets": "npm run lint && node scripts/standalone-lib.ts",
     "pretest:reference-updates": "npm run lint",
     "pretest:link:unit": "npm run lint",
-    "pretest:link": "npm run lint"
+    "pretest:link": "npm run lint",
+    "test:notes": "node --test tests/notes/interview.test.ts",
+    "pretest:notes": "npm run lint"
   },
   "dependencies": {
     "@deck.gl/core": "~9.4.0",

@@ -9,9 +9,12 @@ export const vizProject = { id: 'viz', name: '공간 데이터 시각화 도구'
 
 export const linkProject = { id: 'link', name: '국내 주소·코드 연계 도구', base: '/link', summary: 'PNU·법정동·행정동코드·지번·도로명주소·좌표를 서로 변환. 주소·코드·위치·우편번호에 필지 경계·건물 유무·토지 속성까지' }
 
+export const notesProject = { id: 'notes', name: '개념 정리노트', base: '/notes', summary: '좌표계·벡터·래스터·3D·BIM 개념을 질문 단위로. 정의 → 종류 → 차이 → 이어지는 질문, 항목마다 출처' }
+
 export const projects: Project[] = [
   vizProject,
   linkProject,
+  notesProject,
 ]
 
 /** 기존 시각화 경로로 바로 가는 대표 예시. 새 페이지나 별도 데이터는 만들지 않는다. */
