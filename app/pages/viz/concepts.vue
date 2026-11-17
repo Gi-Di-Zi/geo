@@ -12,8 +12,11 @@ useHead({ title: '개념 | 공간 데이터 시각화 도구' })
       <h1>기본 개념</h1>
       <p class="prose lead">확장자 페이지의 점선 밑줄 용어 풀이. 필요한 항목만 골라 읽기.</p>
       <nav class="toc small" aria-label="개념 목록">
+        <a href="#dem-dsm" class="chip">DEM·DSM</a><a href="#ellipsoidal-projected" class="chip">타원체·투영 좌표계</a>
         <a v-for="t in terms" :key="t.id" :href="`#${t.id}`" class="chip">{{ t.label }}</a>
       </nav>
+
+      <StudyConcepts />
 
       <section id="crs" class="concept">
         <h2>{{ label('crs') }}</h2>

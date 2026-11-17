@@ -1,15 +1,19 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
+
 useHead({ title: '공간 데이터 시각화 도구 | geo' })
+
 const base = useRuntimeConfig().app.baseURL
 
 // 확장자 선택 창은 주소(?type=)로 연다. 뒤로 가기로 창이 다시 열리고, 다른 화면에서 이 창으로 바로 올 수 있다.
 // 정적으로 미리 그린 화면과 어긋나지 않게 브라우저에 붙은 뒤에만 읽는다
 const mounted = ref(false)
+
 onMounted(() => { mounted.value = true })
+
 const picked = computed({
-  get: () => (mounted.value && typeof route.query.type === 'string' ? route.query.type : ''),
+  get: () => (mounted.value && !Array.isArray(route.query.type) ? route.query.type ?? '' : ''),
   set: type => router.replace({ query: type ? { type } : {} }),
 })
 
@@ -21,12 +25,13 @@ const recipeCount = open.reduce((n, f) => n + f.recipes.length, 0)
 
 // 상단 바로 가기: 설명 · 직접 실행 (AI 연결은 사이트 공용 → 헤더 오른쪽)
 const actions = [
+  { to: '/viz/study', label: '학습 정리', hint: '확장자·도구·DEM·좌표계 비교', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5' },
   { to: '/viz/why', label: '처음이라면', hint: '왜 다듬고 바꾸나, 그림으로 3분', icon: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z' },
   { to: '/viz/upload', label: '내 파일로 해 보기', hint: '파일 넣고 바로 변환', icon: 'M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15' },
 ]
 
 // 카드 그림: 유형마다 대표 샘플의 시각화·렌더링 화면 (npm run thumbs → public/thumbs/<유형>-<확장자>.webp)
-const thumbs: Record<string, [format: string, label: string]> = {
+const thumbs = new Map(Object.entries({
   'vector-2d': ['shp', '서울 상권 영역'],
   'vector-25d': ['shp', '과천 건물'],
   'raster': ['cog', '서울 위성영상'],
@@ -35,12 +40,13 @@ const thumbs: Record<string, [format: string, label: string]> = {
   'model-3d': ['citygml', '도쿄역 건물'],
   'indoor-bim': ['ifc', 'IFC 예제 건물'],
   'attribute': ['csv', '서울 버스정류장'],
-}
+} satisfies Record<string, [format: string, label: string]>))
+
 const thumbBase = `${useRuntimeConfig().app.baseURL}thumbs/`
-const cards = categories.map(c => ({ ...c, thumb: thumbs[c.id] }))
+const cards = categories.map(c => ({ ...c, thumb: thumbs.get(c.id) }))
 
 // 유형마다 데이터 모양을 범례 기호처럼 그린 작은 그림 (viewBox 40×40)
-const glyphs: Record<string, string> = {
+const glyphs = new Map(Object.entries({
   'vector-2d': '<path class="f" d="M7 27 13 11l14-3 7 13-11 11z"/><path d="M4 35c9-6 18 1 32-6"/><circle class="d" cx="13" cy="11" r="2"/><circle class="d" cx="27" cy="8" r="2"/><circle class="d" cx="34" cy="21" r="2"/>',
   'vector-25d': '<path class="f2" d="M6 15l8-4 8 4-8 4z"/><path class="f" d="M6 15v16l8 4V19zM14 19v16l8-4V15z"/><path class="f2" d="M22 23l6-3 6 3-6 3z"/><path class="f" d="M22 23v9l6 3v-9zM28 26v9l6-3v-9z"/>',
   'raster': '<rect class="f" x="5" y="5" width="7" height="7"/><rect class="f2" x="12" y="5" width="7" height="7"/><rect class="f3" x="19" y="5" width="7" height="7"/><rect class="f2" x="26" y="5" width="7" height="7"/><rect class="f2" x="5" y="12" width="7" height="7"/><rect class="f3" x="12" y="12" width="7" height="7"/><rect class="f" x="19" y="12" width="7" height="7"/><rect class="f3" x="26" y="12" width="7" height="7"/><rect class="f3" x="5" y="19" width="7" height="7"/><rect class="f" x="12" y="19" width="7" height="7"/><rect class="f2" x="19" y="19" width="7" height="7"/><rect class="f" x="26" y="19" width="7" height="7"/><rect class="f" x="5" y="26" width="7" height="7"/><rect class="f2" x="12" y="26" width="7" height="7"/><rect class="f3" x="19" y="26" width="7" height="7"/><rect class="f2" x="26" y="26" width="7" height="7"/>',
@@ -49,7 +55,7 @@ const glyphs: Record<string, string> = {
   'model-3d': '<path class="f" d="M7 14h18v18H7z"/><path d="M7 14l8-7h18l-8 7M25 14l8-7v18l-8 7"/><path class="dash" d="M15 7v18h18M15 25l-8 7"/>',
   'indoor-bim': '<path class="dash" d="M10 6h26v22"/><path class="f" d="M4 12h26v24H4z"/><path d="M17 12v10M4 24h8M17 30v6M30 24h-6"/><path d="M12 24a5 5 0 0 1 5-5"/>',
   'attribute': '<rect class="f" x="4" y="6" width="27" height="25" rx="2"/><path class="f2" d="M4 8a2 2 0 0 1 2-2h23a2 2 0 0 1 2 2v5H4z"/><path d="M4 13h27M4 19h27M4 25h17M14 6v25"/><path class="d" d="M30 21c-3.3 0-6 2.5-6 5.7 0 4 6 9.3 6 9.3s6-5.3 6-9.3c0-3.2-2.7-5.7-6-5.7z"/><circle cx="30" cy="26.6" r="2.1" style="fill: var(--surface); stroke: none"/>',
-}
+} satisfies Record<string, string>))
 </script>
 
 <template>
@@ -58,6 +64,7 @@ const glyphs: Record<string, string> = {
     <section class="wrap hero">
       <h1>공간 데이터 시각화 도구</h1>
       <p class="muted intro">공개 원본에서 웹 지도·3D까지. 처리 명령과 이유를 따라가며 파일·서버 방식과 뷰어별 결과를 비교합니다.</p>
+      <p><NuxtLink to="/viz/study">확장자·변환 도구 한눈에 보기 · 면접 학습 노트 →</NuxtLink></p>
       <nav class="acts" aria-label="바로 가기">
         <NuxtLink v-for="a in actions" :key="a.to" :to="a.to" class="act">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="a.icon" /></svg>
@@ -90,7 +97,7 @@ const glyphs: Record<string, string> = {
               <img :src="`${thumbBase}${c.id}-${c.thumb[0]}.webp`" :alt="`${c.name} 예: ${c.thumb[1]}`" width="640" height="400" loading="lazy">
             </span>
             <span class="head">
-              <svg class="glyph" viewBox="0 0 40 40" aria-hidden="true" v-html="glyphs[c.id]" />
+              <svg class="glyph" viewBox="0 0 40 40" aria-hidden="true" v-html="glyphs.get(c.id)" />
               <span class="name">{{ c.name }}</span>
             </span>
             <span class="summary">{{ c.summary }}</span>
