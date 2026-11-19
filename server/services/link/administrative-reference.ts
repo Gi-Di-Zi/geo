@@ -35,7 +35,7 @@ export function administrativeZipEntries(data: Buffer) {
     const start = local + 30 + data.readUInt16LE(local + 26) + data.readUInt16LE(local + 28)
     if (data.readUInt16LE(local + 8) !== method || !data.subarray(local + 30, local + 30 + data.readUInt16LE(local + 26)).equals(data.subarray(offset + 46, offset + 46 + nameSize))) throw new Error('행정동 ZIP 로컬 항목 불일치')
     if (start + compressed > offset || (total += expanded) > MAX_EXPANDED || expanded === 0xffffffff) throw new Error('행정동 ZIP 압축 크기 오류')
-    if (/\/(?:KIKcd_[BH]|KIKmix)\.\d{8}\.xlsx$/i.test(name)) {
+    if (/(?:^|\/)(?:KIKcd_[BH]|KIKmix)\.\d{8}\.xlsx$/i.test(name)) {
       const input = data.subarray(start, start + compressed), output = method === 8 ? inflateRawSync(input, { maxOutputLength: MAX_EXPANDED }) : input
       if (output.length !== expanded || crc32(output) !== data.readUInt32LE(offset + 16)) throw new Error('행정동 ZIP 체크섬 오류')
       if (result.has(name)) throw new Error('행정동 ZIP 중복 파일')
@@ -66,7 +66,7 @@ async function records(data: Buffer, headers: string[]) {
 const date = (value: string) => { if (value && !/^\d{8}$/.test(value)) throw new Error('행정동 원문 날짜 오류'); return value ? value.slice(0, 4) + '-' + value.slice(4, 6) + '-' + value.slice(6) : null }
 const code = (value: string) => { if (!/^\d{10}$/.test(value)) throw new Error('행안부 행정동·법정동 코드는 10자리 문자형이어야 합니다.'); return value }
 export async function parseAdministrativeZip(data: Buffer) {
-  const entries = administrativeZipEntries(data), find = (kind: string) => [...entries].find(([name]) => name.toLowerCase().includes('/' + kind.toLowerCase() + '.'))!
+  const entries = administrativeZipEntries(data), find = (kind: string) => [...entries].find(([name]) => name.slice(name.lastIndexOf('/') + 1).toLowerCase().startsWith(kind.toLowerCase() + '.'))!
   const h = find('KIKcd_H'), b = find('KIKcd_B'), mix = find('KIKmix')
   const sourceDate = /\.(\d{8})\.xlsx$/i.exec(h[0])![1]!
   if (![b, mix].every(([name]) => name.endsWith('.' + sourceDate + '.xlsx'))) throw new Error('서로 다른 기준일의 행정동 원문입니다.')
