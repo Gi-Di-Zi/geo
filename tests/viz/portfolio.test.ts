@@ -20,7 +20,7 @@ test('홈·시각화 탐색은 데스크톱과 모바일에서 대표 예시와 
     await page.setViewportSize({ width, height: 900 })
     for (const path of ['/', '/viz']) {
       assert.equal((await page.goto(base + path))?.status(), 200)
-      await expect(page.locator('h1')).toContainText(path === '/' ? '공간 데이터를 웹으로 잇는 두 도구' : '공간 데이터 시각화 도구')
+      await expect(page.locator('h1')).toContainText(path === '/' ? '공간 데이터를 웹으로 잇는 두 도구' : '공간 데이터 시각화')
       const section = page.getByRole('region', { name: path === '/' ? '대표 예시' : '대표 예시로 시작하기', exact: true })
       for (const example of examples) {
         const link = section.getByRole('link', { name: new RegExp(example.name) })
@@ -28,24 +28,24 @@ test('홈·시각화 탐색은 데스크톱과 모바일에서 대표 예시와 
         await expect(link.locator('img')).toBeVisible()
         await expect.poll(() => link.locator('img').evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
       }
-      // 주소·코드 연계는 정식 기능 (개발 중 표시 없음)
-      await expect(page.locator('.flow-bar').getByRole('link', { name: /국내 주소·코드 연계 도구/ })).not.toContainText('개발 중')
+      // 주소·코드 변환은 정식 기능 (개발 중 표시 없음)
+      await expect(page.locator('.flow-bar').getByRole('link', { name: /국내 주소·코드 변환/ })).not.toContainText('개발 중')
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${path}: ${width}px 가로 넘침`)
     }
   }
-  // 두 도구 펼침: 연계 도구 띠를 누르면 그쪽이 펼쳐지고(제목으로 초점) 시각화는 띠로 접힌다, 다시 누르면 반대로
+  // 두 도구 펼침: 주소·코드 변환 띠를 누르면 그쪽이 펼쳐지고(제목으로 초점) 시각화는 띠로 접힌다, 다시 누르면 반대로
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
     // 띠 버튼은 서버가 그린 HTML에 이미 있으므로 화면이 살아난(hydration) 뒤에 누른다
     await page.goto(base, { waitUntil: 'networkidle' })
     const featured = page.getByRole('region', { name: '대표 예시', exact: true })
-    await page.getByRole('button', { name: /국내 주소·코드 연계 도구/ }).click()
+    await page.getByRole('button', { name: /국내 주소·코드 변환/ }).click()
     const linkTitle = page.getByRole('heading', { name: '주소·코드를 서로 잇고, 필지까지' })
     await expect(linkTitle).toBeVisible()
     await expect(linkTitle).toBeFocused()
     await expect(featured).toBeHidden()
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `/ 연계 펼침: ${width}px 가로 넘침`)
-    await page.getByRole('button', { name: /공간 데이터 시각화 도구/ }).click()
+    await page.getByRole('button', { name: /공간 데이터 시각화/ }).click()
     await expect(featured).toBeVisible()
     await expect(linkTitle).toBeHidden()
   }

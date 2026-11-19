@@ -103,7 +103,7 @@ export function tippecanoeRecipe(r: Omit<VectorRecipe, 'sameWhy'> & { input?: { 
 }
 
 /** Python 단계 명령: 화면에 코드가 그대로 보이게 heredoc으로. config = GDAL 설정 (zip 안 한글 파일 이름 등) */
-const py = (code: string, config?: Record<string, string>) =>
+export const py = (code: string, config?: Record<string, string>) =>
   `python3 - <<'PY'\nimport geopandas as gpd, pyogrio\n${config ? `pyogrio.set_gdal_config_options(${JSON.stringify(config)})\n` : ''}${code}\nPY`
 
 /**

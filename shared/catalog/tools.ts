@@ -243,6 +243,15 @@ export const tools: Tool[] = [
     url: 'https://geopandas.org',
   },
   {
+    id: 'h3', name: 'H3 (h3-py)', type: 'python', lang: 'Python (C 코어)', license: 'Apache-2.0', version: '4.5.0', status: 'active',
+    image: 'local:tools',
+    summary: 'Uber의 육각형 격자 체계. 위경도 → 칸 ID, 칸 ID → 경계.',
+    description: '지구를 해상도 0~15의 육각 칸으로 나누고 칸마다 64비트 ID. 점 집계·밀도 지도용. 같은 부류: S2(Google, 사각형), Geohash, Quadkey. Deck.gl H3HexagonLayer는 칸 ID만으로 그림.',
+    io: '위경도 ↔ 칸 ID ↔ 육각형 경계',
+    example: 'h3.latlng_to_cell(37.5665, 126.978, 8)',
+    url: 'https://h3geo.org',
+  },
+  {
     id: 'python', name: 'Python 스크립트', type: 'python', lang: 'Python', license: 'PSF', version: '3.11', status: 'active',
     image: 'local:tools',
     summary: '도구가 못 하는 작은 손질용 직접 작성 스크립트.',

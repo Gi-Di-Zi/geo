@@ -1,4 +1,4 @@
-# 주소·코드 연계 패널 (QGIS 오른쪽 도킹). 두 탭:
+# 주소·코드 변환 패널 (QGIS 오른쪽 도킹). 두 탭:
 #  속성 표 = 레이어의 한 열(또는 도형 위치)을 변환해 그 레이어 속성 표에 결과 열 추가(편집 모드, 저장은 사용자가) 또는 열을 붙인 새 레이어로
 #  직접 검색 = 웹처럼 주소·코드·좌표를 넣거나 지도를 찍어 결과를 패널에서 보고, 원하면 점·필지 레이어로
 # 탭 아래 외부 조회 켬·끔과 기준자료(법정동·행정동 사전)의 마지막 확인·변경 시각. 상태·진행은 QGIS 지도 위 메시지 줄
@@ -41,7 +41,7 @@ def when(value):
 
 class Panel(QgsDockWidget):
     def __init__(self, iface):
-        super().__init__('주소·코드 연계', iface.mainWindow())
+        super().__init__('주소·코드 변환', iface.mainWindow())
         self.setObjectName('geo_address_link_panel')
         self.iface, self.task, self.items, self.lines, self.found, self.checking = iface, None, [], [], {}, None
         settings = QgsSettings()
@@ -165,7 +165,7 @@ class Panel(QgsDockWidget):
         layout.addWidget(self.tabs)
         layout.addLayout(shared)
         layout.addStretch(1)
-        self.status = Status(iface.messageBar(), '주소·코드 연계')
+        self.status = Status(iface.messageBar(), '주소·코드 변환')
         self.setWidget(dock_body(content))
         if server() != DEFAULT_SERVER:
             self.status.say(f'개발 서버: {server()}')
@@ -304,7 +304,7 @@ class Panel(QgsDockWidget):
         details = lookups and (bool(DETAIL_FIELDS & set(self.names())) or self.parcels.isChecked())
         input_type = 'location' if by_geometry else self.input_type.currentData()
         inplace = self.target.currentData() == 'inplace' and writable(layer)
-        self.start('주소·코드 연계 (geo-web-bridge)', lambda report, canceled: resolve(target, values, input_type, lookups, report, canceled, details=details),
+        self.start('주소·코드 변환 (geo-web-bridge)', lambda report, canceled: resolve(target, values, input_type, lookups, report, canceled, details=details),
                    lambda result: self.converted(layer, inplace, result, notice))
 
     def converted(self, layer, inplace, result, notice=''):

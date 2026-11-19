@@ -153,7 +153,7 @@ const service = computed(() => {
 
 const stepLink = (id: FlowStep) => ({ path: stepPath(spec, id), query: route.query })
 
-useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!.name} | 공간 데이터 시각화 도구` }))
+useHead(() => ({ title: `${spec.extensions[0]} ${spec.name} · ${flow[at.value]!.name} | 공간 데이터 시각화` }))
 </script>
 
 <template>

@@ -46,9 +46,12 @@ export type Topic = {
   here?: string
   /** 종류 카드·차이 표를 카탈로그의 서버 도구에서 만든다 (notes.ts) */
   servers?: true
+  /** 종류 카드·차이 표를 카탈로그의 도구 종류(toolTypes)에서 만든다 (notes.ts) */
+  tools?: true
+  /** 겹치는 내용을 먼저 다룬 앞 주제 id → "앞 질문 참고" 링크 */
+  see?: string[]
   /** app/note-figs/<fig>.vue */
   fig?: string
-  tags?: string[]
   links?: { to: string; label: string }[]
 }
 
@@ -139,6 +142,34 @@ export const extraSources: InterviewSource[] = [
   { id: 'R83', title: "Autodesk | Revit 이전 버전 호환", meta: "제조사 지원 문서", text: "새 버전 파일은 이전 버전에서 못 엶, IFC·DWG·SAT로 내보내 우회", url: "https://www.autodesk.com/support/technical/article/Backwards-compatibility-of-Revit-with-earlier-releases-of-the-software" },
   { id: 'R84', title: "buildingSMART | BCF-XML 문서", meta: "규격 원문", text: "BIM 프로그램 간 이슈·장면 토픽 교환, 2.1부터 .bcf", url: "https://github.com/buildingSMART/BCF-XML/blob/release_3_0/Documentation/README.md" },
   { id: 'R85', title: "GDAL | DXF 드라이버", meta: "공식 문서", text: "좌표계 정보 없음으로 간주, 블록 펼침, ACIS 솔리드 건너뜀", url: "https://gdal.org/en/stable/drivers/vector/dxf.html" },
+  { id: 'R86', title: "H3 | 계층 인덱싱", meta: "공식 문서", text: "자식 7칸(aperture 7), 지리적 포함은 근사·인덱스상 포함은 정확", url: "https://h3geo.org/docs/highlights/indexing" },
+  { id: 'R87', title: "H3 | 집계", meta: "공식 문서", text: "육각형은 이웃 6개가 모두 같은 거리, 사각형은 두 가지 거리, 이웃 고리가 원에 가까움", url: "https://h3geo.org/docs/highlights/aggregation" },
+  { id: 'R88', title: "H3 | 해상도 표", meta: "공식 문서", text: "해상도 0~15, 해상도별 평균·최소·최대 칸 넓이, 해상도마다 오각형 12개", url: "https://h3geo.org/docs/core-library/restable" },
+  { id: 'R89', title: "H3 | 격자 구조 개요", meta: "공식 문서", text: "정이십면체 면 위 육각 격자, 해상도 0은 122칸(오각형 12), 꼭짓점 12곳을 모두 바다에 배치", url: "https://h3geo.org/docs/core-library/overview" },
+  { id: 'R90', title: "H3 | 행정구역·우편번호와 비교", meta: "공식 문서", text: "우편번호는 배달 경로, 크기 제각각·무관한 이유로 바뀜, 손으로 나눈 구역은 비교할 단위 없음", url: "https://h3geo.org/docs/comparisons/admin" },
+  { id: 'R91', title: "H3 | S2와 비교", meta: "공식 문서", text: "S2는 사각형·자식 4칸, 부모 칸이 점을 항상 포함", url: "https://h3geo.org/docs/comparisons/s2" },
+  { id: 'R92', title: "H3 | Geohash와 비교", meta: "공식 문서", text: "Geohash는 사각 격자(쿼드트리)·문자열 ID, 위도에 따라 넓이 차이 큼. H3 ID는 64비트 정수", url: "https://h3geo.org/docs/comparisons/geohash" },
+  { id: 'R93', title: "S2 Geometry | S2Cell 계층", meta: "공식 문서", text: "정육면체 6면을 구에 투영, 레벨 0~30, 힐베르트 곡선 순서 번호, 64비트 ID", url: "https://s2geometry.io/devguide/s2cell_hierarchy" },
+  { id: 'R94', title: "Microsoft | Bing Maps 타일 시스템", meta: "공식 문서", text: "메르카토르 타일 XY → 쿼드키, 길이 = 레벨, 부모 타일의 쿼드키로 시작", url: "https://learn.microsoft.com/en-us/bingmaps/articles/bing-maps-tile-system" },
+  { id: 'R95', title: "A5", meta: "라이브러리 저장소", text: "넓이가 정확히 같은 오각형 칸, 해상도 31단계, 64비트 ID, Apache 2.0", url: "https://github.com/felixpalmer/a5" },
+  { id: 'R96', title: "deck.gl | H3HexagonLayer", meta: "공식 문서", text: "H3 칸 ID로 육각형을 그리는 레이어", url: "https://deck.gl/docs/api-reference/geo-layers/h3-hexagon-layer" },
+  { id: 'R97', title: "OGC | Topic 21 DGGS Part 1", meta: "표준 문서", text: "DGGS: 시공간 데이터를 조직·저장·분석하는 새 방식", url: "https://docs.ogc.org/as/20-040r3/20-040r3.html" },
+  { id: 'R98', title: "법제처 | 도로명주소법 시행령 제37조", meta: "법령", text: "국가지점번호: 기준점, 가로·세로 10m 격자 기본단위, 100km 문자 2자 + 숫자", url: "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%8F%84%EB%A1%9C%EB%AA%85%EC%A3%BC%EC%86%8C%EB%B2%95%EC%8B%9C%ED%96%89%EB%A0%B9/%EC%A0%9C37%EC%A1%B0" },
+  { id: 'R99', title: "위키백과 | 국가지점번호", meta: "백과사전", text: "한글 2자 + 숫자 8자, 가장 작은 격자 10m, 기준점 UTM-K 원점에서 남 700km·서 300km", url: "https://ko.wikipedia.org/wiki/%EA%B5%AD%EA%B0%80%EC%A7%80%EC%A0%90%EB%B2%88%ED%98%B8" },
+  { id: 'R100', title: "SGIS | 통계지역경계 자료제공 목록", meta: "공식 사이트", text: "격자경계 100m·500m·1km·10km·100km SHP, UTM-K(EPSG:5179)", url: "https://sgis.mods.go.kr/view/pss/openDataIntrcn" },
+  { id: 'R101', title: "SGIS | 생활권역 통계지도", meta: "공식 사이트", text: "100m 격자 이름 예(다사605439), 1km 미만은 총값만, 비밀보호(BSCA)로 칸 합 ≠ 총계", url: "https://sgis.mods.go.kr/mobile/m2021/map/catchmentareaMap.sgis" },
+  { id: 'R102', title: "기상청 | 동네예보 데이터 활용안내", meta: "공식 사이트", text: "한반도 5km × 5km 격자, X·Y 번호, 행정동 ↔ 격자, 격자 번호 ↔ 위경도 변환", url: "https://data.kma.go.kr/community/nuriLovePopup.do" },
+  { id: 'R103', title: "공공데이터포털 | 기상청 단기예보 조회서비스", meta: "공식 API", text: "전국 5km 격자, 예보지점 X·Y 좌표값 nx·ny", url: "https://www.data.go.kr/data/15084084/openapi.do" },
+  { id: 'R104', title: "H3 | 칸 인덱스", meta: "공식 문서", text: "64비트 정수, 소문자 16진수 문자열로 표기", url: "https://h3geo.org/docs/core-library/h3Indexing" },
+  { id: 'R105', title: "H3 | 영역 함수", meta: "공식 문서", text: "polygonToCells: 칸 중심이 면 안이면 포함, 칸 묶음 → 멀티폴리곤", url: "https://h3geo.org/docs/api/regions" },
+  { id: 'R106', title: "GeoParquet", meta: "규격 사이트", text: "Parquet에 점·선·면 타입을 더함, OGC 표준 인큐베이팅, 열 지향", url: "https://geoparquet.org/" },
+  { id: 'R107', title: "h3-pg 문서", meta: "공식 문서", text: "h3index 타입(부호 없는 64비트, 16진수 표기)·bigint 변환, h3_postgis는 SRID 4326 경위도로 해석·재투영 안 함", url: "https://access.crunchydata.com/documentation/h3-pg/latest" },
+  { id: 'R108', title: "DuckDB | h3 확장", meta: "공식 문서", text: "INSTALL h3 FROM community, 정수 ID 함수와 _string(VARCHAR) 함수", url: "https://duckdb.org/community_extensions/extensions/h3.html" },
+  { id: 'R109', title: "Microsoft Support | 앞자리 0과 큰 숫자 유지", meta: "제조사 지원 문서", text: "엑셀 숫자 정밀도 15자리, 넘는 자리는 0으로", url: "https://support.microsoft.com/topic/1bf7b935-36e1-4985-842f-5dfa51f85fe7" },
+  { id: 'R110', title: "OGC | GeoPackage 명세", meta: "규격 원문", text: "SQLite DB 파일, 여러 벡터·타일 표, 도형 공간 인덱스(R-tree) 선택", url: "https://www.geopackage.org/spec/" },
+  { id: 'R111', title: "SQLite | Appropriate Uses For SQLite", meta: "공식 문서", text: "읽기는 동시에 여럿, 쓰기는 한 번에 하나 → 동시 쓰기가 많으면 서버형 DB", url: "https://www.sqlite.org/whentouse.html" },
+  { id: 'R112', title: "PostGIS | 데이터 관리 (공간 데이터 모델)", meta: "공식 문서", text: "WKT·WKB, geometry(평면)·geography(구면), spatial_ref_sys", url: "https://postgis.net/docs/using_postgis_dbmanagement.html" },
+  { id: 'R113', title: "GDAL | WLD — ESRI World File", meta: "공식 문서", text: "월드파일 6줄: 픽셀 크기·회전·왼쪽 위 픽셀 중심 좌표, .wld·.tfw·.jgw", url: "https://gdal.org/en/stable/drivers/raster/wld.html" },
 ]
 
 const row = (...cells: string[]) => ({ cells })
@@ -263,7 +294,6 @@ export const topics: Topic[] = [
       },
     ],
     here: '서울 상권 SHP는 국내 미터 좌표 → 위도·경도로 변환. 도쿄역 CityGML(EPSG:6697)은 위도가 먼저라 SQL에서 ST_FlipCoordinates로 경도·위도 순서로 바꾼 뒤 3D Tiles로.',
-    tags: ['CRS', 'EPSG', '투영'],
   },
   {
     id: 'viewer',
@@ -379,11 +409,11 @@ export const topics: Topic[] = [
       },
     ],
     here: '같은 결과를 OpenLayers 10 · MapLibre 6 · MapLibre + Deck.gl 9 · CesiumJS 1.146 네 뷰어로 나란히 비교. 지형은 MapLibre가 quantized-mesh를 못 읽어 Terrain-RGB, CesiumJS는 quantized-mesh.',
-    tags: ['OpenLayers', 'MapLibre', 'Deck.gl', 'CesiumJS'],
   },
   {
     id: 'raster',
     cat: 'raster',
+    see: ['files'],
     what: {
       q: '래스터·정사영상이란?',
       def: '래스터: 지표를 일정한 크기의 픽셀(셀) 격자로 나눠 각 칸에 값을 담은 자료. 정사영상: 항공·위성 영상의 기하 왜곡을 보정해 지도와 같은 기하 정확도를 갖춘 래스터 영상.',
@@ -470,11 +500,11 @@ export const topics: Topic[] = [
       },
     ],
     here: '래스터 예시: GeoTIFF → gdal_translate -of COG로 COG, XYZ 타일로도 만들고, GeoServer WMS·WMTS로 발행해 파일 방식과 서버 방식을 비교.',
-    tags: ['GeoTIFF', 'COG', 'WMTS', 'WMS'],
   },
   {
     id: 'dem',
     cat: 'terrain',
+    see: ['files'],
     real: 'Q013',
     fig: 'dem-dsm',
     what: {
@@ -568,11 +598,11 @@ export const topics: Topic[] = [
       },
     ],
     here: '지형 예시(북한산 DEM GeoTIFF, 금문교 일대 IMG)는 픽셀마다 높이 하나인 1밴드 격자 → Terrain-RGB·quantized-mesh로 변환.',
-    tags: ['DEM', 'DSM', 'DTM'],
   },
   {
     id: 'terrain-web',
     cat: 'terrain',
+    see: ['tools'],
     real: 'Q031',
     fig: 'quantized-mesh',
     what: {
@@ -674,11 +704,11 @@ export const topics: Topic[] = [
       },
     ],
     here: 'DEM은 원본 그릇(GeoTIFF·IMG)만 다르고 변환은 같음: mago 3DTerrainer로 quantized-mesh, GDAL로 Terrain-RGB를 둘 다 만들어 뷰어별 비교. MapLibre는 quantized-mesh를 못 읽어 Terrain-RGB를 씀.',
-    tags: ['Quantized-mesh', 'Terrain-RGB', 'layer.json'],
   },
   {
     id: 'vector-files',
     cat: 'vector-common',
+    see: ['files'],
     what: {
       q: "벡터 데이터란?",
       def: "대상 하나의 도형(점·선·면)과 속성을 피처 하나로 묶고, 같은 구조의 피처를 레이어로 모은 데이터 (OGC Simple Features 기반).",
@@ -784,11 +814,11 @@ export const topics: Topic[] = [
       },
     ],
     here: "SHP 업로드는 ZIP에서 같은 이름의 한 벌을 꺼내고, .cpg가 없으면 .dbf 내용으로 UTF-8·CP949 판별. FlatGeobuf 예시는 세계 국가 경계(국내 배포 사례 없음).",
-    tags: ["SHP","GeoJSON","GPKG","FGB"],
   },
   {
     id: 'vtile',
     cat: 'vector-common',
+    see: ['files'],
     fig: 'xyz',
     what: {
       q: '벡터 타일이란?',
@@ -883,11 +913,11 @@ export const topics: Topic[] = [
       'GDAL MVT 드라이버: 단일 타일 파일(압축·비압축), z/x/y.pbf 폴더, MBTiles를 읽고 씀',
     ],
     here: 'MVT 예시: VersaTiles OSM 벡터타일(Shortbread 스키마) 5장을 z/x/y.pbf 그대로 받아 ogrinfo로 레이어 확인. PMTiles 예시는 Protomaps 배경지도(Protomaps 스키마) — 같은 MVT라도 스키마가 달라 레이어 이름·스타일이 다름.',
-    tags: ['MVT', '.pbf', 'MLT', '스키마'],
   },
   {
     id: 'vtile-make',
     cat: 'vector-2d',
+    see: ['tools'],
     real: 'Q041',
     what: {
       q: '벡터 타일 생성(타일링)이란?',
@@ -963,11 +993,11 @@ export const topics: Topic[] = [
     ],
     code: 'tippecanoe -o stops.pmtiles -l stops -Z10 -z16 --drop-densest-as-needed stops.geojson',
     here: '벡터 예시(SHP·GeoJSON·FlatGeobuf): 전처리 결과 → tippecanoe -o *.pmtiles -l <레이어> -Z -z --drop-densest-as-needed. 같은 줌 범위의 GDAL 레시피(MVT 폴더)와 타일 전후 피처 수를 나란히 비교.',
-    tags: ['Tippecanoe', 'Planetiler', 'ST_AsMVT'],
   },
   {
     id: 'archive',
     cat: 'vector-common',
+    see: ['files'],
     real: 'Q051',
     fig: 'vector-tiles',
     what: {
@@ -1063,11 +1093,11 @@ export const topics: Topic[] = [
     ],
     points: ['.pbf는 일반 바이너리 확장자 — OSM 원본(OSM PBF)도 같은 확장자라 확장자만으로 MVT라고 단정하지 않음'],
     here: '서울 도심 PMTiles 샘플은 Protomaps 전 세계 파일에서 pmtiles extract로 영역만 잘라 받음 — 전체를 안 받는 것도 Range 덕분. 같은 전처리 결과를 파일(PMTiles)과 서버(PostGIS → martin이 요청마다 MVT)로 비교.',
-    tags: ['PMTiles', 'MBTiles', 'HTTP Range'],
   },
   {
     id: 'vector-web',
     cat: 'vector-2d',
+    see: ['servers'],
     what: {
       q: '벡터를 웹에 띄우는 방식 — 파일과 서비스란?',
       def: '파일(정적) 방식: 미리 만든 파일을 S3 같은 저장소에 그대로 두고 브라우저가 직접 읽음. 서비스 방식: 서버가 요청을 받아 타일·피처·그림을 응답으로 내줌.',
@@ -1177,11 +1207,11 @@ export const topics: Topic[] = [
       '서비스로 가는 이유: 자주 바뀌는 데이터, 미리 다 만들기엔 너무 큰 데이터·넓은 줌 범위, 요청마다 다른 필터·권한',
     ],
     here: '이 사이트의 결과 제공 방식이 이 구분 그대로: 파일(결과 파일·지도 페이지 ZIP을 내려받아 정적 호스팅)과 서비스(서버에 48시간 임시 발행한 주소 — 공개 배포에선 미제공). 같은 전처리 결과를 PMTiles(파일)와 PostGIS → martin(서버)으로 나란히 비교.',
-    tags: ['정적 호스팅', '타일 서버', 'OGC API Features', 'WMS'],
   },
   {
     id: 'pointcloud',
     cat: 'pointcloud',
+    see: ['files', 'tools'],
     what: {
       q: "포인트 클라우드란?",
       def: "X·Y·Z 위치에 강도(Intensity)·시간·RGB 같은 속성이 붙은 점들의 집합 — 수십억 점 규모로 커지는 3D 측정 데이터.",
@@ -1277,11 +1307,11 @@ export const topics: Topic[] = [
     ],
     points: ["Potree 옥트리는 Potree 뷰어 전용 형식(PotreeConverter) — 표준 아님"],
     here: "치악산 둘레길 LAS 675,472점 → PDAL로 정리 → 3D Tiles 조각 91개. GpsTime이 64비트 실수라 glTF로 못 옮겨 1.1 변환 불가 → .pnts 유지.",
-    tags: ["LAS","LAZ","COPC","pnts"],
   },
   {
     id: 'model3d',
     cat: 'model-3d',
+    see: ['files', 'tools'],
     what: {
       q: "3D 모델 형식이란?",
       def: "3D 장면·모델의 형상·재질·구조를 파일에 담아 도구끼리 주고받거나 런타임에 불러오는 형식. 대표 예 glTF는 3D 장면·모델의 효율적 전송·로드를 위한 로열티 없는 사양.",
@@ -1376,11 +1406,11 @@ export const topics: Topic[] = [
       },
     ],
     here: "도쿄역 CityGML(PLATEAU, LoD 0~2) → mago 3DTiler · CityJSON→glb · 3DCityDB 세 경로로 3D Tiles. glb 예시는 모델 좌표(m)뿐이라 경위도·높이·방향을 따로 정해 배치.",
-    tags: ["glTF","CityGML","OBJ","FBX"],
   },
   {
     id: 'tiles3d',
     cat: 'model-3d',
+    see: ['files', 'tools'],
     what: {
       q: '3D Tiles란?',
       def: '대용량 3D 공간 콘텐츠를 스트리밍·렌더링하기 위한 OGC 표준. 계층적 데이터 구조와, 렌더링할 내용을 담는 타일 형식들로 이루어진다.',
@@ -1483,12 +1513,12 @@ export const topics: Topic[] = [
     ],
     points: ['어느 버전인지: tileset.json의 asset.version, 그리고 content.uri가 가리키는 확장자 (.b3dm·.i3dm·.pnts·.cmpt면 1.0 방식, .glb면 1.1 방식)'],
     here: '변환 도구마다 형식이 다름: mago 3DTiler는 1.0 형식(b3dm·i3dm·pnts), pg2b3dm은 1.1(glb). i3dm 예시는 모델 1회 저장 + 점별 위치로 나무·가로등 반복. IFC는 IfcConvert로 glb 추출 → 3d-tiles-tools로 지구 위에 놓는 tileset.json.',
-    tags: ['tileset.json', 'b3dm·i3dm·pnts', 'glb'],
     links: [{ to: '/viz/model-3d/glb', label: 'GLB' }, { to: '/viz/model-3d/i3dm', label: 'i3dm' }],
   },
   {
     id: 'pg2b3dm',
     cat: 'model-3d',
+    see: ['postgis'],
     real: 'Q071',
     what: {
       q: 'pg2b3dm(DB → 3D Tiles)이란?',
@@ -1558,7 +1588,6 @@ export const topics: Topic[] = [
     ],
     code: 'pg2b3dm --connection "Host=localhost;Username=postgres;Database=citydb" -t bldg3d -c geom -a gml_id,height -o tiles',
     here: '도쿄역 CityGML 경로 하나: citydb import(EPSG:6697 그대로) → SQL로 지붕·벽 면을 건물별 ST_Collect + 높이, ST_FlipCoordinates로 위도·경도 → 경도·위도 → pg2b3dm -t bldg3d -c geom -a gml_id,height → 3D Tiles 1.1.',
-    tags: ['pg2b3dm', '3DCityDB', 'PostGIS'],
   },
   {
     id: 'extrusion',
@@ -1659,11 +1688,11 @@ export const topics: Topic[] = [
     ],
     points: ["높이 열이 없을 때: 다른 표와 조인(건축물대장 층수 등 → 속성 데이터) 또는 라이다 DSM − DTM(nDSM → 지형 › DEM)"],
     here: "이 사이트의 2.5D 입력도 2D 면 + 높이: 국내 건물 SHP는 지상층수(GRO_FLO_CO) × 3 m(층수 없으면 9 m), 샌프란시스코 건물 GeoJSON은 height 속성. 결과는 GeoJSON 그대로(브라우저 돌출) 또는 3D Tiles(mago 3DTiler 높이 열 · PostGIS CG_Extrude → pg2b3dm). CityGML LoD2는 지붕 경사까지 있는 3D.",
-    tags: ["fill-extrusion","LoD1","높이 속성"],
   },
   {
     id: 'attribute',
     cat: 'attribute',
+    see: ['files'],
     what: {
       q: "속성 데이터를 지도에 올린다는 것은?",
       def: "좌표 열·주소·코드처럼 위치를 가리키는 값을 매개로, 표 형식 속성을 지도 위의 점이나 경계 도형에 연결하는 작업.",
@@ -1762,13 +1791,495 @@ export const topics: Topic[] = [
         src: { title: "QGIS | Joins", url: "https://docs.qgis.org/latest/en/docs/user_manual/working_with_vector/joins_relations.html" },
       },
     ],
-    here: "버스정류장 CSV: CP949 → UTF-8 변환, 위경도 열로 점 생성(ogr2ogr SQL로 서울만, 좌표 이상 행 제외). 주소·코드 연계 도구는 주소 → PNU → 필지 경계·토지 속성을 붙임.",
-    tags: ["CSV","지오코딩","조인"],
+    here: "버스정류장 CSV: CP949 → UTF-8 변환, 위경도 열로 점 생성(ogr2ogr SQL로 서울만, 좌표 이상 행 제외). 주소·코드 변환은 주소 → PNU → 필지 경계·토지 속성을 붙임.",
     links: [{"to":"/link","label":"주소·코드 변환"}],
+  },
+  {
+    id: 'dggs',
+    cat: 'attribute',
+    what: {
+      q: "H3 같은 격자 체계란?",
+      def: "지구를 정해진 규칙의 칸으로 빈틈없이 나누고 칸마다 번호(ID)를 붙여, 위치를 '좌표' 대신 '몇 번 칸'으로 다루는 체계. 표준 이름은 DGGS(이산 전역 격자 체계).",
+      facts: [
+        "묶기 — 같은 칸에 든 점끼리 세면 집계 (정류장 12,956곳 → 칸 1,435개)",
+        "붙이기 — 다른 데이터도 같은 칸 ID로 조인, 도형 겹침 계산 없음",
+        "비교 — 칸 크기가 거의 같고 바뀌지 않음 → 크기 제각각·자주 바뀌는 행정구역과 달리 지역끼리·시점끼리 비교",
+        "확대·축소 — 해상도를 바꾸면 큰 칸·작은 칸, 이웃 칸도 ID로 바로",
+        "그리는 도구는 아님 — 결과(칸 + 값)는 지도 라이브러리가 그림",
+      ],
+      src: ["R97","R90","R86","R87"],
+    },
+    kindsQ: "격자 체계는 무엇으로 이루어지나?",
+    terms: [
+      {
+        name: "바탕 도형",
+        sub: "둥근 지구 → 평평한 면",
+        def: "둥근 지구를 평평한 칸으로 나누려고 먼저 펼쳐 놓는 면.",
+        facts: ["H3: 정이십면체(20면), S2: 정육면체(6면)","웹 지도 타일: 메르카토르 지도 한 장 → 위도에 따라 넓이 왜곡","국내 격자: UTM-K 평면 (한국만)"],
+        src: ["R89","R93","R94","R100"],
+      },
+      {
+        name: "칸 모양",
+        sub: "삼각형·사각형·육각형",
+        def: "같은 단계의 칸들이 빈틈·겹침 없이 지구를 덮는 모양.",
+        facts: ["육각형: 이웃 6개가 모두 같은 거리 → 이웃 분석에 유리","사각형: 4등분이 정확 → 계층이 깔끔","구는 육각형만으로 못 덮음 → H3에 오각형 12칸"],
+        src: ["R87","R91","R89"],
+      },
+      {
+        name: "해상도 (계층)",
+        sub: "큰 칸 → 작은 칸",
+        def: "칸을 다시 쪼개 단계를 쌓은 것. 한 단계에 몇 칸으로 쪼개는지가 세분 비율(aperture).",
+        facts: ["H3: 7칸씩 (넓이 약 1/7), S2·지도 타일: 4칸씩","국가지점번호: 100km → 10km → 1km → 100m → 10m"],
+        src: ["R97","R86","R91","R98"],
+      },
+      {
+        name: "칸 ID",
+        sub: "칸 주소",
+        def: "칸을 가리키는 번호. 번호 안에 계층이 들어 있어 부모·자식·이웃을 계산으로 찾음.",
+        facts: ["H3·S2: 64비트 정수 (H3 표기 예: 8830e1d8c1fffff)","Quadkey·국가지점번호: 문자열, 앞부분 = 그 칸을 담은 큰 칸"],
+        src: ["R104","R93","R94","R98"],
+      },
+      {
+        name: "데이터 넣기",
+        sub: "좌표·도형 → 칸 (양자화)",
+        def: "점·면·영상의 값을 칸에 배정하는 일.",
+        facts: ["점: 좌표가 든 칸 하나","면: 칸 중심이 면 안에 든 칸들","칸마다 개수·합계·평균 → 집계"],
+        src: ["R97","R105"],
+      },
+    ],
+    diffQ: "좌표·행정구역·래스터와는 무엇이 다른가?",
+    table: {
+      cols: ["","좌표 (점)","행정구역 코드","래스터 격자","격자 체계"],
+      rows: [
+        row("단위", "점 하나 (넓이 없음)", "법·행정이 정한 구역", "영상마다 정한 픽셀", "전 지구 공통 칸 (해상도별)"),
+        row("크기", "—", "구역마다 제각각", "한 영상 안에서는 같음", "거의 일정 (A5·국내 평면 격자는 같음)"),
+        row("바뀌나", "그대로", "개편·분할로 코드·경계가 바뀜", "영상마다 새 격자", "고정 — 같은 위치는 언제나 같은 칸"),
+        row("묶기·붙이기", "도형 계산 (공간 조인)", "코드로 조인 (시점 맞추기)", "격자가 같아야 픽셀끼리 연산", "칸 ID로 GROUP BY·JOIN"),
+        row("범위", "어디든", "나라 안", "영상 범위", "전 지구 (국내 격자는 한국)"),
+      ],
+    },
+    tableSrc: ["R49","R46","R90","R97"],
+    points: [
+      "예: 인구도 같은 H3 칸으로 집계해 두면 정류장 칸과 칸 ID로 붙여 \"인구 대비 정류장 수\" — 경계 도형끼리 겹침 계산 없이 표 조인",
+      "흐름: 좌표 → 칸 ID(latlng_to_cell) → 칸 ID로 GROUP BY·JOIN → 칸 ID → 육각형(cell_to_boundary)으로 그리기",
+    ],
+    code: "import h3\nh3.latlng_to_cell(37.5665, 126.9780, 8)  # 서울시청 → '8830e1d8c1fffff'\nh3.cell_to_parent('8830e1d8c1fffff', 7)  # 한 단계 큰 칸 → '8730e1d8cffffff'\nh3.grid_disk('8830e1d8c1fffff', 1)       # 자신 + 이웃 6칸 = 7개\nh3.cell_to_boundary('8830e1d8c1fffff')   # 육각형 꼭짓점 (위도, 경도)",
+    follow: [
+      {
+        q: "웹 지도 타일(z/x/y)을 그대로 집계 칸으로 쓰면 안 되나?",
+        kind: '실무 함정',
+        a: "웹 메르카토르 타일은 지도 그림용 격자라 같은 줌이라도 실제 넓이가 위도에 따라 cos²(위도)배 — 제주(33.5°) 0.70, 서울(37.5°) 0.63, 위도 60° 0.25. 한국 안에서도 남북 약 10% 차이, 대륙 단위면 몇 배 → 밀도 비교는 넓이가 고른 격자(H3·A5·국내 평면 격자)나 개수 ÷ 넓이로.",
+        src: { title: "Microsoft | Bing Maps 타일 시스템", url: "https://learn.microsoft.com/en-us/bingmaps/articles/bing-maps-tile-system" },
+      },
+      {
+        q: "격자로 집계했더니 모여 있는 시설이 두 칸에 나뉘어 약하게 보인다?",
+        kind: '실무 함정',
+        a: "칸 경계가 무리를 가르면 값이 이웃 칸으로 나뉨 — 구역으로 나누면 생기는 경계 효과(이웃 구역을 반영하지 못함). 격자는 이웃 칸을 ID로 바로 찾으므로 자신 + 이웃 칸 합(grid_disk)으로 고르게 하거나, 해상도를 바꿔도 결과가 유지되는지 확인.",
+        src: { title: "H3 | 행정구역·우편번호와 비교", url: "https://h3geo.org/docs/comparisons/admin" },
+      },
+      {
+        q: "육각형 격자인데 일부 칸이 오각형으로 나오는 이유는?",
+        kind: '실무 함정',
+        a: "정이십면체 꼭짓점 12곳에는 육각형을 깔 수 없어 해상도마다 오각형 12칸이 생김. 꼭짓점을 모두 바다에 두어 육지 데이터에서는 거의 안 만나지만, 바다·전 지구 데이터에서는 이웃이 5개인 칸이 섞임.",
+        src: { title: "H3 | 격자 구조 개요", url: "https://h3geo.org/docs/core-library/overview" },
+      },
+    ],
+    here: "속성 CSV의 H3 방식: 서울 버스정류장 12,956곳 → 해상도 8 칸 1,435개(칸당 최대 42곳). 결과는 육각형 GeoJSON, count × 30 m로 돌출 → 네 뷰어 공통 (OpenLayers는 평면). Deck.gl은 H3HexagonLayer로 칸 ID만으로도 그릴 수 있음.",
+    links: [{ to: '/viz/attribute/csv/view?tool=h3', label: 'H3 방식 보기' }],
+  },
+  {
+    id: 'grids',
+    cat: 'attribute',
+    see: ['dggs', 'postgis'],
+    what: {
+      q: "격자 체계에는 어떤 것들이 있고 무엇이 다른가?",
+      def: "전 지구용은 다면체·투영을 바탕으로 한 범용 격자 라이브러리(H3·S2·A5)와 지도 타일·문자열 체계(Quadkey·Geohash), 국내용은 UTM-K 평면 위 사각 격자(국가지점번호·통계 격자)와 기상청 예보 격자.",
+      facts: [
+        "해외 라이브러리: 전 지구 공통 칸 ID → 나라·서비스가 달라도 같은 칸, 언어별 라이브러리로 계산",
+        "국내 격자: 한국 좌표계(UTM-K, EPSG:5179) 평면 위 미터 단위 사각형 → 칸 크기가 같고 국가 통계·위치 표시와 바로 연결",
+        "고르는 기준: 범위(세계·한국), 받을 데이터가 이미 쓰는 격자, 칸 넓이가 고른지, 계층 포함이 정확한지",
+      ],
+      src: ["R89","R93","R95","R98","R100"],
+    },
+    kindsQ: "해외 라이브러리와 국내 격자에는 무엇이 있나?",
+    terms: [
+      {
+        name: "H3",
+        sub: "해외 · Uber · 육각형",
+        def: "정이십면체 면 위에 육각형 칸을 깔고 해상도 0~15로 나눈 격자 체계.",
+        facts: ["칸 ID 64비트 정수 (문자열로도 표기)","자식 7칸 — 부모를 정확히 덮지는 않음 (ID상 포함은 정확)","해상도마다 오각형 12칸, 모두 바다에 배치","같은 해상도도 칸 넓이 최대 약 2배 차이 (해상도 8: 0.45~0.89 km²)"],
+        src: ["R89","R86","R88","R92"],
+      },
+      {
+        name: "S2",
+        sub: "해외 · Google · 사각형",
+        def: "정육면체 6면을 구에 투영하고 각 면을 사각형 칸으로 4등분해 나가는 격자 체계.",
+        facts: ["레벨 0~30, 칸 ID 64비트","칸 번호를 힐베르트 곡선 순서로 매김","자식 4칸이 부모를 정확히 덮음 → 점의 부모 칸은 항상 그 점을 포함"],
+        src: ["R93","R91"],
+      },
+      {
+        name: "Geohash",
+        sub: "해외 · 문자열 · 사각형",
+        def: "사각 칸을 계층적으로 나누고(쿼드트리) 칸을 문자열로 나타내는 격자.",
+        facts: ["문자열 ID, 글자를 늘릴수록 작은 칸 (정밀도 제한 없음)","위도에 따라 칸 넓이 차이 큼"],
+        src: ["R92"],
+      },
+      {
+        name: "Quadkey",
+        sub: "해외 · Bing · 웹 메르카토르 타일",
+        def: "웹 메르카토르 타일 XY 번호를 비트 교차해 4진수 문자열로 만든 타일 키.",
+        facts: ["키 길이 = 레벨(줌)","부모 타일의 키로 시작 → 앞부분이 같으면 같은 큰 타일 안","지도 타일 z/x/y와 같은 격자 → 위도에 따라 실제 넓이가 다름, 위도 약 85°까지"],
+        src: ["R94"],
+      },
+      {
+        name: "A5",
+        sub: "해외 · 오각형 · 같은 넓이",
+        def: "지구를 넓이가 정확히 같은 오각형 칸으로 나누는 격자 체계.",
+        facts: ["해상도 31단계, 칸 ID 64비트","같은 해상도의 모든 칸 넓이가 같음 → 칸 개수를 그대로 밀도로 비교","Apache 2.0"],
+        src: ["R95"],
+      },
+      {
+        name: "국가지점번호",
+        sub: "국내 · 행정안전부 · 10m",
+        def: "UTM-K 기준점에서 가로·세로 100km 칸 문자 2자와 그 안 10m 칸 숫자 8자리로 위치를 나타내는 국가 격자 번호 (도로명주소법 시행령 제37조).",
+        facts: ["기준점 '가가 0000 0000' = UTM-K 원점에서 남쪽 700km·서쪽 300km","문자: 100km 칸마다 '가나다라' 순 (가로·세로), 숫자: 가로 4자리 + 세로 4자리 (10km·1km·100m·10m)","예: 서울시청 ≈ 다사 5390 5203 (위경도 → UTM-K 변환으로 계산)","구조·응급 활동 위치 표시 (국가지점번호판)"],
+        src: ["R98","R99"],
+      },
+      {
+        name: "통계 격자",
+        sub: "국내 · 국가데이터처 SGIS · 100m~100km",
+        def: "인구·가구·주택·사업체 통계를 100m·500m·1km·10km·100km 사각 칸으로 내는 격자 (경계 SHP, UTM-K EPSG:5179).",
+        facts: ["칸 이름이 국가지점번호와 같은 문자 체계 (예: 100m 칸 '다사605439')","1km 미만 칸은 총값만","비밀보호 기법으로 값이 흔들림 → 칸 합계 ≠ 총계"],
+        src: ["R100","R101"],
+      },
+      {
+        name: "기상청 예보 격자",
+        sub: "국내 · 기상청 · 5km",
+        def: "단기예보를 한반도 5km × 5km 칸마다 내는 격자. 칸은 X·Y 번호(nx, ny)로 가리킴.",
+        facts: ["예: 청운효자동 = 60, 127","읍면동은 대표 좌표가 든 칸으로 연결","위경도 ↔ 격자 번호는 기상청 변환 기능·좌표 파일로 (국가지점번호·통계 격자와 번호 체계가 다름)"],
+        src: ["R102","R103"],
+      },
+    ],
+    diffQ: "격자 체계별로 무엇이 다른가?",
+    table: {
+      cols: ["","범위","바탕","칸 모양·크기","ID 예","계층"],
+      rows: [
+        row("H3", "전 지구", "정이십면체", "육각형 (오각형 12), 해상도 8 평균 0.74 km²", "8830e1d8c1fffff", "해상도 0~15, 자식 7칸 (근사 포함)"),
+        row("S2", "전 지구", "정육면체", "사각형", "64비트 정수", "레벨 0~30, 자식 4칸 (정확히 포함)"),
+        row("Geohash", "전 지구", "사각 분할 (쿼드트리)", "사각형, 위도 따라 넓이 다름", "문자열", "글자를 늘릴수록 작은 칸"),
+        row("Quadkey", "전 지구 (위도 약 ±85°)", "웹 메르카토르", "사각형 = 지도 타일, 위도 따라 넓이 다름", "4진수 문자열 (예: 213)", "줌마다 자식 4칸 (정확히 포함)"),
+        row("A5", "전 지구", "—", "오각형, 같은 해상도는 넓이 같음", "64비트 정수", "해상도 31단계"),
+        row("국가지점번호", "한국", "UTM-K 평면", "사각형 10m", "다사 5390 5203", "100km 문자 → 10km·1km·100m·10m 자리"),
+        row("통계 격자 (SGIS)", "한국", "UTM-K 평면 (EPSG:5179)", "사각형 100m·500m·1km·10km·100km", "다사605439 (100m)", "크기 5단계"),
+        row("기상청 예보 격자", "한반도", "기상청 격자", "사각형 5km", "nx 60, ny 127", "1단계"),
+      ],
+    },
+    tableSrc: ["R86","R88","R91","R92","R93","R94","R95","R98","R100","R101","R102"],
+    follow: [
+      {
+        q: "H3 해상도 9로 센 값을 부모(해상도 8) 칸으로 올려 합쳤더니, 처음부터 해상도 8로 센 값과 칸별로 다른 이유는?",
+        kind: '실무 함정',
+        a: "H3는 자식 7칸이 부모 육각형을 정확히 덮지 않음 — ID상 포함은 정확하지만 지리적 포함은 근사. 이 사이트의 서울 버스정류장 12,956곳 중 901곳(7.0%)은 해상도 9 칸의 부모가 해상도 8로 바로 찾은 칸과 다름. 합계는 같아도 칸별 값이 달라지므로 비교할 값은 같은 방식으로 집계. 포함이 정확해야 하면 S2(자식 4칸).",
+        src: { title: "H3 | 계층 인덱싱", url: "https://h3geo.org/docs/highlights/indexing" },
+      },
+      {
+        q: "H3 칸마다 센 개수를 그대로 지역 밀도로 비교해도 되나?",
+        kind: '실무 함정',
+        a: "같은 해상도라도 칸 넓이가 위치마다 최대 약 2배 (해상도 8: 0.45~0.89 km², 평균 0.74). 서울의 해상도 8 칸은 약 0.50~0.51 km²라 도시 안에서는 거의 같지만, 나라·대륙끼리 비교하면 개수 ÷ 칸 넓이(cell_area). 넓이가 정확히 같아야 하면 A5.",
+        src: { title: "H3 | 해상도 표", url: "https://h3geo.org/docs/core-library/restable" },
+      },
+      {
+        q: "SGIS 격자 통계를 모두 더했더니 행정구역 총계와 맞지 않는 이유는?",
+        kind: '실무 함정',
+        a: "비밀보호 기법(BSCA)으로 칸 값이 흔들림 — 인구·가구·주택은 0이면 실제 0~4, 5면 1~5, 6 이상 M이면 M−2~M+2(일부 M−7~M+7). 칸 합계 ≠ 총계가 정상이므로 총계는 행정구역 통계로. 100m·500m 칸은 총값만 제공.",
+        src: { title: "SGIS | 생활권역 통계지도", url: "https://sgis.mods.go.kr/mobile/m2021/map/catchmentareaMap.sgis" },
+      },
+      {
+        q: "H3 칸 ID를 정수로 내보내 엑셀에서 열었더니 다른 표와 조인이 안 되는 이유는?",
+        kind: '실무 함정',
+        a: "H3 정수 ID는 18자리(예: 8830e1d8c1fffff = 613349494320267263)인데 엑셀 숫자는 15자리까지만 정확 → 16번째 자리부터 0으로 바뀌어 다른 칸이 됨. 16진수 문자열로 두거나, 정수라면 가져올 때 텍스트로 지정.",
+        src: { title: "Microsoft Support — Keeping leading zeros and large numbers", url: "https://support.microsoft.com/topic/1bf7b935-36e1-4985-842f-5dfa51f85fe7" },
+      },
+      {
+        q: "DB에서 정수로 꺼낸 H3 ID를 JSON으로 브라우저에 보냈더니 칸이 엉뚱하게 그려지는 이유는?",
+        kind: '실무 함정',
+        a: "JavaScript 숫자는 2⁵³−1(약 9×10¹⁵)까지만 정확 → 18자리 H3 정수는 JSON.parse 때 끝자리가 바뀜. h3-js도 칸 ID를 16진수 문자열로 받으므로 API·JSON에는 문자열로 (정수 그대로 다뤄야 하면 BigInt).",
+        src: { title: "MDN — Number.MAX_SAFE_INTEGER", url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER" },
+      },
+      {
+        q: "UTM-K로 저장된 PostGIS 점을 h3_postgis로 칸에 넣었더니 엉뚱한 칸이 나오는 이유는?",
+        kind: '실무 함정',
+        a: "h3_postgis 함수는 PostGIS 좌표를 SRID 4326 경위도로 해석하고 재투영하지 않음 → EPSG:5179 미터 좌표가 그대로 경위도로 읽힘. ST_Transform(geom, 4326)으로 먼저 변환 (ST_SetSRID는 번호만 바꾸고 좌표를 바꾸지 않음).",
+        src: { title: "h3-pg 문서", url: "https://access.crunchydata.com/documentation/h3-pg/latest" },
+      },
+    ],
+    here: "이 사이트는 H3로 집계 (속성 CSV의 H3 방식). 국내 통계 격자는 경계가 SHP(EPSG:5179)로 배포 → 2D 벡터 SHP와 같은 경로(위경도 변환 → GeoJSON·벡터 타일)로 웹 지도에 올림.",
+    links: [{ to: '/viz/vector-2d/shp', label: 'SHP 변환' }],
+  },
+  {
+    id: 'storage',
+    cat: 'storage',
+    see: ['tools'],
+    what: {
+      q: "공간 데이터는 어떤 파일 형식·DB로 저장하나?",
+      def: "공간 데이터 = 위치(도형·픽셀·칸 ID) + 속성 + 좌표계. 저장은 두 갈래 — 공간 데이터 파일(만들어서 통째로 주고받기)과 공간 DB(행 단위로 고치고 SQL로 찾기).",
+      facts: [
+        "공간 데이터 파일: 한 번 만들어 배포·교환 → 정적 호스팅·데스크톱 GIS (종류는 다음 질문)",
+        "공간 DB = 일반 DB + 도형 타입 + 공간 인덱스 + 공간 함수 → 여럿이 동시에 고치고 조건으로 찾음 (PostGIS)",
+        "그 사이: GeoPackage = 파일 하나짜리 DB (SQLite) → 파일처럼 주고받고 DB처럼 SQL",
+        "원본 파일을 바로 변환할지, DB에 넣어 정리한 뒤 내보낼지: DB는 관계·필터·반복 조회에 유리, 대신 적재·스키마 관리가 듦",
+      ],
+      src: ["R01","R40","R111","S29","S31"],
+    },
+    kindsQ: "저장 방식의 종류는?",
+    terms: [
+      {
+        name: "공간 데이터 파일",
+        sub: "GeoJSON · SHP · GeoTIFF · PMTiles …",
+        def: "데이터를 정해진 형식의 파일로 구워 통째로 주고받는 방식.",
+        facts: ["만들기·배포가 단순, 서버 없이 정적 호스팅","고치면 다시 만들어 통째 교체","종류가 많음 → 다음 질문"],
+        src: ["R37","R33","S25"],
+      },
+      {
+        name: "파일 하나짜리 DB",
+        sub: "GeoPackage (SQLite)",
+        def: "SQLite DB 파일 하나에 여러 벡터 레이어·래스터 타일을 담는 OGC 표준.",
+        facts: ["파일처럼 주고받고 DB처럼 SQL 질의","공간 인덱스(R-tree)를 담을 수 있음","읽기는 여럿이 동시에, 쓰기는 한 번에 하나"],
+        src: ["R40","R110","R111"],
+      },
+      {
+        name: "공간 DB",
+        sub: "PostGIS 등",
+        def: "DB 표에 도형 열을 두고 공간 인덱스·공간 함수로 저장·검색·분석하는 DB.",
+        facts: ["행 단위 수정, 여럿이 동시에 쓰기","공간 인덱스로 범위·겹침 검색","지도 서버(GeoServer·martin)가 표를 바로 발행"],
+        src: ["R01","S40","R111"],
+      },
+    ],
+    diffQ: "파일과 공간 DB는 언제 무엇을 고르나?",
+    table: {
+      cols: ["","공간 데이터 파일","GeoPackage","공간 DB (PostGIS)"],
+      rows: [
+        row("형태", "형식별 파일 (하나 또는 여러 개)", "SQLite 파일 하나", "DB 서버의 표"),
+        row("고치기·동시 사용", "다시 만들어 통째 교체", "쓰기는 한 번에 하나", "행 단위, 여럿이 동시에"),
+        row("조건으로 찾기", "통째 읽고 거르기 (FlatGeobuf·COG·PMTiles는 범위만)", "SQL", "SQL + 공간 함수"),
+        row("배포", "정적 호스팅·CDN에 그대로", "파일 전달 (웹은 변환)", "서버(GeoServer·martin)로 발행"),
+        row("잘 맞는 곳", "갱신 드문 데이터·웹 배포·교환", "한 파일 배포 (데스크톱·모바일)", "운영 서비스·자주 바뀌는 데이터"),
+      ],
+    },
+    tableSrc: ["R41","R33","S25","R40","R110","R111","R01","S40"],
+    follow: [
+      {
+        q: "GeoPackage 파일 하나를 공유 폴더에 두고 여러 명이 동시에 편집해도 되나?",
+        kind: '실무 함정',
+        a: "GeoPackage는 SQLite 파일 — 읽기는 여럿이 동시에 되지만 쓰기는 한 번에 하나. 같은 파일을 네트워크 너머 여러 컴퓨터가 직접 동시에 쓰는 구조는 SQLite가 피하라고 하는 경우 → 동시 편집은 PostgreSQL·PostGIS 같은 서버형 DB로.",
+        src: { title: "SQLite — Appropriate Uses For SQLite", url: "https://www.sqlite.org/whentouse.html" },
+      },
+    ],
+    here: "파일 방식 결과(GeoJSON·MVT 폴더·PMTiles·COG·3D Tiles)는 정적 파일로 두고, 서버 방식은 같은 원본을 PostGIS 표에 넣어 GeoServer·martin으로 발행.",
+    links: [{ to: '#files', label: '다음: 공간 데이터 파일' }],
+  },
+  {
+    id: 'files',
+    cat: 'storage',
+    what: {
+      q: "공간 데이터 파일에는 어떤 종류가 있나?",
+      def: "위치 + 속성 + 좌표계를 정해진 형식으로 담은 파일. 크게 벡터(도형)·래스터(픽셀)·그 외(점군·3D·건물·표)로 나뉨 — 이 노트 뒤의 묶음(벡터 → 래스터 → 혼합·기타)과 같은 순서.",
+      facts: [
+        "벡터 파일: 점·선·면 도형 + 속성 → 확대해도 선명, 크기는 피처·꼭짓점 수에 비례",
+        "래스터 파일: 칸마다 값이 든 픽셀 격자(색·높이) → 확대하면 픽셀이 커짐, 크기는 가로 × 세로 × 밴드",
+        "그 외: 점군·3D 모델·도시·건물(BIM)·좌표 열이 있는 표처럼 벡터·래스터 어느 한쪽에 딱 맞지 않는 것",
+        "원본 형식 그대로 웹에 올리기보다 웹 형식(MVT·PMTiles·COG·3D Tiles 등)으로 바꿔 씀",
+      ],
+      src: ["R37","R32","R53","R72"],
+    },
+    kindsQ: "벡터·래스터·그 외 파일에는 무엇이 있나?",
+    terms: [
+      {
+        name: "벡터 파일",
+        sub: "점·선·면 + 속성",
+        def: "도형을 좌표로 담은 파일. 담는 방식에 따라 글자·이진·DB·열 지향·타일.",
+        facts: ["글자는 읽기 쉽지만 크고, 이진은 작고 빠름","FlatGeobuf·GeoPackage는 공간 인덱스를 품음"],
+        subs: [
+          { name: "텍스트", code: ".geojson .csv .gml", text: "좌표를 글자로. GeoJSON은 위경도(WGS84)만" },
+          { name: "이진", code: ".shp .fgb", text: "SHP는 여러 파일·2GB 한도, FlatGeobuf는 한 파일 + HTTP Range로 범위만" },
+          { name: "파일 하나짜리 DB", code: ".gpkg", text: "GeoPackage — SQLite 하나에 여러 레이어, R-tree 인덱스" },
+          { name: "열 지향", code: ".parquet", text: "GeoParquet — 열 단위 압축, 대용량 분석" },
+          { name: "벡터 타일", code: ".pbf .mbtiles .pmtiles", text: "줌·위치별 조각. PMTiles는 파일 하나 + HTTP Range" },
+        ],
+        src: ["R39","R38","R41","R40","R110","R106","R02","S24","S25"],
+      },
+      {
+        name: "래스터 파일",
+        sub: "픽셀 격자 (색·높이)",
+        def: "칸마다 값이 든 격자를 지리참조와 함께 담은 파일. 영상(색)과 지형(높이)이 같은 구조.",
+        facts: ["GeoTIFF가 기본, 웹에는 COG나 타일로","지형(DEM)도 래스터 → 웹 지형 타일로 바꿔 씀"],
+        subs: [
+          { name: "GeoTIFF·COG", code: ".tif", text: "TIFF + 지리참조. COG는 내부 타일·축소판 → HTTP Range로 필요한 부분만" },
+          { name: "그림 + 월드파일", code: ".jpg .png + .jgw", text: "그림엔 위치가 없어 월드파일(픽셀 크기·왼쪽 위 좌표 6줄)로 배치" },
+          { name: "래스터 타일", code: "z/x/y.png", text: "줌별로 자른 그림 조각, 모든 뷰어 공통" },
+          { name: "지형", code: ".tif .img .terrain", text: "높이 격자(DEM) → 웹엔 Terrain-RGB(높이를 색으로) 또는 quantized-mesh(삼각형)" },
+        ],
+        src: ["R32","R33","S13","R113","R34","S20","S17"],
+      },
+      {
+        name: "그 외",
+        sub: "점군 · 3D · 건물 · 표",
+        def: "벡터·래스터 어느 한쪽에 딱 맞지 않는 데이터를 담는 파일.",
+        facts: ["3D는 웹에서 대부분 3D Tiles·glTF로 바꿔 씀","좌표 없는 표는 좌표 열·주소·코드·격자 칸 ID로 위치를 연결"],
+        subs: [
+          { name: "점군", code: ".las .laz", text: "레이저 측량 점. LAZ는 LAS의 무손실 압축" },
+          { name: "3D 모델", code: ".glb .gltf", text: "glTF — 3D 모델 전송·로드용" },
+          { name: "3D 타일", code: "tileset.json", text: "3D Tiles — 대용량 3D를 타일·LOD로 스트리밍" },
+          { name: "도시·건물", code: ".gml .ifc", text: "CityGML·IFC — 형상과 함께 의미·속성·관계" },
+          { name: "속성 표", code: ".csv", text: "좌표 열·주소·코드, 또는 H3 같은 격자 칸 ID로 위치 연결" },
+        ],
+        src: ["R53","R54","R57","S32","S33","S36","R47"],
+      },
+    ],
+    diffQ: "벡터·래스터·그 외 파일은 무엇이 다른가?",
+    table: {
+      cols: ["","벡터 파일","래스터 파일","그 외 (점군·3D·건물·표)"],
+      rows: [
+        row("담는 것", "점·선·면 도형 + 속성", "픽셀 격자 (색·높이 값)", "점·입체 모델·건물 정보·표"),
+        row("대표 원본", "SHP·GeoJSON·GPKG·FlatGeobuf·GML", "GeoTIFF·JPG/PNG + 월드파일·IMG", "LAS·LAZ·glTF·CityGML·IFC·CSV"),
+        row("웹으로 보낼 때", "GeoJSON·MVT·PMTiles", "COG·XYZ 타일·Terrain-RGB·quantized-mesh", "3D Tiles·glTF (CSV는 점·격자로)"),
+        row("확대하면", "선이 그대로 선명 (좌표)", "픽셀이 커짐 (해상도 한계)", "3D Tiles는 가까울수록 자세한 단계(LOD)"),
+        row("크기를 좌우", "피처·꼭짓점 수", "가로 × 세로 픽셀 × 밴드", "점 수·삼각형·텍스처"),
+        row("이어서", "벡터 묶음", "래스터 묶음", "혼합·기타 묶음"),
+      ],
+    },
+    tableSrc: ["R37","R32","R33","S20","S17","R72","R53"],
+    follow: [
+      {
+        q: "JPG 영상에 월드파일(.jgw)을 같이 줬는데도 위치가 엉뚱한 이유는?",
+        kind: '실무 함정',
+        a: "월드파일은 숫자 6줄(픽셀 크기·회전·왼쪽 위 좌표)뿐 — 그 숫자가 어떤 좌표계인지는 없음. 미터 단위 TM 좌표를 위경도로 읽으면 엉뚱한 곳 → 원본 좌표계를 따로 지정 (GDAL -a_srs·-s_srs, .prj).",
+        src: { title: "GDAL | WLD — ESRI World File", url: "https://gdal.org/en/stable/drivers/raster/wld.html" },
+      },
+    ],
+    here: "공간 데이터 시각화가 유형별 확장자 예시 26개를 수집 → 전처리 → 웹 형태(GeoJSON·MVT·PMTiles·COG·3D Tiles …)로 변환. 이미지 레시피는 월드파일에 없는 좌표계를 -s_srs로 지정.",
+    links: [{ to: '/viz', label: '확장자별 예시' }, { to: '#postgis', label: '다음: PostGIS' }],
+  },
+  {
+    id: 'postgis',
+    cat: 'storage',
+    see: ['tools', 'storage', 'crs'],
+    what: {
+      q: "PostGIS란?",
+      def: "PostgreSQL에 공간 데이터 타입·공간 인덱스·공간 함수를 더해, 공간 데이터를 SQL로 저장·검색·분석하게 하는 확장.",
+      facts: [
+        "PostgreSQL = DB 관리 시스템, PostGIS = 그 위에 얹는 공간 확장 (CREATE EXTENSION postgis)",
+        "타입: geometry(평면 계산)·geography(지구 곡면 계산)",
+        "공간 인덱스(GiST): 도형의 bbox로 후보를 빠르게 줄인 뒤 정확히 판정",
+        "함수 이름은 ST_ (ST_Intersects·ST_Transform·ST_AsMVT …), 도형 입출력은 WKT·WKB",
+      ],
+      src: ["R01","R112","S40"],
+    },
+    kindsQ: "PostGIS가 PostgreSQL에 더하는 것은?",
+    terms: [
+      {
+        name: "geometry",
+        sub: "평면 도형",
+        def: "좌표계(SRID) 평면 위의 도형. 거리·넓이를 그 좌표계 단위로 계산.",
+        facts: ["SRID 4326이면 단위가 도(°) → 미터가 필요하면 미터 좌표계(5179·5186 등)로 변환","함수가 가장 많고 계산이 빠름"],
+        src: ["R112","S41","S39"],
+      },
+      {
+        name: "geography",
+        sub: "지구 곡면 경위도",
+        def: "경위도를 지구 곡면 위 경로로 계산하는 타입. 결과는 미터.",
+        facts: ["넓은 범위·대륙 간 거리에 정확","쓸 수 있는 함수가 적고 계산이 훨씬 무거움"],
+        src: ["S39","R112"],
+      },
+      {
+        name: "공간 인덱스",
+        sub: "GiST · R-tree 방식",
+        def: "도형 대신 도형의 bbox를 R-tree 방식으로 색인하는 인덱스.",
+        facts: ["CREATE INDEX … USING GIST (geom)","ST_Intersects·ST_DWithin 등은 인덱스로 후보를 줄이고 정확히 판정","대량 적재·삭제 뒤 ANALYZE (통계 갱신)"],
+        src: ["S40","S41"],
+      },
+      {
+        name: "좌표계 (SRID)",
+        sub: "spatial_ref_sys",
+        def: "도형마다 좌표계 번호(SRID)를 붙이고 spatial_ref_sys 표의 정의로 변환.",
+        facts: ["ST_SetSRID: 번호만 붙임 (좌표 그대로)","ST_Transform: 좌표를 다른 좌표계로 계산"],
+        src: ["R112","S08","S09"],
+      },
+      {
+        name: "공간 함수",
+        sub: "ST_*",
+        def: "도형 관계·측정·가공·내보내기를 SQL 함수로.",
+        facts: ["관계: ST_Intersects·ST_DWithin","가공: ST_Union(합쳐 새 도형)·ST_Collect(모으기만)·ST_Dump(풀기)","내보내기: ST_AsMVT(벡터 타일)"],
+        src: ["S40","S41","S37","S38","S42"],
+      },
+      {
+        name: "더 얹는 확장·도구",
+        sub: "h3-pg · 3DCityDB · pg2b3dm",
+        def: "PostGIS 위에 다시 얹어 쓰는 확장·스키마·도구.",
+        facts: ["h3-pg + h3_postgis: H3 칸 ↔ 도형","3DCityDB: CityGML 도시 모델을 담는 스키마","pg2b3dm: PostGIS 3D 도형 → 3D Tiles"],
+        src: ["R107","S29","S28"],
+      },
+    ],
+    diffQ: "geometry와 geography는 무엇이 다른가?",
+    table: {
+      cols: ["","geometry","geography"],
+      rows: [
+        row("계산 바탕", "평면 (직선 거리)", "지구 곡면 (대원 경로)"),
+        row("좌표", "SRID 좌표계의 x·y (투영·경위도)", "경위도 (SRID 4326)"),
+        row("거리·넓이 단위", "SRID 단위 (4326이면 도)", "미터"),
+        row("함수·속도", "가장 많음·빠름", "적음·무거움"),
+        row("잘 맞는 곳", "좁은 범위 (한국 데이터 → 미터 좌표계)", "세계 곳곳에 퍼진 데이터"),
+      ],
+    },
+    tableSrc: ["S39","R112","S41"],
+    code: "CREATE EXTENSION postgis;\nCREATE TABLE stops (id text PRIMARY KEY, name text, geog geography(Point, 4326));\nCREATE INDEX ON stops USING GIST (geog);\n\n-- 서울시청 반경 500 m 정류장: geography라 단위가 미터, ST_DWithin은 인덱스 사용\nSELECT name FROM stops\nWHERE ST_DWithin(geog, 'SRID=4326;POINT(126.978 37.5665)'::geography, 500);",
+    follow: [
+      {
+        q: "ST_Distance(a, b) < 500 조건으로 주변을 찾았더니 느린 이유는?",
+        kind: '실무 함정',
+        a: "ST_Distance 조건은 행마다 거리를 계산 → 인덱스 없이 전부 훑음(Seq Scan). ST_DWithin(a, b, 500)은 bbox 비교로 인덱스를 써서 후보를 줄인 뒤 거리 판정. PostGIS 18 + 2만 행으로 실행 계획 확인: ST_Distance는 Seq Scan, ST_DWithin은 Bitmap Index Scan.",
+        src: { title: "PostGIS | ST_DWithin", url: "https://postgis.net/docs/ST_DWithin.html" },
+      },
+      {
+        q: "geom 열에 GiST 인덱스를 만들었는데 ST_DWithin(ST_Transform(geom, 5179), …)이 느린 이유는?",
+        kind: '실무 함정',
+        a: "인덱스는 geom 값 자체에 만든 것 → 함수로 바꾼 값으로 찾으면 그 인덱스를 못 씀(Seq Scan). 같은 식으로 식 인덱스(CREATE INDEX … USING GIST (ST_Transform(geom, 5179)))를 만들면 Index Scan — 실행 계획으로 확인. 식 인덱스는 넣기·고치기마다 계산 비용이 들므로, 자주 쓰면 미터 좌표계 열을 따로 두기.",
+        src: { title: "PostgreSQL | Indexes on Expressions", url: "https://www.postgresql.org/docs/current/indexes-expressional.html" },
+      },
+      {
+        q: "대량으로 넣은 직후 공간 질의가 인덱스를 타지 않고 느린 이유는?",
+        kind: '실무 함정',
+        a: "질의 계획을 세우는 통계가 적재 전 상태 → 대량 적재·삭제 뒤 ANALYZE. 대량 UPDATE·INSERT·DELETE 뒤에는 VACUUM도 (자동 vacuum만 믿지 않기).",
+        src: { title: "PostGIS workshop | Spatial Indexing", url: "https://postgis.net/workshops/postgis-intro/indexing.html" },
+      },
+    ],
+    here: "postgis/postgis:18-3.6 이미지. 서버 방식 레시피는 원본을 PostGIS 표에 넣고 martin(요청마다 ST_AsMVT)·GeoServer(WMS·WFS)로 발행. SHP의 PostGIS 레시피는 SQL로 추출·좌표계·필드를 정리한 뒤 ST_AsMVT 타일·ST_AsGeoJSON을 파일로 굽고, 2.5D 건물은 pg2b3dm으로 3D Tiles.",
+    links: [{ to: '/viz/vector-2d/shp/convert?tool=postgis', label: 'PostGIS 레시피 (SHP)' }, { to: '/viz/attribute/csv/convert?tool=martin', label: 'PostGIS + martin (CSV)' }],
+  },
+  {
+    id: 'tools',
+    cat: 'tools',
+    tools: true,
+    what: {
+      q: "변환·처리 도구란?",
+      def: "원본 공간 데이터를 읽어 좌표계·형식·크기를 정리하고, 웹에서 쓸 형태(파일·타일·서비스)로 만드는 프로그램·라이브러리. 하는 일에 따라 범용 변환 엔진·타일 생성·3D 변환·모델 변환·Python·DB·서버로 나뉨.",
+      facts: [
+        "흐름: 원본 읽기 → 정리(좌표계·속성·오류) → 웹 형태로 굽기(파일) 또는 발행(서버)",
+        "출발점은 대부분 GDAL/OGR — 거의 모든 형식을 읽고 쓰고, 좌표계 변환(ogr2ogr·gdalwarp)까지",
+        "같은 일도 도구가 여럿 → 데이터 크기·결과 형식·운영 방식(파일·서버)으로 고름",
+        "종류별 자세한 설명: 서버는 다음 질문(지도 서버), DB는 '저장·공간 DB'의 PostGIS",
+      ],
+      src: ["S11","S12","R37"],
+    },
+    kindsQ: "변환·처리 도구의 종류는?",
+    diffQ: "종류별로 무엇을 하나?",
+    here: "도구 45개를 뷰어·도구 화면에 정리하고, 확장자 예시마다 어떤 도구를 왜 썼는지(단계별 명령·옵션 설명)와 실행 시간·결과 크기를 기록. 같은 원본을 여러 도구로 바꿔 비교.",
+    links: [{ to: '/viz/tools', label: '뷰어·도구' }],
   },
   {
     id: 'servers',
     cat: 'service',
+    see: ['tools'],
     servers: true,
     what: {
       q: "지도 서버란?",
@@ -1787,11 +2298,11 @@ export const topics: Topic[] = [
       },
     ],
     here: "서비스 레시피는 GeoServer·martin을 실제로 띄워 /svc/… 주소로 결과를 확인하고(아래 표의 \"이 사이트\"), 그 밖의 결과(PMTiles·COG·3D Tiles·quantized-mesh)는 파일로 제공.",
-    tags: ["WMS","WFS","MVT","확장자·차원"],
   },
   {
     id: 'bim',
     cat: 'indoor-bim',
+    see: ['files'],
     what: {
       q: "BIM이란?",
       def: "BIM(Building Information Modeling): 시설의 물리적·기능적 특성을 디지털로 표현한 모델, 그리고 그 데이터를 설계·시공·운영 생애주기 동안 만들고 쓰는 과정.",
@@ -1899,11 +2410,11 @@ export const topics: Topic[] = [
       },
     ],
     here: "이 사이트의 BIM 입력은 IFC만 (IFC4·IFC2X3 두 판 예시) — Revit 모델 등은 IFC로 내보내 올림.",
-    tags: ["BIM","CAD","IFC","RVT·DWG·DXF"],
   },
   {
     id: 'bim-georef',
     cat: 'indoor-bim',
+    see: ['tools'],
     what: {
       q: "IFC 지리참조란?",
       def: "IFC 모델의 국지 공학 좌표계를 지도 좌표계(투영 좌표·높이)에 연결하는 정보 — 대략 위치는 IfcSite, 정밀 변환은 IfcMapConversion.",
@@ -1985,6 +2496,5 @@ export const topics: Topic[] = [
       },
     ],
     here: "IFC 예시: 위치를 IfcMapConversion(IFC4) → 없으면 IfcSite 위경도 → 없으면 기본 위치 순으로 찾아(ifc_georef.py), IfcConvert로 형상만 glb 추출 후 3d-tiles-tools로 지구 위에 놓는 tileset.json.",
-    tags: ["IfcMapConversion","IfcSite","IfcOpenShell"],
   },
 ]

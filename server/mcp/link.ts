@@ -103,7 +103,7 @@ export function registerLinkTools(server: McpServer, origin: string, owner: stri
     const file = await exportLegalBoundary(codes, crs)
     return answer({ filename: file.filename, bytes: file.data.length, codes, crs, sourceDate: file.sourceDate, checkedAt: file.checkedAt }, '공식 법정구역 경계 SHP 묶음입니다.', { resource: { type: 'resource', resource: { uri: 'geo-link://boundary/' + file.filename, mimeType: file.mime, blob: file.data.toString('base64') } } })
   }))
-  registerAppResource(server, '국내 주소·코드 연계 도구', LINK_APP, { description: '주소·코드 검색(유형 자동 판별)·좌표 검색·경계 SHP 다운로드' }, async () => {
+  registerAppResource(server, '국내 주소·코드 변환', LINK_APP, { description: '주소·코드 검색(유형 자동 판별)·좌표 검색·경계 SHP 다운로드' }, async () => {
     const code = await appSdk()
     return { contents: [{
     uri: LINK_APP, mimeType: RESOURCE_MIME_TYPE,

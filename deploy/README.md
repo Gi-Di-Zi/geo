@@ -22,12 +22,12 @@ nginx는 Geo 전용 Docker DNS 이름 `coolify-proxy`로 해석되는 앞단 프
 
 사용자 systemd의 PrivateTmp는 이 Ubuntu 호스트에서 별도 사용자 네임스페이스/AppArmor 경계로 rootless Docker 소켓 연결을 막으므로 사용하지 않는다. 대신 mode700의 전용 runtime-data/tmp를 TMPDIR로 지정하고 NoNewPrivileges·작업자 인증·비공개 바인딩·자원 제한은 유지한다.
 
-## 주소·코드 연계 (작업자)
+## 주소·코드 변환 (작업자)
 
 nginx는 `/api/link/`의 즉시 변환·조회·경계 경로(resolve·boundary는 POST, capabilities·regions·references는 GET)만 작업자로 넘기고 접속자별 초당 5건(버스트 20)으로 제한한다. 작업자 미들웨어도 같은 목록만 받는다. CSV·XLSX 업로드·일괄 작업 경로는 공개하지 않는다(MCP도 공개 모드에서는 일괄 작업·파일 도구를 등록하지 않는다).
 
 작업자에 필요한 것:
-- 기준 사전: `GEO_DATA_DIR`(업로드와 같은 데이터 폴더) 아래 `reference/link`. `LINK_REFERENCE_DIR`·`LINK_ADMINISTRATIVE_DIR`·`LINK_DATA_DIR`가 있으면 그쪽. 작업자가 뜰 때 사전이 없으면 공개 원천(행정표준코드관리시스템·행정안전부, 키 없음)에서 자동으로 받는다(server/plugins/link-reference.ts, 빈 폴더에서 약 2초). 끄려면 `LINK_REFERENCE_AUTOSTART=0`, 작업자 키 없는 단일 서버는 `=1`. 이후에는 작업자가 하루 한 번 자동으로 확인한다(뜰 때 + 1시간마다 "오늘 확인했는가"를 보고 안 했으면 확인, 한국 날짜 기준, 원본이 같으면 다시 적용하지 않음). 마지막 확인·변경 시각은 /link·/link/reference 화면과 QGIS 주소·코드 연계 패널에 보인다. QGIS 웹 지도 변환 플러그인의 예시 목록 `/api/qgis/samples`는 앱이 답한다(nginx에서 GET만 허용).
+- 기준 사전: `GEO_DATA_DIR`(업로드와 같은 데이터 폴더) 아래 `reference/link`. `LINK_REFERENCE_DIR`·`LINK_ADMINISTRATIVE_DIR`·`LINK_DATA_DIR`가 있으면 그쪽. 작업자가 뜰 때 사전이 없으면 공개 원천(행정표준코드관리시스템·행정안전부, 키 없음)에서 자동으로 받는다(server/plugins/link-reference.ts, 빈 폴더에서 약 2초). 끄려면 `LINK_REFERENCE_AUTOSTART=0`, 작업자 키 없는 단일 서버는 `=1`. 이후에는 작업자가 하루 한 번 자동으로 확인한다(뜰 때 + 1시간마다 "오늘 확인했는가"를 보고 안 했으면 확인, 한국 날짜 기준, 원본이 같으면 다시 적용하지 않음). 마지막 확인·변경 시각은 /link·/link/reference 화면과 QGIS 주소·코드 변환 패널에 보인다. QGIS 웹 지도 변환 플러그인의 예시 목록 `/api/qgis/samples`는 앱이 답한다(nginx에서 GET만 허용).
 - VWorld 키: 작업자 환경변수 `VWORLD_KEY`(지오코더·검색 API). 2D 데이터 API(법정동 경계 SHP, 연속지적도 = 필지 실재·경계·좌표 → 필지, 도로명주소 건물 = 건물 유무·도로명주소)와 국가중점데이터(토지특성)는 키에 등록한 서비스 URL을 `VWORLD_DOMAIN`에 글자 그대로 넣어야 한다. 없으면 그 항목만 이용 불가로 표시되고 다른 결과는 그대로다. 필지 단위 결과는 필지마다 원천을 3번 더 부른다(같은 PNU는 한 번). 키가 없으면 위치·우편번호·경계는 설정 필요로 표시되고 코드·지번주소 변환은 그대로 된다.
 - 외부 원천을 부르는 조회(위치·우편번호·경계, 도로명주소)는 접속자(X-Real-IP)별 하루 2,000줄(작업자 메모리 기록, 재시작 시 초기화). 사전만 쓰는 변환은 세지 않는다.
 
@@ -49,7 +49,7 @@ Coolify compose의 두 Nginx 설정 bind는 파일별 공개 환경변수 `GEO_P
 
 독립 HTML 지도 ZIP의 최상위 폴더는 업로드 표시명에서 POSIX·Windows 경로와 파일 확장자를 분리한 이름으로 만든다. 비어 있거나 점만 남는 이름은 `result`를 쓰며 Unicode 표시명은 유지한다. 실제 ZIP central directory의 모든 항목이 한 폴더 안에 남는 회귀 검증을 `test:recommend`에 포함한다. 원본 업로드와 작업 결과 파일의 이름·내용은 변경하지 않는다.
 
-공개 주소·코드 연계의 `lookups=false`는 전체 결과(`target=all`)의 사전 전용 모드다. 직접 위치·주소 원천을 호출하는 요청의 하루 행 한도를 해제하지 않는다. 입력 형식 오류·비정상 수치가 이미 사용한 한도를 초기화하지 않는지, 동시 요청이 같은 한도에서 차감되는지, 다음 UTC 날짜에 갱신되는지 함께 검증한다. 실제 VWorld 응답·기기별 QGIS 동작은 해당 환경에서 별도로 확인한다.
+공개 주소·코드 변환의 `lookups=false`는 전체 결과(`target=all`)의 사전 전용 모드다. 직접 위치·주소 원천을 호출하는 요청의 하루 행 한도를 해제하지 않는다. 입력 형식 오류·비정상 수치가 이미 사용한 한도를 초기화하지 않는지, 동시 요청이 같은 한도에서 차감되는지, 다음 UTC 날짜에 갱신되는지 함께 검증한다. 실제 VWorld 응답·기기별 QGIS 동작은 해당 환경에서 별도로 확인한다.
 
 호스트 배포 실행기의 DKB 완료 기록은 사용자 요구사항 원문 뒤의 검증된 자동 생성 기록 한 건만 교체한다. 전체 원문과 이전 기록은 비공개 사본으로 보존하고, 8,000 UTF-16 단위 한도 안에서 revision CAS와 전체 profile 재조회로 저장을 확인한다. 저장 응답이 끊겼을 때는 동일 소스·CI run·deployment와 저장된 intent를 대조해 GET으로 확인하며, 저장 여부가 불명확한 POST를 자동 반복하지 않는다. 이전 백업이 검증 완료된 상태와 미완료 백업 차단 상태도 구분한다.
 

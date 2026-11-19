@@ -1,4 +1,4 @@
-# QGIS 플러그인(qgis/) 흐름 시험: QGIS Python(화면 없음)으로 내보내기 → 실제 서버 변환 → 결과 레이어·브라우저로 보기, 주소·코드 연계(속성 표·직접 검색) → 원본 열·새 레이어·점·필지 레이어, 예시 데이터, 메뉴·오른쪽 패널.
+# QGIS 플러그인(qgis/) 흐름 시험: QGIS Python(화면 없음)으로 내보내기 → 실제 서버 변환 → 결과 레이어·브라우저로 보기, 주소·코드 변환(속성 표·직접 검색) → 원본 열·새 레이어·점·필지 레이어, 예시 데이터, 메뉴·오른쪽 패널.
 # 실제 변환 작업자가 있는 서버가 필요하다 (docs/ci-cd.md). 사용(Windows): "%PROGRAMFILES%\QGIS 3.44.9\bin\python-qgis-ltr.bat" tests/qgis/plugins_test.py qgis http://localhost:3000 <빈 폴더>
 import os
 import sys
@@ -90,7 +90,7 @@ info3, folder3, base3 = viz.convert(server, path3, fmt3, {'viewer': 'ol', 'prior
 layer3 = viz.result_layer(info3['primary'], base3, 'raster-result')
 check('래스터 결과 → QGIS 레이어', layer3 is not None and layer3.isValid(), info3['primary']['kind'])
 
-# 4) 주소·코드 연계: 도형 없는 표 → 외부 조회 켬(20줄씩) → 결과 열 + 점 레이어
+# 4) 주소·코드 변환: 도형 없는 표 → 외부 조회 켬(20줄씩) → 결과 열 + 점 레이어
 table = QgsVectorLayer('None?field=입력:string&field=번호:integer', '시험 표', 'memory')
 values = ['1111010100100010000', '서울 강남구 테헤란로 152', '경기도 부천시 중동 1156', '중구 태평로1가 31', '4211011200101000000', '', '1111010100100010000']
 rows = []

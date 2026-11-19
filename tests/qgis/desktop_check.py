@@ -2,7 +2,7 @@
 #  1) 두 플러그인 시작 → 웹 메뉴·오른쪽 패널(탭으로 겹침)·닫기(파이썬 오류 없음)
 #  2) 사용 시험: 이 임시 프로필에서만 서버를 시험 서버(GEO_SERVER)로 바꾸고, 사람이 쓰듯 패널을 조작한다
 #     웹 지도 변환 = 예시 목록 → 예시 불러오기(FGB·GeoTIFF) → 변환(결과 파일·HTML 지도) → 결과 레이어
-#     주소·코드 연계 = 기준자료 시각 → 직접 검색 → 점·필지 레이어 → 지도에서 찍기 → 속성 표(주소 열 → 원본에 열, 도형 위치 → 새 레이어)
+#     주소·코드 변환 = 기준자료 시각 → 직접 검색 → 점·필지 레이어 → 지도에서 찍기 → 속성 표(주소 열 → 원본에 열, 도형 위치 → 새 레이어)
 #  GEO_SHOT_DIR가 있으면 단계마다 화면을 저장한다. Qt가 부르는 함수에서 난 파이썬 오류는 sys.excepthook으로 모아 실패로 센다
 import os
 import sys
@@ -109,7 +109,7 @@ try:
         check('래스터 결과 레이어', any(isinstance(layer, QgsRasterLayer) and '·' in layer.name() for layer in QgsProject.instance().mapLayers().values()), web.status.text())
         shot('3-web-raster')
 
-        # 주소·코드 연계
+        # 주소·코드 변환
         plugins['geo_address_link'].action.trigger()
         link = plugins['geo_address_link'].dock
         link.raise_()

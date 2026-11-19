@@ -69,7 +69,7 @@ async function show(id: string) {
       <header class="hero">
         <p class="eyebrow">geo-web-bridge</p>
         <h1>공간 데이터를 웹으로 잇는 두 도구</h1>
-        <p class="lead">공개 원본을 다듬어 웹 지도·3D로 바꾸는 시각화 도구와, 국내 주소·코드를 서로 바꾸고 필지·위치를 붙이는 연계 도구입니다. 웹에서 바로 쓰고, QGIS와 AI 대화(MCP)에도 연결합니다.</p>
+        <p class="lead">공개 원본을 다듬어 웹 지도·3D로 바꾸는 공간 데이터 시각화와, 국내 주소·코드를 서로 바꾸고 필지·위치를 붙이는 주소·코드 변환입니다. 웹에서 바로 쓰고, QGIS와 AI 대화(MCP)에도 연결합니다.</p>
       </header>
 
       <div ref="box" class="tools">
@@ -94,7 +94,7 @@ async function show(id: string) {
                     단계별 명령과 처리 이유를 살펴보고, 같은 데이터를 여러 방식과 뷰어로 비교해 보세요.
                   </p>
                   <nav class="go" aria-label="시작">
-                    <NuxtLink to="/viz" class="btn-go main">공간 데이터 시각화 도구 →</NuxtLink>
+                    <NuxtLink to="/viz" class="btn-go main">공간 데이터 시각화 →</NuxtLink>
                     <NuxtLink to="/viz#examples" class="btn-go">대표 예시 3개 →</NuxtLink>
                   </nav>
                 </header>
@@ -137,7 +137,7 @@ async function show(id: string) {
                     주소나 코드를 하나 넣으면 지번·도로명주소, PNU, 법정동·행정동 코드, 우편번호, 위치를 한 번에 찾습니다.
                     PNU가 정해지면 그 필지의 경계와 건물 유무, 지목·면적·공시지가 같은 토지 속성까지 붙입니다.
                   </p>
-                  <nav class="go" aria-label="주소·코드 연계 시작">
+                  <nav class="go" aria-label="주소·코드 변환 시작">
                     <NuxtLink to="/link" class="btn-go main">주소·코드 변환 →</NuxtLink>
                     <NuxtLink to="/link/reference" class="btn-go">기준자료 →</NuxtLink>
                   </nav>

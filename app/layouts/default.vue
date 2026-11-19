@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 푸터: 사이트 공통(만든 사람·저장소)과, 공간 데이터 시각화 도구(/viz) 안에서만 그 프로젝트의 출처·링크
+// 푸터: 사이트 공통(만든 사람·저장소)과, 공간 데이터 시각화(/viz) 안에서만 그 프로젝트의 출처·링크, 개념 정리노트(/notes)에서만 참고 자료 팝업
 const route = useRoute()
 const inViz = computed(() => route.path.startsWith('/viz'))
 </script>
@@ -15,6 +15,7 @@ const inViz = computed(() => route.path.startsWith('/viz'))
           <p>샘플 출처·라이선스: 각 확장자의 수집 단계(샘플 데이터는 각 출처 라이선스). 배경지도: VWorld, © OpenStreetMap contributors.</p>
           <p class="links"><NuxtLink to="/viz/why">처음이라면</NuxtLink><NuxtLink to="/viz/tools">뷰어·도구</NuxtLink><NuxtLink to="/viz/sources">데이터 받는 곳</NuxtLink><NuxtLink to="/viz/status">현황</NuxtLink></p>
         </template>
+        <LazyNoteRefs v-if="route.path === '/notes'" />
         <p>만든 사람: Gi-Di-Zi · <a href="https://github.com/Gi-Di-Zi/geo">GitHub 저장소</a> · 코드 MIT</p>
       </div>
     </footer>

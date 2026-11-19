@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
-useHead({ title: '공간 데이터 시각화 도구 | geo' })
+useHead({ title: '공간 데이터 시각화 | geo' })
 const base = useRuntimeConfig().app.baseURL
 
 // 확장자 선택 창은 주소(?type=)로 연다. 뒤로 가기로 창이 다시 열리고, 다른 화면에서 이 창으로 바로 올 수 있다.
@@ -56,7 +56,7 @@ const glyphs: Record<string, string> = {
   <div>
     <FlowSteps />
     <section class="wrap hero">
-      <h1>공간 데이터 시각화 도구</h1>
+      <h1>공간 데이터 시각화</h1>
       <p class="muted intro">공개 원본에서 웹 지도·3D까지. 처리 명령과 이유를 따라가며 파일·서버 방식과 뷰어별 결과를 비교합니다.</p>
       <nav class="acts" aria-label="바로 가기">
         <NuxtLink v-for="a in actions" :key="a.to" :to="a.to" class="act">

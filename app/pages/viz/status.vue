@@ -36,7 +36,7 @@ const planned = [
 ]
 const candidates = 'KML, GPX, DXF, ECW, ASC, HGT, E57, PLY, OBJ, FBX, OSM PBF, COPC'
 
-useHead({ title: '확장자별 현황 | 공간 데이터 시각화 도구' })
+useHead({ title: '확장자별 현황 | 공간 데이터 시각화' })
 </script>
 
 <template>

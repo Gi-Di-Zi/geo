@@ -5,9 +5,9 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 python3-venv curl unzip ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Python 도구: COG, GeoPandas, PostGIS 드라이버, CityJSON, Overture CLI
+# Python 도구: COG, GeoPandas, PostGIS 드라이버, CityJSON, Overture CLI, H3 격자
 RUN python3 -m venv /opt/py \
- && /opt/py/bin/pip install --no-cache-dir rio-cogeo==7.0.4 geopandas==1.2.0 "psycopg[binary]==3.3.6" "cjio[export]==0.10.1" overturemaps
+ && /opt/py/bin/pip install --no-cache-dir rio-cogeo==7.0.4 geopandas==1.2.0 "psycopg[binary]==3.3.6" "cjio[export]==0.10.1" overturemaps h3==4.5.0
 ENV PATH=/opt/py/bin:$PATH
 
 # Node 도구: 3D Tiles, glTF

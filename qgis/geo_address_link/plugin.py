@@ -1,4 +1,4 @@
-# QGIS 웹 메뉴·도구 모음의 "주소·코드 연계" → 오른쪽 패널 (다른 geo-web-bridge 패널이 있으면 같은 자리에 탭으로)
+# QGIS 웹 메뉴·도구 모음의 "주소·코드 변환" → 오른쪽 패널 (다른 geo-web-bridge 패널이 있으면 같은 자리에 탭으로)
 import os
 
 from qgis.PyQt.QtCore import Qt
@@ -20,7 +20,7 @@ class Plugin:
         self.iface, self.action, self.dock = iface, None, None
 
     def initGui(self):
-        self.action = QAction(QIcon(os.path.join(os.path.dirname(__file__), 'icon.svg')), '주소·코드 연계', self.iface.mainWindow())
+        self.action = QAction(QIcon(os.path.join(os.path.dirname(__file__), 'icon.svg')), '주소·코드 변환', self.iface.mainWindow())
         self.action.setCheckable(True)
         self.action.triggered.connect(self.run)
         self.iface.addPluginToWebMenu(MENU, self.action)

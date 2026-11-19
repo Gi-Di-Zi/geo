@@ -28,7 +28,7 @@ onBeforeUnmount(() => { live = false; clearTimeout(timer) })
     <FlowSteps />
     <div class="wrap reference-page">
       <NuxtLink to="/link" class="back">← 주소·코드 변환</NuxtLink>
-      <header><p class="eyebrow">공식 자료와 업데이트</p><h1>기준자료</h1><p class="lead">주소·코드 연계 도구가 쓰는 기준자료와 업데이트 상태입니다.</p></header>
+      <header><p class="eyebrow">공식 자료와 업데이트</p><h1>기준자료</h1><p class="lead">주소·코드 변환이 쓰는 기준자료와 업데이트 상태입니다.</p></header>
       <section class="update-panel" aria-labelledby="update-heading" :aria-busy="data?.state === 'checking'">
         <div class="update-top"><h2 id="update-heading">자동 업데이트</h2><span class="badge">매일 자동 확인</span></div>
         <dl v-if="data" class="times">

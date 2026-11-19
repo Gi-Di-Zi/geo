@@ -9,7 +9,7 @@
 | 경로 | 내용 |
 |---|---|
 | `app/pages/index.vue`, `app/utils/projects.ts` | 첫 화면(`/`): 시각화 소개·대표 예시·탐색 경로, 맨 아래 개발 중인 확장 기능. `/viz`는 시각화, `/link`는 개발 중 표시. 헤더는 프로젝트 이름들(예시 화면 안에서만 유형·확장자·단계), 오른쪽에 AI 연결 + 소개로 가는 화살표. MCP(`/mcp`)·API(`/api`)·서버 프록시(`/svc`)는 사이트에 하나로 함께 씀 |
-| `app/pages/viz/index.vue` | 공간 데이터 시각화 도구 홈(`/viz`): 바로 가기 버튼, 대표 예시 3개, 노선도(수집 → 전처리 → 웹 형태 변환(파일·서버 가지) → 시각화·렌더링), 유형 카드, 확장자 선택 창 |
+| `app/pages/viz/index.vue` | 공간 데이터 시각화 홈(`/viz`): 바로 가기 버튼, 대표 예시 3개, 노선도(수집 → 전처리 → 웹 형태 변환(파일·서버 가지) → 시각화·렌더링), 유형 카드, 확장자 선택 창 |
 | `app/pages/viz/[category]/[format]/[[step]].vue` | 확장자 4단계: 수집(`/viz/유형/확장자`), 전처리(`/preprocess`), 웹 형태 변환(`/convert`), 시각화·렌더링(`/view`) |
 | `app/pages/viz/sources.vue` | 데이터 받는 곳: 국내·해외·개인·커뮤니티 다운로드 사이트 모음 |
 | `app/pages/viz/tools`, `status`, `concepts` | 뷰어·도구, 현황, 개념 |

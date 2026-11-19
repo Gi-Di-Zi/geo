@@ -41,7 +41,7 @@ def export_layer(layer, folder, selected_only=False):
     os.makedirs(folder, exist_ok=True)
     if isinstance(layer, QgsVectorLayer):
         if not layer.isSpatial():
-            raise ServerError('도형이 없는 표입니다. 주소·코드 연계 플러그인을 쓰세요.')
+            raise ServerError('도형이 없는 표입니다. 주소·코드 변환 플러그인을 쓰세요.')
         path = os.path.join(folder, f'{name}.gpkg')
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = 'GPKG'

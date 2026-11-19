@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // QGIS 연결 방법: ① 플러그인(사용자 지정 저장소 plugins.xml 하나) ② 결과 주소를 QGIS에 바로 ③ 공간 서비스(WMS·WMTS·WFS·OGC API·벡터 타일) 연결.
 // 예시 주소는 공개 사이트의 예시 결과·서버이며 QGIS 3.44에서 열리는 것을 확인한 것. 플러그인 원본은 qgis/, 저장소는 빌드 때 scripts/qgis-plugins.ts
-useHead({ title: 'QGIS 연결 (개발 중) · geo-web-bridge', meta: [{ name: 'description', content: 'QGIS에서 geo-web-bridge를 쓰는 방법: 플러그인 두 개(웹 지도 변환·주소·코드 연계), 결과 주소 바로 열기, WMS·WFS·OGC API·벡터 타일 연결.' }] })
+useHead({ title: 'QGIS 연결 (개발 중) · geo-web-bridge', meta: [{ name: 'description', content: 'QGIS에서 geo-web-bridge를 쓰는 방법: 플러그인 두 개(웹 지도 변환·주소·코드 변환), 결과 주소 바로 열기, WMS·WFS·OGC API·벡터 타일 연결.' }] })
 const site = 'https://geospatial.kro.kr'
 const repo = `${site}/qgis/plugins.xml`
 const copied = ref('')
@@ -34,7 +34,7 @@ const plugins = [
     ],
   },
   {
-    name: 'geo-web-bridge 주소·코드 연계', id: 'geo_address_link', menu: '웹 → geo-web-bridge → 주소·코드 연계 (오른쪽 패널)', for: '/link',
+    name: 'geo-web-bridge 주소·코드 변환', id: 'geo_address_link', menu: '웹 → geo-web-bridge → 주소·코드 변환 (오른쪽 패널)', for: '/link',
     does: '속성 표의 한 열(PNU·법정동코드·행정동코드·지번주소·도로명주소) 또는 레이어의 도형 위치를 주소·PNU·단계별 코드·행정동·우편번호·위치·도로명주소·건물 유무·필지 실재·토지 속성으로 바꿔 그 속성 표에 열로 넣습니다(또는 새 레이어). 주소·코드·좌표를 웹처럼 바로 찾을 수도 있습니다.',
     steps: [
       '속성 표 탭: 레이어와 값이 든 열, 입력 종류(자동 판별 가능)를 고릅니다. 도형 없는 표도 됩니다. 점·면 레이어는 "도형 위치"를 고르면 그 지점의 필지를 찾습니다.',
@@ -77,7 +77,7 @@ const services = [
     <FlowSteps />
     <main class="wrap page">
       <h1>QGIS 연결 <small class="beta">개발 중</small></h1>
-      <p class="prose lead">QGIS에서 geo-web-bridge를 쓰는 세 가지 방법입니다. 이 사이트의 시각화 도구·주소·코드 연계 도구와 같은 서버·규칙을 씁니다.</p>
+      <p class="prose lead">QGIS에서 geo-web-bridge를 쓰는 세 가지 방법입니다. 이 사이트의 공간 데이터 시각화·주소·코드 변환과 같은 서버·규칙을 씁니다.</p>
       <p class="prose beta-note"><strong>개발 중:</strong> 두 플러그인은 실험 버전입니다. 아직 충분히 시험하지 않아 오류가 날 수 있습니다. 문제가 생기면 <a href="https://github.com/Gi-Di-Zi/geo/issues">GitHub 이슈</a>로 알려 주세요.</p>
       <ul class="ways">
         <li v-for="w in ways" :key="w.href"><a :href="w.href"><b>{{ w.title }}</b><span>{{ w.text }}</span></a></li>
@@ -91,7 +91,7 @@ const services = [
           <li><strong>설정</strong> 탭에서 <strong>추가…</strong>를 누르고 이름은 <strong>geo-web-bridge</strong>, URL은 위 저장소 주소를 넣습니다. 같은 탭의 <strong>실험적인 플러그인도 표시</strong>(Show also experimental plugins)를 켭니다. 두 플러그인은 실험 버전이라 이 항목을 켜야 목록에 나옵니다.</li>
           <li><strong>모두</strong> 탭에서 "geo-web-bridge"를 찾아 두 플러그인을 설치합니다. 새 버전이 나오면 <strong>업그레이드 가능</strong> 탭에 나옵니다.</li>
         </ol>
-        <p class="prose small muted">QGIS 3.28 이상(QGIS 4 포함), 추가 Python 패키지 없음. 저장소에 접속할 수 없는 곳은 <a href="/qgis/geo_web_bridge.zip">웹 지도 변환 zip</a>·<a href="/qgis/geo_address_link.zip">주소·코드 연계 zip</a>을 받아 <strong>ZIP에서 설치</strong>로 넣습니다.</p>
+        <p class="prose small muted">QGIS 3.28 이상(QGIS 4 포함), 추가 Python 패키지 없음. 저장소에 접속할 수 없는 곳은 <a href="/qgis/geo_web_bridge.zip">웹 지도 변환 zip</a>·<a href="/qgis/geo_address_link.zip">주소·코드 변환 zip</a>을 받아 <strong>ZIP에서 설치</strong>로 넣습니다.</p>
 
         <h3 class="sub">플러그인 쓰기</h3>
         <div class="vendors">
@@ -142,7 +142,7 @@ const services = [
           <summary>개발·시험 (저장소를 받은 경우)</summary>
           <ul class="small limits">
             <li><code>npm run qgis:dev</code> — 이 PC의 QGIS 프로필에 저장소의 플러그인을 바로가기로 연결하고, 두 플러그인을 켜고, 숨은 설정 <code>server_override</code>를 <code>http://localhost:3000</code>으로 맞춥니다(QGIS가 꺼져 있을 때). 코드를 고친 뒤 QGIS를 다시 켜면 반영됩니다. 되돌리기는 <code>npm run qgis:dev -- --remove</code>.</li>
-            <li><code>npm run test:qgis</code> — 설치된 QGIS로 흐름 시험(내보내기 → 실제 변환 → 결과 레이어, 주소·코드 연계)과 데스크톱 시험을 돌립니다. 데스크톱 시험은 임시 프로필에서만 서버를 시험 서버로 바꾸고 패널을 사람이 쓰듯 조작합니다(예시 불러오기 → 변환, 직접 검색·지도에서 찍기·속성 표). <code>QGIS_SHOTS=폴더</code>면 단계별 화면을 저장합니다. 서버는 <code>QGIS_TEST_URL</code>(기본 로컬).</li>
+            <li><code>npm run test:qgis</code> — 설치된 QGIS로 흐름 시험(내보내기 → 실제 변환 → 결과 레이어, 주소·코드 변환)과 데스크톱 시험을 돌립니다. 데스크톱 시험은 임시 프로필에서만 서버를 시험 서버로 바꾸고 패널을 사람이 쓰듯 조작합니다(예시 불러오기 → 변환, 직접 검색·지도에서 찍기·속성 표). <code>QGIS_SHOTS=폴더</code>면 단계별 화면을 저장합니다. 서버는 <code>QGIS_TEST_URL</code>(기본 로컬).</li>
           </ul>
         </details>
       </section>
@@ -152,7 +152,7 @@ const services = [
         <ul class="prose limits">
           <li><strong>저장소에 플러그인이 안 보임:</strong> 설정 탭의 <strong>실험적인 플러그인도 표시</strong>를 켰는지 확인하고 <strong>모든 저장소 다시 불러오기</strong>. QGIS 3.28보다 낮으면 표시되지 않습니다.</li>
           <li><strong>사내망·프록시:</strong> 플러그인은 운영체제(Windows) 프록시 설정으로 서버에 접속합니다. 저장소에 못 가면 ZIP으로 설치하고, 외부 접속이 막히면 직접 설치한 서버를 쓰세요.</li>
-          <li><strong>하루 한도(429):</strong> 공개 서버의 업로드 1GiB·외부 조회 2,000줄을 넘었습니다. 다음 날 다시 하거나, 주소·코드 연계는 외부 조회를 끄고(사전만) 변환하세요.</li>
+          <li><strong>하루 한도(429):</strong> 공개 서버의 업로드 1GiB·외부 조회 2,000줄을 넘었습니다. 다음 날 다시 하거나, 주소·코드 변환은 외부 조회를 끄고(사전만) 변환하세요.</li>
           <li><strong>PNU가 1.11E+18처럼 보임:</strong> CSV를 숫자로 읽어 자릿수가 이미 사라진 값입니다. 구분자로 분리된 텍스트 추가에서 "필드 형식 감지"를 끄고 문자열로 다시 불러오세요. 플러그인은 이런 값을 정밀도 손실로 알려 줍니다.</li>
           <li><strong>결과 열 이름이 짧음:</strong> Shapefile로 저장해도 깨지지 않게 10자 이하로 짓고, 레이어 속성의 별칭에 한글 이름이 있습니다.</li>
         </ul>

@@ -4,7 +4,7 @@
 
 **공개 사이트:** [geospatial.kro.kr](https://geospatial.kro.kr) · [데이터 시각화](https://geospatial.kro.kr/viz) · [내 파일 업로드](https://geospatial.kro.kr/viz/upload) · [AI 연결 안내](https://geospatial.kro.kr/ai) · [개념 정리노트](https://geospatial.kro.kr/notes)
 
-[다른 도구와의 차이](#compare) · [작업 범위](#scope) · [MCP Apps 연결 방법(베타)](#mcp-apps) · [주소·코드 연계](#link) · [QGIS 플러그인](#qgis) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
+[다른 도구와의 차이](#compare) · [작업 범위](#scope) · [MCP Apps 연결 방법(베타)](#mcp-apps) · [주소·코드 변환](#link) · [QGIS 플러그인](#qgis) · [배포 상태](#deployment) · [처리 구조](#architecture) · [라이선스](#license) · [개발 중인 사항](#in-progress)
 
 <a id="compare"></a>
 ## 다른 도구와의 차이
@@ -138,10 +138,10 @@ MCP Apps를 표시하지 못하는 클라이언트도 `geo_identify(stage)` → 
 - **서비스 48시간:** 서비스를 허용한 로컬 시험 서버에서 이용 기간을 줄여 만료 전 200 → 만료 뒤 410 → 리소스 정리를 확인. 만료 판정·정리 재시도·소유 확인은 시계를 주입한 단위 시험으로 확인([시험](tests/viz/delivery.test.ts)).
 - **미검증:** 실제 Claude·ChatGPT 계정의 호스트 연결과 호스트별 앱 표시·도구 승인·파일 내려받기.
 
-공개 연결에서는 **외부 URL 가져오기와 서버 PC 파일 경로 읽기를 제공하지 않습니다.** `geo_engine`의 Unreal 실행과 주소·코드 연계의 대량 파일 작업도 공개 기능에 포함하지 않습니다. 호스트의 도구 승인·앱 표시·내려받기 지원은 해당 클라이언트의 기능에 따릅니다.
+공개 연결에서는 **외부 URL 가져오기와 서버 PC 파일 경로 읽기를 제공하지 않습니다.** `geo_engine`의 Unreal 실행과 주소·코드 변환의 대량 파일 작업도 공개 기능에 포함하지 않습니다. 호스트의 도구 승인·앱 표시·내려받기 지원은 해당 클라이언트의 기능에 따릅니다.
 
 <a id="link"></a>
-## 국내 주소·코드 연계 도구
+## 국내 주소·코드 변환
 
 [주소·코드 변환](https://geospatial.kro.kr/link)은 PNU·법정동코드·행정동코드·지번주소·도로명주소·좌표를 한 줄씩 넣으면 줄마다 유형을 판별해 결과를 한 번에 줍니다. 법정동 경계는 SHP ZIP으로 받습니다.
 
@@ -171,7 +171,7 @@ QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https:/
 | 플러그인 | 하는 일 |
 |---|---|
 | geo-web-bridge 웹 지도 변환 | 레이어(2D 벡터·래스터)를 대상 라이브러리에 맞는 웹 결과로. 결과 파일 + 적용 코드 또는 HTML 지도 폴더로 받고(HTML 지도는 패널의 "브라우저로 보기"로 이 PC에서 바로 열림), 결과(GeoJSON·타일 폴더·COG)를 QGIS에 다시 불러와 확인. 레이어 좌표계를 그대로 보내 좌표계를 고를 일이 없음. 확장자별 예시 데이터(사이트의 공개 샘플 원본, [/api/qgis/samples](server/api/qgis/samples.get.ts))를 불러와 바로 해 보기 |
-| geo-web-bridge 주소·코드 연계 | 속성 표: PNU·법정동코드·행정동코드·지번주소·도로명주소 열(또는 도형 위치)을 주소·PNU·단계별 코드·행정동·우편번호·위치·필지·건물·토지 속성으로 바꿔 그 속성 표에 열로 넣음(편집 모드, 저장은 사용자. CSV처럼 열을 더할 수 없으면 또는 고르면 새 레이어). 직접 검색: 주소·코드·좌표를 넣거나 지도에서 찍어 결과를 패널에서 보고 점·필지 레이어로. 외부 조회를 끄면 사전만으로 200줄씩 한도 없이 |
+| geo-web-bridge 주소·코드 변환 | 속성 표: PNU·법정동코드·행정동코드·지번주소·도로명주소 열(또는 도형 위치)을 주소·PNU·단계별 코드·행정동·우편번호·위치·필지·건물·토지 속성으로 바꿔 그 속성 표에 열로 넣음(편집 모드, 저장은 사용자. CSV처럼 열을 더할 수 없으면 또는 고르면 새 레이어). 직접 검색: 주소·코드·좌표를 넣거나 지도에서 찍어 결과를 패널에서 보고 점·필지 레이어로. 외부 조회를 끄면 사전만으로 200줄씩 한도 없이 |
 
 플러그인 없이도 [QGIS 연결 안내](https://geospatial.kro.kr/qgis)의 방법으로 결과 주소(GeoJSON·PMTiles·COG·타일·3D Tiles)와 예시 공간 서비스(WMS·WMTS·WFS·OGC API Features·벡터 타일)를 QGIS에 바로 엽니다(QGIS 3.44에서 확인).
 
@@ -191,7 +191,7 @@ QGIS에서 [사용자 지정 저장소](https://geospatial.kro.kr/qgis) `https:/
 | MCP Apps 연동 | **베타**. 공개 `/mcp` 연결과 앱 화면 제공. 실제 Claude·ChatGPT 계정의 호스트 연결은 미검증 |
 | 기존 GeoServer·Martin 예시 | 준비된 레이어의 읽기 전용 조회 제공 |
 | Cesium for Unreal | 서버에 설치·실행하지 않으며 화면 전환 비활성화 |
-| 국내 주소·코드 연계(`/link`) | 즉시 변환·지역 조회·기준자료 상태·경계 SHP. 위치·우편번호·경계처럼 외부 원천(VWorld)을 부르는 조회는 접속자별 하루 2,000줄. CSV·XLSX 대량 작업은 비공개 실행에서만 |
+| 국내 주소·코드 변환(`/link`) | 즉시 변환·지역 조회·기준자료 상태·경계 SHP. 위치·우편번호·경계처럼 외부 원천(VWorld)을 부르는 조회는 접속자별 하루 2,000줄. CSV·XLSX 대량 작업은 비공개 실행에서만 |
 
 ### 배포 화면에서 현재 불가능한 사항
 

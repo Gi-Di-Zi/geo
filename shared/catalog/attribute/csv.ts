@@ -1,8 +1,11 @@
 import type { FormatSpec, Step } from '../../types.ts'
 import { serverRecipes } from '../_server.ts'
-import { geopandasRecipe, vectorRecipe, vectorUpload } from '../vector-2d/_vector.ts'
+import { geopandasRecipe, py, vectorRecipe, vectorUpload } from '../vector-2d/_vector.ts'
 
 const RAW = '/raw/molit_bus_stops.csv'
+/** H3 레시피 해상도(8 = 서울에서 칸 하나 약 0.5 km², 동네 단위)와 결과 경로 */
+const H3_RES = 8
+const HEX = 'ogc/collections/stops_h3/items.json'
 /** 업로드 CSV의 좌표 열 이름. GDAL CSV X/Y_POSSIBLE_NAMES 규칙(대소문자 무시, 앞뒤 * 와일드카드). 업로드 판별(shared/sniff.ts)도 같은 목록 */
 export const XY_NAMES = { x: ['경도', 'lon*', 'lng', 'x', 'x좌표', '*_x'], y: ['위도', 'lat*', 'y', 'y좌표', '*_y'] }
 // 위도·경도 열이 텍스트라 빈 칸·뒤바뀐 값이 섞여 있다. 한국 범위(위도 33~39, 경도 124~132) 밖은 버린다
@@ -102,6 +105,33 @@ export default {
         code: `import pandas as pd\ndf = pd.read_csv('${RAW}', encoding='cp949', dtype=str)\ndf['lat'], df['lon'] = pd.to_numeric(df['위도'], errors='coerce'), pd.to_numeric(df['경도'], errors='coerce')\ndf = df[(df['관리도시명'] == '서울BIS') & df['lat'].between(33, 39) & df['lon'].between(124, 132)]\ndf = gpd.GeoDataFrame(df[['정류장번호', '정류장명', '모바일단축번호']].set_axis(['id', 'name', 'ars'], axis=1), geometry=gpd.points_from_xy(df['lon'], df['lat']), crs=4326)`,
       },
     }),
+    {
+      id: 'h3',
+      title: 'H3',
+      preprocess,
+      convert: [
+        {
+          title: 'H3 육각 격자 집계',
+          why: `latlng_to_cell(위도, 경도, ${H3_RES}): 점 → 해상도 ${H3_RES} 칸 ID(서울에서 칸 하나 약 0.5 km², 전 세계 평균 0.74 km²). Counter: 칸마다 정류장 수(count). cell_to_boundary: 칸 ID → 육각형 꼭짓점(위도, 경도 순 → 뒤집어 경도, 위도). height = count × 30 m: 돌출 높이(최대 42곳 → 1,260 m). RFC7946=YES·COORDINATE_PRECISION=7: GDAL 레시피와 같은 GeoJSON 옵션.`,
+          tool: 'h3',
+          run: py(`import h3\nfrom collections import Counter\nfrom shapely import Polygon\npts = gpd.read_file('/work/stops.gpkg')\nn = Counter(h3.latlng_to_cell(p.y, p.x, ${H3_RES}) for p in pts.geometry)\ndf = gpd.GeoDataFrame({'h3': list(n), 'count': list(n.values())}, geometry=[Polygon([(x, y) for y, x in h3.cell_to_boundary(c)]) for c in n], crs=4326)\ndf['height'] = df['count'] * 30\ndf.to_file('/out/${HEX}', driver='GeoJSON', RFC7946='YES', COORDINATE_PRECISION=7)\nprint(len(pts), '점 →', len(df), '칸 · 칸 넓이 평균', round(sum(h3.cell_area(c, 'km^2') for c in n) / len(n), 2), 'km²')`),
+        },
+        {
+          title: '무결성 확인 (집계 전후 점 수)',
+          why: '칸마다 센 정류장 수의 합 = 집계 전 점 수 → 빠진 점 없음. 칸당 최대·평균: 돌출 높이 배율 확인.',
+          tool: 'geopandas',
+          run: py(`a = len(gpd.read_file('/work/stops.gpkg'))\ndf = gpd.read_file('/out/${HEX}')\nprint('집계 전 점', a, '· 칸', len(df), '· 칸 합계', df['count'].sum(), '· 칸당 최대', df['count'].max(), '· 평균', round(df['count'].mean(), 1))\nassert df['count'].sum() == a, '집계 전후 점 수 다름'`),
+        },
+      ],
+      outputs: [{ id: 'hex', kind: 'geojson', path: HEX, style: { height: 'height' }, label: 'H3 육각 격자 GeoJSON', why: `칸 = 해상도 ${H3_RES} 육각형. h3 = 칸 ID, count = 칸 안 정류장 수, height = 돌출 높이(m). 점 수만 개 대신 칸 수천 개 → 밀도 비교.` }],
+      viewers: {
+        ol: { output: 'hex', note: '2D 지도 → 돌출 없이 육각형 면. 정류장 수는 클릭.' },
+        maplibre: { output: 'hex' },
+        deck: { output: 'hex', note: 'H3HexagonLayer는 칸 ID만으로도 그림. 여기선 네 뷰어 공통 GeoJSON.' },
+        cesium: { output: 'hex' },
+      },
+      view: { center: [126.98, 37.55], zoom: 10.6, pitch: 50, bearing: -15 },
+    },
     ...serverRecipes({ category: 'attribute', layer: 'stops', preprocess, work: '/work/stops.gpkg', geom: 'point', bounds: [126.434013, 37.184719, 127.187302, 37.829449] }),
   ],
   alternatives: [

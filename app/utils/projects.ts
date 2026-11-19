@@ -4,10 +4,10 @@
  */
 type Project = { id: string; name: string; base?: string; summary: string; status?: string }
 
-/** 공간 데이터 시각화 도구 (/viz). 예시 화면 헤더의 프로젝트 이름·돌아가기 주소 */
-export const vizProject = { id: 'viz', name: '공간 데이터 시각화 도구', base: '/viz', summary: '공개 원본을 수집·전처리·웹 변환하고, 처리 방식과 지도·3D 결과를 비교' }
+/** 공간 데이터 시각화 (/viz). 예시 화면 헤더의 프로젝트 이름·돌아가기 주소 */
+export const vizProject = { id: 'viz', name: '공간 데이터 시각화', base: '/viz', summary: '공개 원본을 수집·전처리·웹 변환하고, 처리 방식과 지도·3D 결과를 비교' }
 
-export const linkProject = { id: 'link', name: '국내 주소·코드 연계 도구', base: '/link', summary: 'PNU·법정동·행정동코드·지번·도로명주소·좌표를 서로 변환. 주소·코드·위치·우편번호에 필지 경계·건물 유무·토지 속성까지' }
+export const linkProject = { id: 'link', name: '국내 주소·코드 변환', base: '/link', summary: 'PNU·법정동·행정동코드·지번·도로명주소·좌표를 서로 변환. 주소·코드·위치·우편번호에 필지 경계·건물 유무·토지 속성까지' }
 
 export const notesProject = { id: 'notes', name: '개념 정리노트', base: '/notes', summary: '좌표계·벡터·래스터·3D·BIM 개념을 질문 단위로. 정의 → 종류 → 차이 → 이어지는 질문, 항목마다 출처' }
 

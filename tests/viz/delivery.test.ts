@@ -233,7 +233,7 @@ test('공개 업로드 한도: 접속자마다 하루 1GiB, 다른 접속자·�
   assert.equal(chargeDaily('1.1.1.1', 1, day + 24 * HOUR), true)
 })
 
-test('주소·코드 연계: 외부 원천(위치·우편번호·경계)을 부르는 줄만 하루 한도에 센다', () => {
+test('주소·코드 변환: 외부 원천(위치·우편번호·경계)을 부르는 줄만 하루 한도에 센다', () => {
   assert.equal(lookupRows({ text: '1111010100100010000\n\n서울 강남구 테헤란로 152', options: { target: 'all' } }), 2)
   assert.equal(lookupRows({ rows: [{}, {}, {}], options: { inputType: 'location' } }), 3)
   assert.equal(lookupRows({ codes: ['11', '11110'] }), 2)

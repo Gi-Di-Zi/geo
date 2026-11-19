@@ -1,6 +1,6 @@
 /**
- * 개념 정리노트(/notes). 묶음: 공통(좌표계·라이브러리·서버) → 벡터(공통·2D·2.5D·3D·기타) → 래스터(2D·2.5D) → 혼합·기타 → 프론트엔드 → 전체 요약(맨 아래).
- * 데이터 유형은 시각화 도구의 카탈로그 categories 그대로.
+ * 개념 정리노트(/notes). 묶음: 공통(좌표계·라이브러리·서버·저장·공간 DB) → 벡터(공통·2D·2.5D·3D·기타) → 래스터(2D·2.5D) → 혼합·기타 → 프론트엔드 → 전체 요약(맨 아래).
+ * 데이터 유형은 공간 데이터 시각화의 카탈로그 categories 그대로.
  * 두 갈래: ① 주제 노트 — note-topics.ts. 교과서 순서(무엇인가 → 종류 → 차이 → 이어지는 질문), 면접에 나온 주제는 ★중요 (질문은 app/assets/interview.txt에서)
  *          ② 정리 — 아래 mine (헷갈리는 것 비교), 맨 아래 전체 요약(카탈로그에서)
  * 그림: app/note-figs/<fig 또는 노트 id>.vue 파일이 있으면 그 노트에 붙는다.
@@ -8,7 +8,7 @@
 import raw from '~/assets/interview.txt?raw'
 import { parseInterview, type InterviewSource } from '#shared/interview'
 import type { Output, OutputKind, Tool, ViewerId } from '#shared/types'
-import { categories, formats, supportLabels, tools } from '~/utils/catalog'
+import { categories, formats, supportLabels, tools, toolTypes } from '~/utils/catalog'
 import { extraSources, topics, type FollowUp } from '~/utils/note-topics'
 
 export const interview = parseInterview(raw)
@@ -22,7 +22,7 @@ export const noteGroups = [
   { id: 'summary', name: '전체 요약' },
 ]
 
-// 데이터 유형 = 시각화 도구의 데이터 유형(카탈로그) 그대로 → 이름·색·설명이 도구와 같이 바뀐다.
+// 데이터 유형 = 공간 데이터 시각화의 데이터 유형(카탈로그) 그대로 → 이름·색·설명이 도구와 같이 바뀐다.
 // 묶음: 벡터(공통 → 2D → 2.5D → 3D 벡터 = 카탈로그의 3D 모델, 면·메시 도형은 벡터) · 래스터(정사영상 2D, 지형 2.5D) · 혼합·기타(점군·BIM·속성)
 // dim: 그 유형의 차원 — 목록 줄마다 표시
 const groupOfCat = new Map([['vector-2d', 'vector'], ['vector-25d', 'vector'], ['model-3d', 'vector'], ['raster', 'raster'], ['terrain', 'raster']])
@@ -35,7 +35,9 @@ const catsIn = (group: string) => categories.filter(c => (groupOfCat.get(c.id) ?
 export const noteCats: { id: string; group: string; name: string; color: string; text: string; dim?: string }[] = [
   { id: 'crs', group: 'common', name: '좌표계', color: '#475569', text: '좌표를 어떻게 표현하는가 — 각도·평면·지심 좌표와 수평·수직 기준' },
   { id: 'viewer', group: 'common', name: '웹 지도 라이브러리', color: '#0E7490', text: 'OpenLayers·MapLibre·Deck.gl·CesiumJS — 데이터를 화면에 그리는 쪽' },
+  { id: 'tools', group: 'common', name: '변환·처리 도구', color: '#4338CA', text: '원본을 읽어 정리하고 웹 형태로 만드는 쪽 — 도구 종류와 대표 도구' },
   { id: 'service', group: 'common', name: '지도 서버', color: '#B45309', text: '데이터를 요청마다 그림·타일·피처로 내주는 쪽 — 서버별 제공 확장자와 차원' },
+  { id: 'storage', group: 'common', name: '저장·공간 DB', color: '#4D7C0F', text: '공간 데이터를 파일·DB에 담는 방식 — 벡터·래스터·그 외 파일과 PostGIS' },
   { id: 'vector-common', group: 'vector', name: '벡터 공통', color: '#64748B', text: '2D·2.5D·3D에 걸친 개념 — 벡터 데이터, 벡터 타일, 타일 아카이브', dim: '2D · 2.5D · 3D' },
   ...catsIn('vector'),
   { id: 'vector-etc', group: 'vector', name: '벡터 기타', color: '#9D174D', text: 'GML·CityGML·LOD — 2D~3D 벡터를 담는 표준과 세밀도', dim: '2D · 2.5D · 3D' },
@@ -72,7 +74,9 @@ export type Note = {
   dimsRefs?: InterviewSource[]
   /** 주제 2단계: 종류 카드 (정의 한 문장 + 핵심 사실 + 출처) */
   kindsQ?: string
-  terms?: { name: string; sub: string; dim?: string; def: string; facts: string[]; refs: InterviewSource[]; subs?: { name: string; code?: string; text: string }[] }[]
+  terms?: { name: string; sub: string; dim?: string; def: string; facts: string[]; refs: InterviewSource[]; subs?: { name: string; code?: string; text: string; to?: string }[] }[]
+  /** 겹치는 내용을 먼저 다룬 앞 주제 */
+  see?: { id: string; title: string }[]
   /** 주제 3단계: 차이 표 질문·출처 (표는 table) */
   diffQ?: string
   tableRefs?: InterviewSource[]
@@ -85,7 +89,6 @@ export type Note = {
   /** 이 사이트에서 실제로 쓴 곳 — 경험으로 이어 말하기 */
   here?: string
   table?: NoteTable
-  tags?: string[]
   links?: { to: string; label: string }[]
 }
 
@@ -112,7 +115,6 @@ const mine: Omit<Note, 'kind'>[] = [
     ],
     code: '<gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">\n  <gml:exterior><gml:LinearRing>\n    <gml:posList>37.56 126.97 37.56 126.98 37.57 126.98 37.56 126.97</gml:posList>\n  </gml:LinearRing></gml:exterior>\n</gml:Polygon>',
     here: 'GML 예시: WFS GetFeature 응답(GML 3.2)을 그대로 저장한 네덜란드 주 경계(EPSG:28992, X 먼저) → ogr2ogr로 위경도 GPKG. 도쿄역 CityGML은 EPSG:6697(위도 먼저)을 반대로 읽으면 건물이 바다 위로.',
-    tags: ['XML', 'OGC', 'ISO 19136', '축 순서', 'WFS'],
     links: [{ to: '/viz/vector-2d/gml', label: 'GML 예시' }, { to: '/notes#citygml', label: '다음: CityGML' }],
   },
   {
@@ -132,7 +134,6 @@ const mine: Omit<Note, 'kind'>[] = [
       '단점: XML이라 무겁고 브라우저 직접 표시 불가 → CityJSON으로 줄이거나 glTF·3D Tiles로 모양만 추출',
     ],
     here: '도쿄역 샘플 = PLATEAU 치요다구 CityGML 2.0 (LoD 0~2 혼재, 85동, 2025 배포본도 2.0 — citygml-tools upgrade로 3.0 변환 가능). 변환 경로 비교: mago 3DTiler 직접 · citygml-tools → CityJSON → glb · 3DCityDB(PostGIS) → pg2b3dm.',
-    tags: ['OGC', '2.0 · 3.0', 'LoD', 'ADE', 'NDT'],
     links: [{ to: '/viz/model-3d/citygml', label: 'CityGML 예시' }, { to: '/notes#xml-gml-citygml', label: '다음: 차이 정리' }],
   },
   {
@@ -156,7 +157,6 @@ const mine: Omit<Note, 'kind'>[] = [
         row('파일 예', '.xml', '.gml (WFS 응답)', '.gml (PLATEAU)', '.gml · .city.json'),
       ],
     },
-    tags: ['비교'],
     links: [{ to: '/notes#gml', label: 'XML·GML' }, { to: '/notes#citygml', label: 'CityGML' }, { to: '/notes#lod', label: '다음: LOD' }],
   },
   {
@@ -170,7 +170,6 @@ const mine: Omit<Note, 'kind'>[] = [
       '높이를 색으로 담는 Terrain-RGB 타일은 무손실(PNG) 필수 — JPEG면 높이가 깨짐',
     ],
     here: 'WebP 예시는 국내 GeoTIFF를 WebP + 월드파일로 바꾼 샘플. 업로드는 첫 바이트로 판별: PNG 89 50 4E 47, JPEG FF D8 FF, WebP RIFF.',
-    tags: ['비교', '월드파일'],
     links: [{ to: '/viz/raster/png', label: 'PNG' }, { to: '/viz/raster/jpg', label: 'JPEG' }, { to: '/viz/raster/webp', label: 'WebP' }],
   },
 
@@ -187,7 +186,6 @@ const mine: Omit<Note, 'kind'>[] = [
       '모델 LoD는 실시간 전환이 아니라 구축 기준 → 같은 "LoD 4"도 기준마다 뜻이 다르니 어느 기준인지 먼저 확인',
     ],
     here: '치악산 점군 3D Tiles: 멀리서는 성긴 조각만, 다가가면 그 자리의 촘촘한 조각을 더 받음. 도쿄역 CityGML은 모델 LoD 0~2가 섞인 데이터.',
-    tags: ['SSE', 'geometricError', 'HLOD'],
     links: [{ to: '/viz/why#s-lod', label: '처음이라면 · 3D 장면' }, { to: '/notes#lod-standards', label: '다음: LoD 기준 3가지' }],
   },
   {
@@ -210,7 +208,6 @@ const mine: Omit<Note, 'kind'>[] = [
         row('실무 영향', "NDT 사업에서 이 기준의 'LoD 4'를 잘못 혼용해 제안하는 문제", '특정 실내 객체 표현 시 불필요하게 상위 LoD 전체를 구축해야 함', '모든 LoD 단계에서 실내 공간·개구부 등 시맨틱 객체 표현 가능'),
       ],
     },
-    tags: ['비교', 'LoD', 'NDT'],
     links: [{ to: '/notes#citygml', label: 'CityGML' }],
   },
 
@@ -229,6 +226,10 @@ for (const t of topics) {
   if (missing.length) throw new Error(`note-topics.ts ${t.id}: 출처 ${missing.join(', ')}가 면접 문서·extraSources에 없음`)
 
   if (t.real && !items.some(i => i.no === t.real)) throw new Error(`note-topics.ts ${t.id}: 실제 질문 ${t.real}이 면접 문서에 없음`)
+
+  const unknown = (t.see ?? []).filter(id => !topics.some(x => x.id === id))
+
+  if (unknown.length) throw new Error(`note-topics.ts ${t.id}: 앞 질문 ${unknown.join(', ')}이 주제에 없음`)
 }
 
 // 지도 서버: 카탈로그의 서버 도구에서 종류 카드·표. 확장자·차원은 서버가 내주는 결과 종류(serves)에서, "이 사이트"는 실제로 띄워 본 결과(checked)
@@ -268,6 +269,32 @@ const serverTable: NoteTable = {
   ],
 }
 
+// 변환·처리 도구: 카탈로그 도구 종류마다 카드 하나, 카드 안에 그 종류의 도구들 (기초 명령 제외).
+// 예시 레시피 수 = 그 종류 도구를 한 단계라도 쓰는 확장자 예시 레시피. image 없는 도구는 이 사이트에서 실행하지 않음(설명만)
+const recipes = formats.flatMap(f => f.recipes)
+
+const toolKinds = toolTypes.filter(k => k.id !== 'basic').map(k => {
+  const list = k.id === 'server' ? servers : tools.filter(t => t.type === k.id)
+
+  return { ...k, list, used: recipes.filter(r => [...r.preprocess, ...r.convert].some(st => list.some(t => t.id === st.tool))).length }
+})
+
+const toolTerms = toolKinds.map(k => ({
+  name: k.name,
+  sub: `${k.list.length}개 · 예시 레시피 ${k.used}개`,
+  def: k.summary,
+  facts: [],
+  refs: [],
+  subs: k.list.map(t => ({ name: t.name, code: t.version, text: `${t.summary}${t.image ? '' : ' (설명만)'}`, to: `/viz/tools/${t.id}` })),
+}))
+
+const toolTable: NoteTable = {
+  cols: ['종류', '하는 일', '대표 도구', '입력 → 출력 (첫 도구)', '예시 레시피'],
+  rows: toolKinds.map(k => ({ cells: [k.name, k.summary, k.list.slice(0, 3).map(t => t.name).join(' · '), k.list[0]?.io ?? '', `${k.used}개`], to: `/viz/tools#${k.id}` })),
+}
+
+const topicTitle = new Map(topics.map(t => [t.id, t.what.q]))
+
 const topicNotes: Note[] = topics.map(t => {
   const real = items.find(i => i.no === t.real)
 
@@ -283,22 +310,19 @@ const topicNotes: Note[] = topics.map(t => {
     dims: t.dims,
     dimsRefs: t.dimsSrc && sources(t.dimsSrc),
     kindsQ: t.kindsQ,
-    terms: t.servers ? serverTerms : t.terms?.map(k => ({ name: k.name, sub: k.sub, dim: k.dim, def: k.def, facts: k.facts, refs: sources(k.src), subs: k.subs })),
+    terms: t.servers ? serverTerms : t.tools ? toolTerms : t.terms?.map(k => ({ name: k.name, sub: k.sub, dim: k.dim, def: k.def, facts: k.facts, refs: sources(k.src), subs: k.subs })),
+    see: t.see?.map(id => ({ id, title: topicTitle.get(id)! })),
     diffQ: t.diffQ,
-    table: t.servers ? serverTable : t.table,
+    table: t.servers ? serverTable : t.tools ? toolTable : t.table,
     tableRefs: t.servers ? servers.map(serverRef) : t.tableSrc && sources(t.tableSrc),
     follow: t.follow,
     fig: t.fig,
     points: t.points ?? [],
     code: t.code,
     here: t.here,
-    tags: t.tags,
     links: t.links,
   }
 })
-
-export const importantCount = topics.filter(t => t.real || t.asked).length
-export const followCount = topics.reduce((k, t) => k + (t.follow?.length ?? 0), 0)
 
 // ── 전체 요약 (맨 아래): 데이터 유형마다 원본 → 도구 → 웹 결과 → 라이브러리. 카탈로그의 예시·레시피에서 → 예시가 바뀌면 같이 바뀐다 ──
 const viewerName = { ol: 'OpenLayers', maplibre: 'MapLibre', deck: 'Deck.gl', cesium: 'CesiumJS' } satisfies Record<ViewerId, string>
@@ -335,7 +359,7 @@ const summaryNote: Note = {
   cat: 'summary',
   kind: '정리',
   title: '전체 요약 — 데이터 유형별 원본 → 도구 → 웹 결과 → 라이브러리',
-  answer: `데이터 유형 ${summaryRows.length}가지를 한 줄씩. 시각화 도구의 예시·레시피에서 만든 표라 예시가 바뀌면 같이 바뀐다.`,
+  answer: `데이터 유형 ${summaryRows.length}가지를 한 줄씩. 공간 데이터 시각화의 예시·레시피에서 만든 표라 예시가 바뀌면 같이 바뀐다.`,
   points: [
     '벡터 · 래스터 · 혼합: 도형(점·선·면·입체)이냐, 격자(픽셀)냐, 그 밖(점군·BIM·속성)이냐',
     '차원: 2D(x, y) → 2.5D(한 위치에 높이 하나 — 돌출·DEM) → 3D(한 위치에 높이 여럿 — 메시·솔리드·점군)',
@@ -344,8 +368,7 @@ const summaryNote: Note = {
     '라이브러리: 2D 지도는 OpenLayers·MapLibre, 대용량 오버레이는 Deck.gl, 3D 지구본은 CesiumJS',
   ],
   table: { cols: ['유형', '차원', '예시 확장자', '웹 결과', '변환 도구', '라이브러리', '서버로도'], rows: summaryRows },
-  tags: ['요약'],
-  links: [{ to: '/viz', label: '시각화 도구 노선도' }, { to: '/viz/tools', label: '뷰어·도구' }],
+  links: [{ to: '/viz', label: '시각화 노선도' }, { to: '/viz/tools', label: '뷰어·도구' }],
 }
 
 export const notes: Note[] = [

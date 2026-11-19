@@ -3,7 +3,7 @@
 // 그림 좌표(why-data.json): 한국 윤곽 = 2D .fgb 샘플(countries.fgb)의 KOR, 점 = 버스정류장 원본 CSV에서 700행마다 1개 / 서울BIS 40개마다 1개
 import data from '~/assets/why-data.json'
 
-useHead({ title: '처음이라면 | 공간 데이터 시각화 도구' })
+useHead({ title: '처음이라면 | 공간 데이터 시각화' })
 
 // 화면에 들어오면 한 번 재생. "다시 보기" = key를 바꿔 그림을 새로 그림 → CSS 애니메이션이 처음부터
 const runs = reactive<Record<string, number>>({})

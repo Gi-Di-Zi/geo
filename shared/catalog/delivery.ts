@@ -83,6 +83,11 @@ export const toolNotes: Record<string, ToolNote> = {
     pros: ['X·Y 열 이름 지정만으로 점 생성', 'SQLite 방언으로 필터·형변환', '결과가 정적 파일 → 서버 불필요'],
     cons: ['CSV는 UTF-8만 → CP949는 iconv 먼저', '숫자 열 판별 불안정 → 형변환 직접', 'MVT 폴더 파일 수 많음'],
   },
+  'attribute/h3': {
+    when: '점이 겹쳐 분포가 안 보일 때. 육각 칸으로 묶어 밀도를 돌출 막대로',
+    pros: ['점 수만~수십만 개 → 칸 수천 개', '칸 크기·이웃 거리 균일 → 지역끼리 밀도 비교', '결과가 GeoJSON → 네 뷰어 공통'],
+    cons: ['개별 점·속성 사라짐 (칸 개수만)', '해상도 고정 → 줌을 바꿔도 칸 크기 그대로', 'OpenLayers는 돌출 없이 평면'],
+  },
   'vector-25d/gdal': {
     when: '건물 수천~수만 동. 높이 속성 GeoJSON을 브라우저가 돌출',
     pros: ['파일 하나 → 가장 단순', 'MapLibre fill-extrusion·Deck.gl extruded로 바로', '속성 클릭·필터를 브라우저에서'],
@@ -263,6 +268,7 @@ export const byCategory: Record<string, { rows: Row[] }> = {
     rows: [
       { when: '좌표 있는 표 · 수만 행', way: 'file', why: 'GeoJSON 점으로 바꿔 통째.' },
       { when: '수십만 행 이상 (전국)', way: 'file', why: 'MVT 타일: 줌별 점 솎기. 통째 GeoJSON은 첫 화면 지연.' },
+      { when: '개별 점보다 밀도·분포', way: 'file', why: 'H3 육각 격자 집계: 칸마다 개수 → 돌출 막대. 점 대신 칸 수천 개.' },
       { when: '자주 갱신 (운영 DB의 표)', way: 'server', why: 'PostGIS 적재 → martin MVT·GeoServer WMS. 표 수정 즉시 반영.' },
       { when: '조건 조회 (기관·노선별)', way: 'server', why: 'GeoServer WFS CQL_FILTER: 조건에 맞는 행만 응답.' },
     ],

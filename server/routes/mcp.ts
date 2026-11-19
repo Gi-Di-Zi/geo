@@ -339,7 +339,7 @@ function buildServer(origin: string, owner: string, client?: string) {
     return { content: [{ type: 'text', text: identifyText(info) }], structuredContent: { mode: 'choose', origin, service, upload: r.upload, ...info } }
   })
 
-  registerAppResource(server, '공간 데이터 시각화 도구 (MCP Apps 베타)', APP, { description: '베타: 업로드·목적에 맞는 변환 추천·변환 진행·결과. 호스트별 앱 지원 필요.' }, async () => {
+  registerAppResource(server, '공간 데이터 시각화 (MCP Apps 베타)', APP, { description: '베타: 업로드·목적에 맞는 변환 추천·변환 진행·결과. 호스트별 앱 지원 필요.' }, async () => {
     const code = await appSdk()
 
     return { contents: [{

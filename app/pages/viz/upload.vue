@@ -7,7 +7,7 @@ import { deliveries, forms, priorities, readIntent, recommend, type Delivery, ty
 
 // 내 파일로 해 보기: ① 파일 넣기(형식 판별) → ② 형식 고르기 → ③ 대상 라이브러리·목적·제공 방식 → 추천 (고급 설정에서 다른 방식) → ④ 변환 시작
 // → 그 확장자의 시각화 단계로 이동해 변환 진행(JobProgress)·결과 지도 (고른 라이브러리로 연다). 추천 규칙은 MCP와 같은 shared/recommend.ts
-useHead({ title: '내 파일로 해 보기 | 공간 데이터 시각화 도구' })
+useHead({ title: '내 파일로 해 보기 | 공간 데이터 시각화' })
 
 const router = useRouter()
 const route = useRoute()
