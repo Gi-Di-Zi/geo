@@ -48,6 +48,8 @@ export type Topic = {
   servers?: true
   /** 종류 카드·차이 표를 카탈로그의 도구 종류(toolTypes)에서 만든다 (notes.ts) */
   tools?: true
+  /** 차이 표를 카탈로그의 확장자 예시(받은 곳)와 notes.ts의 "보통 이렇게 만들어짐"으로 만든다 */
+  flow?: true
   /** 겹치는 내용을 먼저 다룬 앞 주제 id → "앞 질문 참고" 링크 */
   see?: string[]
   /** app/note-figs/<fig>.vue */
@@ -170,11 +172,156 @@ export const extraSources: InterviewSource[] = [
   { id: 'R111', title: "SQLite | Appropriate Uses For SQLite", meta: "공식 문서", text: "읽기는 동시에 여럿, 쓰기는 한 번에 하나 → 동시 쓰기가 많으면 서버형 DB", url: "https://www.sqlite.org/whentouse.html" },
   { id: 'R112', title: "PostGIS | 데이터 관리 (공간 데이터 모델)", meta: "공식 문서", text: "WKT·WKB, geometry(평면)·geography(구면), spatial_ref_sys", url: "https://postgis.net/docs/using_postgis_dbmanagement.html" },
   { id: 'R113', title: "GDAL | WLD — ESRI World File", meta: "공식 문서", text: "월드파일 6줄: 픽셀 크기·회전·왼쪽 위 픽셀 중심 좌표, .wld·.tfw·.jgw", url: "https://gdal.org/en/stable/drivers/raster/wld.html" },
+  { id: 'R114', title: "아시아경제 | 매년 고해상도 국토 항공영상 촬영 (국토지리정보원 발표)", meta: "뉴스", text: "항공사진 = 항공기 카메라 디지털 사진, 정사영상 = 왜곡 보정한 연속 영상, 촬영 주기 1년·도시 12cm급 (2020-10-12)", url: "https://medigatenews.com/stand/7726" },
+  { id: 'R115', title: "KoreaScience | 정밀도로지도 제작을 위한 MMS 점군 위치정확도 성능평가 시설 구축", meta: "논문", text: "MMS = GNSS·LiDAR 등 여러 센서로 3차원 공간정보 취득, 레이저 스캐너·GPS·INS·DMI", url: "https://koreascience.kr/article/JAKO202025863869397.page" },
+  { id: 'R116', title: "OpenStreetMap | Copyright and License", meta: "공식 사이트", text: "여럿이 만든 오픈 데이터, ODbL, 출처 표시", url: "https://www.openstreetmap.org/copyright" },
+  { id: 'R117', title: "eoPortal | Copernicus Sentinel-2", meta: "미션 문서", text: "10m 밴드 4개, 두 위성으로 적도 기준 5일 재방문, 폭 290km", url: "https://www.eoportal.org/satellite-missions/copernicus-sentinel-2" },
+  { id: 'R118', title: "KoreaScience | 정밀 위치결정 서비스에 연계한 국가 GNSS 인프라 활용현황 분석", meta: "논문", text: "국토지리정보원 위성기준점(1995년부터) 기반 GNSS 측량·정밀 위치결정 서비스", url: "https://koreascience.kr/article/JAKO201712658042361.page" },
 ]
 
 const row = (...cells: string[]) => ({ cells })
 
 export const topics: Topic[] = [
+  {
+    id: 'collect',
+    cat: 'collect',
+    what: {
+      q: "공간 데이터는 어떻게 수집하나?",
+      def: "하늘·우주·땅에서 직접 찍거나 재서 얻는 방법(항공사진·위성·드론·라이다·MMS·현장 측량)과, 이미 있는 지도·도면·장부를 디지털로 옮기거나 모으는 방법으로 나뉨. 수집 → 보정·분류·편집 → 데이터 파일 순서.",
+      facts: [
+        "사진으로: 항공사진·위성영상·드론 → 왜곡 보정 → 정사영상(래스터), 겹쳐 찍은 사진으로 높이(DEM)까지",
+        "레이저로: 항공·차량(MMS)·지상 라이다 → 점군(LAS·LAZ) → DEM·건물 모델",
+        "현장에서: GNSS·토털스테이션 측량 → 기준점·경계·시설 좌표 (벡터)",
+        "사람이 만든 자료: 도면·설계(BIM)·행정 장부(주소·통계 표)·여럿이 그린 지도(OpenStreetMap) → 벡터·표",
+      ],
+      src: ["R114","R35","S04","R115","R116"],
+    },
+    kindsQ: "수집 방법에는 무엇이 있나?",
+    terms: [
+      {
+        name: "항공사진",
+        sub: "항공기 카메라 → 정사영상",
+        def: "항공기에 실은 카메라로 국토를 찍은 디지털 사진. 촬영 때 생긴 왜곡을 보정해 이어 붙인 것이 정사영상.",
+        facts: ["국내: 촬영 주기 1년, 도시 지역 12cm급으로 (국토지리정보원, 2020년 발표)","사진을 겹쳐 찍어 높이(DEM)·건물 모양까지 계산","→ 정사영상 GeoTIFF·DEM·수치지도"],
+        src: ["R114","R35"],
+      },
+      {
+        name: "위성영상",
+        sub: "인공위성 센서",
+        def: "인공위성 센서가 넓은 지역을 주기적으로 찍은 영상.",
+        facts: ["넓은 범위를 반복 촬영 → 변화 탐지","예: Sentinel-2 — 10m 밴드 4개, 두 위성으로 적도 기준 5일마다","→ GeoTIFF·COG (이 사이트 COG 예시)"],
+        src: ["R117"],
+      },
+      {
+        name: "드론",
+        sub: "무인비행장치",
+        def: "드론으로 낮게 날며 사진이나 라이다를 찍는 방법.",
+        facts: ["좁은 지역을 자주, 항공기보다 낮은 고도에서 자세히","겹쳐 찍은 사진 → 정사영상·점군·3D 모델 (항공사진과 같은 원리)"],
+        src: ["R35"],
+      },
+      {
+        name: "라이다",
+        sub: "항공·지상 레이저",
+        def: "레이저를 쏘아 되돌아오는 시간으로 거리를 재, 주변을 점군으로 얻는 방법.",
+        facts: ["항공 라이다: 넓은 지형 → DEM (예: USGS 3DEP)","지상(삼각대) 라이다: 건물·시설 정밀 스캔","→ LAS·LAZ 점군"],
+        src: ["S04","R53","R54"],
+      },
+      {
+        name: "MMS",
+        sub: "차량 탑재 측량",
+        def: "차량에 GNSS 수신기·관성항법장치(INS)·거리측정장치·레이저 스캐너·카메라를 싣고 달리며 도로와 주변을 3차원으로 측량하는 시스템.",
+        facts: ["넓은 도로망을 빠르게 → 정밀도로지도·시설물 조사","터널·고층 건물 사이처럼 위성 신호가 약한 곳은 관성항법으로 이어 계산","→ 점군 + 사진 (이 사이트 pnts 예시: 야마나시 MMS 점군)"],
+        src: ["R115"],
+      },
+      {
+        name: "현장 측량",
+        sub: "GNSS · 토털스테이션",
+        def: "위성 신호(GNSS)나 각도·거리를 재는 기계(토털스테이션)로 점의 좌표를 정확히 재는 방법.",
+        facts: ["국가기준점·위성기준점에 맞춰 좌표를 잼","위성기준점의 보정정보로 실시간 정밀 위치(RTK)","→ 좌표 목록·지적·시설 도면 (벡터)"],
+        src: ["R118"],
+      },
+      {
+        name: "그리기·편집",
+        sub: "디지타이징",
+        def: "영상·종이 지도·도면을 보며 점·선·면을 그려 디지털 벡터로 만드는 작업.",
+        facts: ["정사영상 위에 건물·도로 윤곽을 그려 수치지도 갱신","속성(이름·용도)은 조사·장부에서 붙임"],
+        src: [],
+      },
+      {
+        name: "설계",
+        sub: "CAD · BIM",
+        def: "설계 프로그램으로 그린 건물·시설 도면과 3D 모델.",
+        facts: ["→ DWG·IFC·glTF","지도 좌표 없이 건물 기준 좌표로 그린 경우가 많음 → 지리참조 필요"],
+        src: ["S36"],
+      },
+      {
+        name: "행정·통계 자료",
+        sub: "장부 · 표",
+        def: "기관이 업무로 관리하는 주소·시설·통계 목록.",
+        facts: ["좌표 열·주소·행정 코드가 있는 표(CSV) → 지도에 연결","공공데이터포털 등에서 배포"],
+        src: [],
+      },
+      {
+        name: "함께 그리는 지도",
+        sub: "OpenStreetMap",
+        def: "여러 사람이 함께 그려 공개하는 세계 지도 데이터.",
+        facts: ["누구나 편집, ODbL 오픈 데이터 (출처 표시)","→ 배경지도 벡터 타일 (이 사이트 MVT·PMTiles 예시)"],
+        src: ["R116"],
+      },
+    ],
+    diffQ: "수집 방법별로 무엇이 다른가?",
+    table: {
+      cols: ["","범위","얼마나 자주","얻는 것","주로 나오는 파일"],
+      rows: [
+        row("항공사진", "도시·국토", "국내 매년", "색 영상 + 높이", ".tif(정사영상)·DEM"),
+        row("위성영상", "나라·대륙", "수일마다", "색·여러 파장 영상", ".tif·COG"),
+        row("드론", "현장 하나", "필요할 때", "고해상도 영상·점군", ".tif·.las·3D 모델"),
+        row("항공 라이다", "도시·지역", "사업마다", "땅·건물 높이 점군", ".las·.laz → DEM"),
+        row("MMS", "도로망", "사업마다", "도로 주변 점군·사진", ".las·3D Tiles"),
+        row("지상 라이다", "건물·시설 하나", "필요할 때", "정밀 점군", ".las"),
+        row("현장 측량", "점 단위", "필요할 때", "정확한 좌표", "좌표 표·도면 벡터"),
+        row("그리기·편집", "지도 한 장 ~ 국토", "갱신 때", "점·선·면 + 속성", ".shp·.gpkg"),
+        row("설계", "건물 하나", "설계 단계마다", "부재·속성", ".ifc·.dwg"),
+        row("행정 자료", "기관 업무 범위", "기관 갱신 주기", "목록·통계", ".csv"),
+        row("OpenStreetMap", "전 세계", "수시로", "도로·건물·장소", ".osm.pbf → 벡터 타일"),
+      ],
+    },
+    tableSrc: ["R114","R117","S04","R115","R118","R116"],
+    follow: [
+      {
+        q: "항공사진을 그대로 지도에 겹쳤더니 건물이 기울어 보이고 위치가 안 맞는 이유는?",
+        kind: '실무 함정',
+        a: "항공사진은 렌즈 한 점에서 본 원근 사진이라 높은 건물은 바깥쪽으로 기울고, 높낮이가 있는 땅은 위치가 밀림. 높이(DEM)로 이 왜곡을 보정한 정사영상을 써야 지도와 겹침.",
+        src: { title: "Esri | Ortho mapping 소개", url: "https://doc.esri.com/en/arcgis-pro/latest/help/data/imagery/introduction-to-ortho-mapping.html" },
+      },
+    ],
+    here: "이 사이트 예시도 수집 방법이 여러 가지: 위성(Sentinel-2 COG), 항공 정사영상(함부르크 JPG), 항공 라이다(USGS LAZ·IMG), MMS 점군(야마나시 pnts), 도시 모델(PLATEAU CityGML), 행정 장부(버스정류장 CSV), OpenStreetMap(MVT·PMTiles).",
+    links: [{ to: '#collect-flow', label: '다음: 확장자별 흐름' }, { to: '/viz/sources', label: '데이터 받는 곳' }],
+  },
+  {
+    id: 'collect-flow',
+    cat: 'collect',
+    flow: true,
+    what: {
+      q: "확장자별로 데이터는 어디서 와서 어떻게 만들어지나?",
+      def: "같은 확장자라도 원본은 수집 방법에서 출발해 보정·편집·변환을 거쳐 만들어짐. 이 사이트의 확장자 예시를 '보통 이렇게 만들어짐'과 '실제로 받은 곳'으로 나란히 정리.",
+      facts: [
+        "원본 형식: 측량·촬영·설계 장비와 프로그램이 처음 내놓는 것 (LAS·GeoTIFF·IFC·CSV)",
+        "교환 형식: 기관이 편집·검수해 나눠 주는 것 (SHP·GML·GPKG·GeoJSON·CityGML)",
+        "웹 형식: 웹에서 빨리 보이게 바꾼 것 (MVT·PMTiles·COG·3D Tiles·glTF·quantized-mesh)",
+      ],
+      src: [],
+    },
+    kindsQ: "확장자를 어떻게 나눠 보나?",
+    terms: [
+      { name: "원본 형식", sub: "수집·설계에서 바로", def: "측량·촬영·설계 장비와 프로그램이 처음 내놓는 형식.", facts: ["점군 LAS·LAZ, 영상 GeoTIFF, 설계 IFC, 장부 CSV"], src: [] },
+      { name: "교환 형식", sub: "기관이 정리해 배포", def: "편집·검수한 데이터를 다른 기관·프로그램에 넘기려고 쓰는 형식.", facts: ["SHP·GML·GPKG·GeoJSON·CityGML"], src: [] },
+      { name: "웹 형식", sub: "웹에서 보이게 변환", def: "브라우저가 빨리 읽게 조각내거나 압축한 형식.", facts: ["MVT·PMTiles·COG·3D Tiles·glTF·quantized-mesh"], src: [] },
+    ],
+    diffQ: "확장자별로 어디서 와서 어떻게 만들어지나?",
+    here: "표의 '이 사이트 예시'는 시각화 카탈로그의 실제 수집 기록에서 만든 줄 — 예시가 바뀌면 같이 바뀜. 줄을 누르면 그 확장자의 수집 → 전처리 → 웹 형태 변환 화면으로.",
+    links: [{ to: '/viz/sources', label: '데이터 받는 곳' }],
+  },
   {
     id: 'crs',
     cat: 'crs',

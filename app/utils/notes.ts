@@ -8,8 +8,9 @@
 import raw from '~/assets/interview.txt?raw'
 import { parseInterview, type InterviewSource } from '#shared/interview'
 import type { Output, OutputKind, Tool, ViewerId } from '#shared/types'
-import { categories, formats, supportLabels, tools, toolTypes } from '~/utils/catalog'
+import { categories, formats, sources as dataSources, supportLabels, tools, toolTypes } from '~/utils/catalog'
 import { extraSources, topics, type FollowUp } from '~/utils/note-topics'
+import { noteEasy, type Easy } from '~/utils/note-easy'
 
 export const interview = parseInterview(raw)
 
@@ -33,6 +34,7 @@ const catsIn = (group: string) => categories.filter(c => (groupOfCat.get(c.id) ?
 }))
 
 export const noteCats: { id: string; group: string; name: string; color: string; text: string; dim?: string }[] = [
+  { id: 'collect', group: 'common', name: '수집', color: '#1D4ED8', text: '공간 데이터를 얻는 방법 — 촬영·레이저·현장 측량·기존 자료, 확장자별 출처' },
   { id: 'crs', group: 'common', name: '좌표계', color: '#475569', text: '좌표를 어떻게 표현하는가 — 각도·평면·지심 좌표와 수평·수직 기준' },
   { id: 'viewer', group: 'common', name: '웹 지도 라이브러리', color: '#0E7490', text: 'OpenLayers·MapLibre·Deck.gl·CesiumJS — 데이터를 화면에 그리는 쪽' },
   { id: 'tools', group: 'common', name: '변환·처리 도구', color: '#4338CA', text: '원본을 읽어 정리하고 웹 형태로 만드는 쪽 — 도구 종류와 대표 도구' },
@@ -75,6 +77,8 @@ export type Note = {
   /** 주제 2단계: 종류 카드 (정의 한 문장 + 핵심 사실 + 출처) */
   kindsQ?: string
   terms?: { name: string; sub: string; dim?: string; def: string; facts: string[]; refs: InterviewSource[]; subs?: { name: string; code?: string; text: string; to?: string }[] }[]
+  /** 입문 버전 (note-easy.ts) */
+  easy?: Easy
   /** 겹치는 내용을 먼저 다룬 앞 주제 */
   see?: { id: string; title: string }[]
   /** 주제 3단계: 차이 표 질문·출처 (표는 table) */
@@ -293,6 +297,47 @@ const toolTable: NoteTable = {
   rows: toolKinds.map(k => ({ cells: [k.name, k.summary, k.list.slice(0, 3).map(t => t.name).join(' · '), k.list[0]?.io ?? '', `${k.used}개`], to: `/viz/tools#${k.id}` })),
 }
 
+// 확장자별 흐름: 카탈로그 예시(유형·확장자·받은 곳)에 "보통 이렇게 만들어짐"을 붙인다. 예시를 더하면 여기에 한 줄 (없으면 —)
+const madeBy = new Map(Object.entries({
+  'vector-2d/fgb': '측량·편집한 벡터를 웹에서 범위만 읽게 내보냄',
+  'vector-2d/geojson': '행정 자료·API·GIS 편집 결과를 웹용 텍스트로 내보냄',
+  'vector-2d/gml': '측량·편집한 벡터를 기관 간 교환용 표준(WFS·파일)으로',
+  'vector-2d/gpkg': '측량·편집·행정 자료를 GIS에서 정리해 파일 하나로',
+  'vector-2d/mvt': 'OpenStreetMap 같은 벡터 원본을 타일 생성 도구로 자른 결과',
+  'vector-2d/pmtiles': '벡터 타일(MVT)을 파일 하나로 묶은 결과 (배경지도는 OpenStreetMap)',
+  'vector-2d/shp': '측량·디지타이징·행정 편집 결과 — 기관 배포의 오래된 기본 형식',
+  'vector-25d/geojson': '항공사진·라이다로 건물 윤곽과 높이를 따서 만든 건물 데이터',
+  'vector-25d/shp': '건물 대장·측량으로 그린 건물 윤곽 + 층수·높이 속성',
+  'raster/cog': '위성영상을 보정·합성해 클라우드에서 범위만 읽는 GeoTIFF로',
+  'raster/jpg': '항공사진 → 정사보정 → 정사영상 그림 + 월드파일',
+  'raster/png': '지형도를 그림으로 렌더링 + 월드파일',
+  'raster/tif': '지형·토양·임상 등 여러 자료를 분석해 만든 주제도 래스터',
+  'raster/webp': '같은 주제도를 웹 그림 형식으로 바꾼 것 (이 사이트 변환 샘플)',
+  'terrain/img': '항공 라이다·사진측량으로 만든 DEM',
+  'terrain/terrain': 'DEM을 Cesium용 삼각형 지형 타일로 만든 결과',
+  'terrain/tif': '라이다·항공사진측량으로 만든 수치표고모델(DEM)',
+  'pointcloud/las': '레이저 스캐너로 실측한 점군',
+  'pointcloud/laz': '항공 라이다 점군을 무손실 압축',
+  'pointcloud/pnts': 'MMS(차량) 레이저 점군을 3D Tiles로 변환',
+  'model-3d/citygml': '항공사진·라이다로 건물을 모델링한 도시 3D 모델',
+  'model-3d/glb': '3D 모델링 프로그램으로 만든 모델의 웹 배포 형식',
+  'model-3d/gltf': 'glb와 같은 모델을 텍스트 + 외부 파일로',
+  'model-3d/i3dm': '나무·시설 위치(점)에 같은 3D 모델을 반복 배치한 3D Tiles',
+  'indoor-bim/ifc': 'BIM 설계 프로그램에서 내보낸 설계 모델',
+  'attribute/csv': '기관 업무 장부(목록)를 좌표 열이 있는 표로 내보냄',
+}))
+
+const catName = new Map(categories.map(c => [c.id, c.name]))
+const srcName = new Map(dataSources.map(x => [x.id, x.name]))
+
+const flowTable: NoteTable = {
+  cols: ['확장자', '유형', '보통 이렇게 만들어짐', '이 사이트 예시 (받은 곳 — 데이터)'],
+  rows: categories.flatMap(c => formats.filter(f => f.category === c.id && !f.closed)).map(f => ({
+    cells: [f.extensions.join(' '), catName.get(f.category) ?? f.category, madeBy.get(`${f.category}/${f.id}`) ?? '—', `${srcName.get(f.collect.source) ?? f.collect.source} — ${f.collect.dataset}`],
+    to: `/viz/${f.category}/${f.id}`,
+  })),
+}
+
 const topicTitle = new Map(topics.map(t => [t.id, t.what.q]))
 
 const topicNotes: Note[] = topics.map(t => {
@@ -313,7 +358,7 @@ const topicNotes: Note[] = topics.map(t => {
     terms: t.servers ? serverTerms : t.tools ? toolTerms : t.terms?.map(k => ({ name: k.name, sub: k.sub, dim: k.dim, def: k.def, facts: k.facts, refs: sources(k.src), subs: k.subs })),
     see: t.see?.map(id => ({ id, title: topicTitle.get(id)! })),
     diffQ: t.diffQ,
-    table: t.servers ? serverTable : t.tools ? toolTable : t.table,
+    table: t.servers ? serverTable : t.tools ? toolTable : t.flow ? flowTable : t.table,
     tableRefs: t.servers ? servers.map(serverRef) : t.tableSrc && sources(t.tableSrc),
     follow: t.follow,
     fig: t.fig,
@@ -375,7 +420,7 @@ export const notes: Note[] = [
   ...topicNotes,
   ...mine.map(n => ({ ...n, kind: '정리' })),
   summaryNote,
-]
+].map(n => ({ ...n, easy: noteEasy[n.id] }))
 
 // 유형 id 오타 → 목록에서 조용히 사라지지 않게
 const catIds = new Set(noteCats.map(c => c.id))

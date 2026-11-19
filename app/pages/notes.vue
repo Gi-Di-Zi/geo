@@ -67,9 +67,25 @@ async function openHash(hash: string) {
   document.getElementById(id)?.scrollIntoView()
 }
 
+// 설명 수준: 입문(개발·GIS를 몰라도 읽히게) / 자세히. 고른 값은 이 브라우저에 기억 (저장소를 못 쓰면 매번 자세히부터)
+type Mode = 'easy' | 'full'
+
+const mode = ref<Mode>('full')
+const easyOn = computed(() => mode.value === 'easy')
+
+function setMode(m: Mode) {
+  mode.value = m
+
+  try { localStorage.setItem('notes-mode', m) } catch { /* 저장 못 해도 화면은 바뀜 */ }
+}
+
 const route = useRoute()
 
-onMounted(() => openHash(location.hash))
+onMounted(() => {
+  try { if (localStorage.getItem('notes-mode') === 'easy') mode.value = 'easy' } catch { /* 기본값(자세히) */ }
+
+  openHash(location.hash)
+})
 
 watch(() => route.hash, openHash)
 </script>
@@ -79,25 +95,47 @@ watch(() => route.hash, openHash)
     <FlowSteps />
     <div class="wrap page">
       <h1 class="head">공간 데이터 개념 정리</h1>
+      <div class="mode">
+        <div class="seg" role="group" aria-label="설명 수준">
+          <button type="button" :aria-pressed="easyOn" @click="setMode('easy')">입문</button>
+          <button type="button" :aria-pressed="!easyOn" @click="setMode('full')">자세히</button>
+        </div>
+        <p class="small muted">{{ easyOn ? '개발·GIS를 몰라도 읽히게 쉬운 말과 비유로' : '정의 → 종류 → 차이 → 이어지는 질문, 항목마다 출처' }}</p>
+      </div>
 
       <template v-for="s in sections" :key="s.cat.id">
         <h2 v-if="s.group" class="grp">{{ s.group }}</h2>
         <section class="sec" :style="{ '--c': s.cat.color }" :aria-labelledby="`cat-${s.cat.id}`">
-        <h3 :id="`cat-${s.cat.id}`" class="cat"><span class="chip-dot" />{{ s.cat.name }}<span v-if="s.cat.dim" class="dim">{{ s.cat.dim }}</span><span class="n">{{ s.items.length }}</span><small>{{ s.cat.text }}</small></h3>
+        <h3 :id="`cat-${s.cat.id}`" class="cat"><span class="chip-dot" />{{ s.cat.name }}<span v-if="s.cat.dim" class="dim">{{ s.cat.dim }}</span><span class="n">{{ s.items.length }}</span><small>{{ easyOn ? noteEasyCats[s.cat.id] ?? s.cat.text : s.cat.text }}</small></h3>
         <div class="list">
           <details v-for="(n, i) in s.items" :id="n.id" :key="n.id" class="note" :open="opened.has(n.id)" @toggle="toggle(n.id, $event)">
             <summary>
               <span class="no">{{ String(i + 1).padStart(2, '0') }}</span>
-              <span class="q">{{ n.title }}</span>
+              <span class="q">{{ easyOn && n.easy?.q || n.title }}</span>
               <span class="marks"><span v-if="n.important" class="star" :title="n.important">★ 중요</span></span>
               <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
             </summary>
 
             <!-- 주제(kindsQ 있음)는 교과서 순서: 1 그게 뭔가(+ 차원별) → 2 종류 → 3 차이 → 4 이어서 나올 질문 -->
-            <div class="body" :class="{ 'has-fig': figOf(n) && !n.kindsQ, topic: n.kindsQ }">
+            <!-- 입문: 한 줄 요약 → 쉬운 문단 → 비유 → 낱말 → 그림. 카드·표·출처·이어지는 질문은 자세히에서 -->
+            <div v-if="easyOn && n.easy" class="body easy">
+              <p class="answer def">{{ n.easy.one }}</p>
+              <p v-for="p in n.easy.say" :key="p" class="say">{{ p }}</p>
+              <p v-if="n.easy.eg" class="eg"><b>예를 들면</b>{{ n.easy.eg }}</p>
+              <dl v-if="n.easy.words?.length" class="words">
+                <div v-for="[w, d] in n.easy.words" :key="w"><dt>{{ w }}</dt><dd>{{ d }}</dd></div>
+              </dl>
+              <figure v-if="figOf(n)" class="fig">
+                <component :is="figOf(n)" v-if="runs.get(n.id)" :key="runs.get(n.id)" />
+                <button type="button" class="btn" @click="replay(n.id)">다시 보기</button>
+              </figure>
+              <button type="button" class="btn more" @click="setMode('full')">자세히 보기 →</button>
+            </div>
+            <div v-else class="body" :class="{ 'has-fig': figOf(n) && !n.kindsQ, topic: n.kindsQ }">
               <section v-if="n.kindsQ" class="step-box">
                 <h4 class="step"><span class="num">1</span>{{ n.title }}</h4>
                 <p class="answer def">{{ n.answer }}</p>
+                <p v-if="n.easy" class="plain"><b>쉽게 말하면</b>{{ n.easy.one }}</p>
                 <ul v-if="n.answerFacts?.length" class="facts"><li v-for="f in n.answerFacts" :key="f">{{ f }}</li></ul>
                 <p v-if="n.answerRefs?.length" class="src">출처 <a v-for="r in n.answerRefs" :key="r.id" :href="r.url" target="_blank" rel="noopener" :title="r.text">{{ r.title }}</a></p>
                 <p v-if="n.see?.length" class="see">겹치는 내용은 앞 질문 참고 <NuxtLink v-for="s in n.see" :key="s.id" :to="`#${s.id}`">{{ s.title }}</NuxtLink></p>
@@ -122,7 +160,10 @@ watch(() => route.hash, openHash)
                         <dd>{{ x.text }}</dd>
                       </template>
                     </dl>
-                    <p v-if="t.refs.length" class="src">출처 <a v-for="r in t.refs" :key="r.id" :href="r.url" target="_blank" rel="noopener" :title="`${r.title} — ${r.text}`">{{ r.title }}</a></p>
+                    <details v-if="t.refs.length" class="src-fold">
+                      <summary>출처 {{ t.refs.length }}</summary>
+                      <p class="src"><a v-for="r in t.refs" :key="r.id" :href="r.url" target="_blank" rel="noopener" :title="`${r.title} — ${r.text}`">{{ r.title }}</a></p>
+                    </details>
                   </li>
                 </ul>
               </div>
@@ -147,6 +188,7 @@ watch(() => route.hash, openHash)
               </div>
               <div class="text">
                 <p v-if="!n.kindsQ" class="answer"><b>답</b>{{ n.answer }}</p>
+                <p v-if="!n.kindsQ && n.easy" class="plain"><b>쉽게 말하면</b>{{ n.easy.one }}</p>
                 <ul v-if="n.points.length" class="points"><li v-for="p in n.points" :key="p">{{ p }}</li></ul>
                 <pre v-if="n.code"><code>{{ n.code }}</code></pre>
               </div>
@@ -183,6 +225,18 @@ watch(() => route.hash, openHash)
 <style scoped>
 .page { padding-top: 40px; padding-bottom: 24px; interpolate-size: allow-keywords; }
 .head { font-size: var(--fs-5); }
+.mode { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 16px; }
+/* 입문 본문: 문단을 넉넉한 줄 간격으로, 비유는 연한 상자, 낱말은 두 칸 */
+.easy { gap: 12px; max-width: calc(46rem + 18px + 2.6rem + 12px); }
+.easy .say { font-size: var(--fs-1); line-height: 1.8; }
+.eg { padding: 10px 14px; line-height: 1.7; background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-tile); }
+.eg b, .plain b { margin-right: 8px; font-size: 0.78rem; color: color-mix(in srgb, var(--c) 85%, black); }
+.words { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 6px; margin: 0; }
+.words > div { padding: 8px 12px; background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--c); border-radius: 0 var(--r-tile) var(--r-tile) 0; }
+.words dt { font-weight: 700; }
+.words dd { margin: 2px 0 0; font-size: var(--fs-0); color: var(--ink-2); }
+.easy .more { justify-self: start; }
+.plain { font-size: var(--fs-0); line-height: 1.6; color: var(--ink-2); }
 .n { margin-left: 6px; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; opacity: 0.7; }
 
 /* 묶음 제목(공통·벡터…) → 그 밑에 유형별 목록 */
@@ -250,7 +304,13 @@ watch(() => route.hash, openHash)
 .tsubs dt code { margin-left: 6px; padding: 0 6px; font-size: 0.75rem; color: color-mix(in srgb, var(--c) 80%, black); background: var(--paper); border-radius: 4px; }
 .tsubs dd { margin: 0; line-height: 1.55; color: var(--ink-2); }
 .src { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 2px; font-size: 0.78rem; color: var(--ink-2); }
-.terms .src { margin-top: auto; padding-top: 6px; }
+/* 카드 출처는 접어 둔다 (펼치면 링크 목록) — 카드 본문이 먼저 읽히게 */
+.src-fold { margin-top: auto; padding-top: 6px; font-size: 0.78rem; color: var(--ink-2); }
+.src-fold > summary { width: fit-content; cursor: pointer; list-style: none; }
+.src-fold > summary::-webkit-details-marker { display: none; }
+.src-fold > summary::before { content: '▸ '; }
+.src-fold[open] > summary::before { content: '▾ '; }
+.src-fold .src { margin-top: 4px; }
 .terms .src a { display: inline-block; max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .src a { color: var(--link); }
 .see { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 6px 10px; font-size: var(--fs-0); color: var(--ink-2); background: var(--paper); border-radius: var(--r-tile); }
