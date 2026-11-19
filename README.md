@@ -215,7 +215,7 @@ flowchart LR
   prepared["준비된 샘플 공간 서버"] --> web
 ```
 
-웹 화면은 Nuxt 4·Vue 3·TypeScript, 변환은 Node 실행기와 버전을 정한 Docker 도구를 사용합니다. GDAL·PDAL·tippecanoe·mago·py3dtiles·IfcConvert 등은 형식별 레시피로 연결됩니다. 처리 명령과 로그·시간은 실행 기록에 남고 화면은 카탈로그와 그 기록을 읽습니다. 서버의 데이터 처리는 별도 rootless Docker 엔진을 사용합니다. [구현·운영 상세](docs/visualization.md), [배포 구성](deploy/README.md).
+웹 화면은 Nuxt 4·Vue 3·TypeScript, 변환은 Node 실행기와 버전을 정한 Docker 도구를 사용합니다. GDAL·PDAL·tippecanoe·mago·py3dtiles·IfcConvert 등은 형식별 레시피로 연결됩니다. 처리 명령과 로그·시간은 실행 기록에 남고 화면은 카탈로그와 그 기록을 읽습니다. 서버의 데이터 처리는 별도 rootless Docker 엔진을 사용합니다. [구현·운영 상세](docs/visualization.md), [배포 구성](deploy/README.md), [MCP Apps·QGIS 연결 점검](docs/integration-review.md).
 
 <a id="license"></a>
 ## 라이선스
